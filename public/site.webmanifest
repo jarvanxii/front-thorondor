@@ -1,0 +1,21 @@
+{
+  "name": "Thorondor",
+  "short_name": "Thorondor",
+  "description": "Panel de monitorizacion de sistemas, agentes, alertas, reglas y respuesta operativa por host.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#07111d",
+  "theme_color": "#07111d",
+  "icons": [
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
