@@ -42,7 +42,8 @@
 
 .thorondor-page .intro-box {
   display: grid;
-  gap: 22px;
+  gap: 24px;
+  padding-bottom: 30px;
 }
 
 .thorondor-page .intro-box .section-heading > .section-kicker:first-child {
@@ -87,47 +88,80 @@
   max-width: 90ch;
 }
 
-.thorondor-page .intro-emblem,
+.thorondor-page .intro-summary,
 .thorondor-page .phase-badge-block {
   display: grid;
   gap: 10px;
 }
 
-.thorondor-page .intro-emblem {
+.thorondor-page .intro-summary {
   align-content: center;
   justify-items: start;
   text-align: left;
-  padding: 20px;
-  border-radius: 4px;
-  background:
-    linear-gradient(90deg, rgba(226, 232, 240, 0.08), transparent 44%),
-    linear-gradient(180deg, rgba(42, 47, 55, 0.96), rgba(24, 29, 36, 0.96));
-  border: 1px solid rgba(176, 184, 194, 0.28);
+  min-height: 100%;
+  padding-left: 24px;
+  border-left: 1px solid rgba(190, 198, 209, 0.22);
 }
 
-.thorondor-page .intro-emblem-tag {
+.thorondor-page .intro-summary span {
   display: inline-flex;
   width: fit-content;
-  padding: 5px 9px;
-  border: 1px solid rgba(213, 219, 226, 0.24);
-  border-radius: 3px;
-  background: rgba(10, 14, 20, 0.6);
-  color: #aeb8c4;
-  font-size: 0.68rem;
+  color: #9aa6b3;
+  font-size: 0.72rem;
   font-weight: 800;
+  letter-spacing: 0.12em;
   text-transform: uppercase;
 }
 
-.thorondor-page .intro-emblem span {
+.thorondor-page .intro-summary strong {
   color: #f8fafc;
-  font-size: 0.95rem;
-  font-weight: 700;
+  font-size: 1.02rem;
+  font-weight: 800;
 }
 
-.thorondor-page .intro-emblem small,
+.thorondor-page .intro-summary p,
 .thorondor-page .phase-badge-block small,
 .thorondor-page .muted-copy {
+  margin: 0;
   color: #9aa6b3;
+  line-height: 1.65;
+}
+
+.thorondor-page .intro-points {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0;
+  padding-top: 24px;
+  border-top: 1px solid rgba(190, 198, 209, 0.16);
+}
+
+.thorondor-page .intro-point {
+  display: grid;
+  gap: 10px;
+  min-width: 0;
+  padding: 0 22px;
+  border-right: 1px solid rgba(190, 198, 209, 0.12);
+}
+
+.thorondor-page .intro-point:first-child {
+  padding-left: 0;
+}
+
+.thorondor-page .intro-point:last-child {
+  padding-right: 0;
+  border-right: 0;
+}
+
+.thorondor-page .intro-point label {
+  color: #edf2f7;
+  font-size: 0.78rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.thorondor-page .intro-point span {
+  color: #aebbd0;
   line-height: 1.65;
 }
 
@@ -730,6 +764,28 @@
     grid-template-columns: 1fr;
   }
 
+  .thorondor-page .intro-summary {
+    min-height: auto;
+    padding-top: 18px;
+    padding-left: 0;
+    border-top: 1px solid rgba(190, 198, 209, 0.16);
+    border-left: 0;
+  }
+
+  .thorondor-page .intro-points {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    row-gap: 18px;
+  }
+
+  .thorondor-page .intro-point:nth-child(2n) {
+    padding-right: 0;
+    border-right: 0;
+  }
+
+  .thorondor-page .intro-point:nth-child(2n + 1) {
+    padding-left: 0;
+  }
+
   .thorondor-page .guide-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
@@ -756,9 +812,23 @@
   }
 
   .thorondor-page .guide-grid,
+  .thorondor-page .intro-points,
   .thorondor-page .metric-grid,
   .thorondor-page .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .thorondor-page .intro-point,
+  .thorondor-page .intro-point:nth-child(2n),
+  .thorondor-page .intro-point:nth-child(2n + 1) {
+    padding: 0 0 16px;
+    border-right: 0;
+    border-bottom: 1px solid rgba(190, 198, 209, 0.12);
+  }
+
+  .thorondor-page .intro-point:last-child {
+    padding-bottom: 0;
+    border-bottom: 0;
   }
 
   .thorondor-page .card-head {

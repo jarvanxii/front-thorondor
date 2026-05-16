@@ -44,18 +44,18 @@
                     </p>
                 </article>
 
-                <aside class="intro-emblem">
-                    <span class="intro-emblem-tag">Endpoint</span>
-                    <span>Control directo por endpoint</span>
-                    <small>
+                <aside class="intro-summary">
+                    <span>Endpoint</span>
+                    <strong>Control directo por endpoint</strong>
+                    <p>
                         Pensado para servidores propios, laboratorios y entornos donde quieres visibilidad sin montar
                         infraestructura central antes de tiempo.
-                    </small>
+                    </p>
                 </aside>
             </header>
 
-            <section class="guide-grid">
-                <article class="guide-card" v-for="item in foundationalNotes" :key="item.label">
+            <section class="intro-points" aria-label="Bases de Thorondor">
+                <article class="intro-point" v-for="item in foundationalNotes" :key="item.label">
                     <label>{{ item.label }}</label>
                     <span>{{ item.copy }}</span>
                 </article>
