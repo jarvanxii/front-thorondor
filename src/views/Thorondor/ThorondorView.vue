@@ -1,15 +1,18 @@
 <template>
     <ThorondorPageShell>
-        <section class="home-hero" aria-labelledby="thorondor-home-title">
-            <article class="hero-copy">
+        <section class="home-overview" aria-labelledby="thorondor-home-title">
+            <div class="home-overview-main">
                 <div class="hero-brand-panel">
-                    <span class="section-kicker">SIEM para infraestructura propia</span>
                     <img class="hero-wordmark" src="@/assets/images/brand/logo_completo_thorondor.png"
                         alt="Thorondor SIEM" />
                     <h1 id="thorondor-home-title" class="sr-only">Thorondor</h1>
-                    <p>
-                        Supervisa hosts Linux y Windows, centraliza eventos relevantes y ejecuta respuesta manual
-                        con trazabilidad.
+                </div>
+                <div class="hero-message">
+                    <span class="section-kicker">SIEM para infraestructura propia</span>
+                    <h2>Modelo operativo</h2>
+                    <p class="hero-summary">
+                        Monitoriza hosts Linux y Windows, centraliza eventos y opera agentes con persistencia local o
+                        API centralizada.
                     </p>
                 </div>
                 <dl class="hero-status-bar" aria-label="Estado de Thorondor">
@@ -18,37 +21,10 @@
                         <dd :class="item.tone">{{ item.value }}</dd>
                     </div>
                 </dl>
-            </article>
-        </section>
-
-        <section class="section-box intro-box">
-            <header class="intro-layout">
-                <article class="section-heading">
-                    <span class="section-kicker">Monitorización distribuida</span>
-                    <h2 class="section-name">Modelo operativo</h2>
-                    <p class="section-copy">
-                        Cada sistema ejecuta un agente autocontenido. La consola consulta telemetría, registra eventos
-                        y mantiene reglas separadas por host para que la operación sea directa, trazable y sencilla de
-                        desplegar.
-                    </p>
-                </article>
-
-                <aside class="intro-summary">
-                    <span>Despliegue</span>
-                    <strong>Directo o centralizado</strong>
-                    <p>
-                        Puede trabajar en local con IndexedDB o sincronizarse con una API respaldada por base de datos
-                        cuando necesitas persistencia compartida.
-                    </p>
-                </aside>
-            </header>
-
-            <section class="intro-points" aria-label="Bases de Thorondor">
-                <article class="intro-point" v-for="item in foundationalNotes" :key="item.label">
-                    <label>{{ item.label }}</label>
-                    <span>{{ item.copy }}</span>
-                </article>
-            </section>
+            </div>
+            <p class="home-overview-note">
+                Despliegue directo: laboratorio con IndexedDB, producción con API y base de datos.
+            </p>
         </section>
 
         <section class="section-box">
@@ -167,27 +143,6 @@ export default {
             ];
         },
 
-        foundationalNotes() {
-            return [
-                {
-                    label: "Agente autocontenido",
-                    copy: "El instalador genera el agente y su arranque persistente desde un único archivo. El host no necesita piezas sueltas."
-                },
-                {
-                    label: "Linux y Windows",
-                    copy: "Linux usa systemd con entorno Python aislado y Windows genera un MSI real que deja Task Scheduler configurado si activas autoarranque."
-                },
-                {
-                    label: "Datos portables",
-                    copy: "El modo local usa IndexedDB; el modo sincronizado guarda el mismo histórico en base de datos para llevarlo a cualquier sesión."
-                },
-                {
-                    label: "Alertas separadas de reglas",
-                    copy: "Las reglas definen condiciones. Las alertas son la cola operativa que revisas, cierras o reabres."
-                }
-            ];
-        },
-
         storageCards() {
             return [
                 {
@@ -287,13 +242,14 @@ export default {
 </script>
 
 <style scoped>
-.home-hero {
+.home-overview {
     position: relative;
     isolation: isolate;
     display: grid;
+    gap: 14px;
     margin-bottom: 18px;
-    min-height: clamp(245px, 24vw, 310px);
-    padding: clamp(20px, 2.7vw, 36px) clamp(22px, 3vw, 42px);
+    min-height: 0;
+    padding: clamp(14px, 1.8vw, 22px) clamp(18px, 2.6vw, 30px);
     overflow: hidden;
     border: 1px solid rgba(236, 194, 119, 0.18);
     border-radius: 4px;
@@ -305,7 +261,7 @@ export default {
         0 18px 42px rgba(0, 0, 0, 0.28);
 }
 
-.home-hero::before {
+.home-overview::before {
     content: "";
     position: absolute;
     inset: 0;
@@ -315,7 +271,7 @@ export default {
         linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%);
 }
 
-.home-hero::after {
+.home-overview::after {
     content: "";
     position: absolute;
     inset: auto 26px 0;
@@ -324,29 +280,28 @@ export default {
     background: linear-gradient(90deg, rgba(236, 194, 119, 0.56), rgba(236, 194, 119, 0.12), transparent);
 }
 
-.hero-copy {
+.home-overview-main {
     display: grid;
-    grid-template-columns: minmax(320px, 560px) minmax(260px, 360px);
-    gap: clamp(22px, 4vw, 56px);
+    grid-template-columns: minmax(140px, 180px) minmax(300px, 1fr) minmax(220px, 270px);
+    gap: clamp(18px, 2.4vw, 34px);
     min-width: 0;
-    align-items: end;
+    align-items: center;
 }
 
 .hero-brand-panel {
     display: grid;
-    gap: 12px;
+    gap: 9px;
     min-width: 0;
-    align-content: start;
-    align-self: start;
+    align-content: center;
 }
 
 .hero-wordmark {
     display: block;
-    width: min(100%, clamp(250px, 29vw, 385px));
+    width: min(100%, clamp(140px, 12vw, 168px));
     height: auto;
     object-fit: contain;
     object-position: left center;
-    filter: contrast(1.06) saturate(1.04) drop-shadow(0 18px 24px rgba(0, 0, 0, 0.38));
+    filter: contrast(1.06) saturate(1.04) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.32));
 }
 
 .sr-only {
@@ -360,12 +315,25 @@ export default {
     border: 0;
 }
 
-.hero-brand-panel p {
-    max-width: 62ch;
+.hero-message {
+    display: grid;
+    gap: 7px;
+    min-width: 0;
+}
+
+.hero-message h2 {
+    margin: 0;
+    color: #f8fafc;
+    font-size: clamp(1.28rem, 2vw, 1.8rem);
+    line-height: 1.05;
+}
+
+.hero-summary {
+    max-width: 48ch;
     margin: 0;
     color: #c9d3df;
-    font-size: clamp(0.94rem, 1.1vw, 1.04rem);
-    line-height: 1.55;
+    font-size: clamp(0.9rem, 0.95vw, 0.98rem);
+    line-height: 1.45;
 }
 
 .hero-status-bar {
@@ -375,7 +343,7 @@ export default {
     min-width: 0;
     margin: 0;
     padding: 0;
-    width: min(100%, 360px);
+    width: min(100%, 270px);
     justify-self: end;
     border: 1px solid rgba(196, 204, 214, 0.16);
     background: rgba(255, 255, 255, 0.035);
@@ -383,11 +351,11 @@ export default {
 
 .hero-status-bar div {
     display: flex;
-    min-height: 54px;
+    min-height: 40px;
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    padding: 10px 14px;
+    padding: 7px 11px;
 }
 
 .hero-status-bar div + div {
@@ -406,46 +374,76 @@ export default {
 .hero-status-bar dd {
     margin: 0;
     color: #f8fafc;
-    font-size: 1.18rem;
+    font-size: 1rem;
     font-weight: 900;
+}
+
+.home-overview-note {
+    margin: 0;
+    padding-top: 12px;
+    border-top: 1px solid rgba(196, 204, 214, 0.14);
+    color: #aebac8;
+    font-size: 0.86rem;
+    line-height: 1.45;
 }
 
 .storage-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-@media (max-width: 980px) {
-    .home-hero {
-        margin-bottom: 14px;
-        min-height: auto;
-        padding: 14px;
-        border-radius: 3px;
-    }
-
-    .hero-copy {
-        grid-template-columns: 1fr;
-        gap: 16px;
-    }
-
-    .hero-wordmark {
-        width: min(100%, 320px);
-    }
-
-    .hero-brand-panel p {
-        font-size: 0.9rem;
-        line-height: 1.5;
+@media (max-width: 1180px) {
+    .home-overview-main {
+        grid-template-columns: minmax(140px, 170px) minmax(300px, 1fr);
     }
 
     .hero-status-bar {
+        grid-column: 1 / -1;
         grid-template-columns: repeat(3, minmax(0, 1fr));
         width: 100%;
-        max-width: none;
         justify-self: stretch;
     }
 
     .hero-status-bar div + div {
         border-top: 0;
         border-left: 1px solid rgba(196, 204, 214, 0.16);
+    }
+}
+
+@media (max-width: 760px) {
+    .home-overview {
+        margin-bottom: 14px;
+        padding: 14px;
+        border-radius: 3px;
+    }
+
+    .home-overview-main {
+        grid-template-columns: minmax(118px, 140px) minmax(0, 1fr);
+        gap: 12px 14px;
+    }
+
+    .hero-wordmark {
+        width: min(100%, 140px);
+    }
+
+    .hero-message h2 {
+        font-size: clamp(1.14rem, 6vw, 1.38rem);
+    }
+
+    .hero-summary {
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .home-overview-note {
+        font-size: 0.82rem;
+    }
+
+    .hero-status-bar {
+        grid-column: 1 / -1;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        width: 100%;
+        max-width: none;
+        justify-self: stretch;
     }
 
     .hero-status-bar div {
@@ -470,7 +468,7 @@ export default {
 
 @media (max-width: 420px) {
     .hero-wordmark {
-        width: min(100%, 265px);
+        width: min(100%, 128px);
     }
 
     .hero-status-bar dt {
