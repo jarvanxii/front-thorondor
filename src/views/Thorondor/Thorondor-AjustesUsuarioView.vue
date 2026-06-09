@@ -314,7 +314,7 @@ export default {
         {
           id: "confirm-actions",
           label: "Confirmar acciones sensibles",
-          copy: "Pedir confirmacion antes de operaciones administrativas.",
+          copy: "Pedir confirmación antes de operaciones administrativas.",
           enabled: true
         },
         {

@@ -374,7 +374,7 @@ export default {
         {
           key: 'twoFactorPrepared',
           label: 'Doble factor preparado',
-          copy: 'Reserva la opcion para exigir 2FA desde el proveedor OAuth cuando se active la politica.',
+          copy: 'Reserva la opción para exigir 2FA desde el proveedor OAuth cuando se active la política.',
         },
       ],
       emailSettingItems: [

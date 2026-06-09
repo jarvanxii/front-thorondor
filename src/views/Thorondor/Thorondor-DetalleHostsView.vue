@@ -281,7 +281,7 @@
                                 <td>{{ formatBytes(rate.recvBytesPerSec) }}/s</td>
                             </tr>
                             <tr v-if="!snapshotNetworkRates.length">
-                                <td colspan="3" class="text-muted text-center">Sin datos de velocidad de red. Activa el modulo networkRates en el generador.</td>
+                                <td colspan="3" class="text-muted text-center">Sin datos de velocidad de red. Activa el módulo networkRates en el generador.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -311,7 +311,7 @@
                                 <td><code class="small-code">{{ conn.remoteAddr }}</code></td>
                             </tr>
                             <tr v-if="!snapshotEstablished.length">
-                                <td colspan="4" class="text-muted text-center">Sin conexiones ESTABLISHED activas o modulo desactivado.</td>
+                                <td colspan="4" class="text-muted text-center">Sin conexiones ESTABLISHED activas o módulo desactivado.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -389,7 +389,7 @@
                             <span class="mini-badge">{{ snapshotLoginHistory.length }} entradas</span>
                         </div>
                         <div class="output-box scrollable-wrap" style="max-height:200px;">
-                            <pre class="result-pre">{{ snapshotLoginHistory.join('\n') || 'Sin historial de logins o modulo desactivado.' }}</pre>
+                            <pre class="result-pre">{{ snapshotLoginHistory.join('\n') || 'Sin historial de logins o módulo desactivado.' }}</pre>
                         </div>
                     </div>
                 </div>

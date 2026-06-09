@@ -5,9 +5,9 @@ Frontend Vue de Thorondor, extraído desde El Anillo como aplicación independie
 Incluye:
 
 - Vistas de información, guía, generador de agentes, dashboard, detalle de hosts, reglas, bloqueo de IPs, auditoría de comandos y agentes.
-- Estado Vuex con persistencia IndexedDB y capa opcional de sincronizacion con base de datos.
+- Estado Vuex con persistencia IndexedDB y capa opcional de sincronización con base de datos.
 - Assets, favicons, tema visual y navegación secundaria propios de Thorondor.
-- Integracion con Bootstrap CSS, Marked y Chart.js por CDN.
+- Integración con Bootstrap CSS, Marked y Chart.js por CDN.
 
 ## Setup
 
@@ -75,7 +75,7 @@ Los callbacks OAuth registrados en cada proveedor para el login web deben apunta
 - `https://thorondor.app/login/oauth2/code/github`
 - `https://thorondor.app/login/oauth2/code/apple`
 
-El proxy `/api` de Nginx deja que el navegador inicie OAuth contra la API sin cambiar de origen. Usar callbacks en `api.thorondor.app` solo tiene sentido si se configura dominio de cookie compartido y CORS/cookies cross-origin de forma explicita.
+El proxy `/api` de Nginx deja que el navegador inicie OAuth contra la API sin cambiar de origen. Usar callbacks en `api.thorondor.app` solo tiene sentido si se configura dominio de cookie compartido y CORS/cookies cross-origin de forma explícita.
 
 ## Persistencia de datos
 

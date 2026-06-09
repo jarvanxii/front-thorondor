@@ -35,15 +35,15 @@ por HTTPS y los puertos locales de agentes no deben abrirse a Internet salvo con
 ## Persistencia y retención
 
 Thorondor guarda solo datos operativos: agentes registrados, snapshots resumidos, eventos, logs recientes, reglas,
-alertas y conexiones. En modo local se conservan en IndexedDB y la purga automatica evita que el navegador crezca sin
+alertas y conexiones. En modo local se conservan en IndexedDB y la purga automática evita que el navegador crezca sin
 control. En modo sincronizado se guardan también en la base de datos del workspace y se mantiene IndexedDB como caché
 local para que el panel pueda seguir funcionando aunque haya un corte temporal de red.
 
-## Limites
+## Límites
 
 - No sustituye a un SIEM empresarial multiusuario.
-- No hace respuesta automatica tipo EDR salvo reglas explicitas que se configuren para ello; el bloqueo manual siempre debe poder revertirse desde el front.
-- La centralizacion fuera del navegador solo existe cuando el workspace activa persistencia remota.
+- No hace respuesta automática tipo EDR salvo reglas explícitas que se configuren para ello; el bloqueo manual siempre debe poder revertirse desde el front.
+- La centralización fuera del navegador solo existe cuando el workspace activa persistencia remota.
 - No expongas un agente en Internet sin TLS cuando corresponda, proxy frontal y controles de red adicionales.
 
 ## Uso recomendado
