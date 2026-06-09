@@ -101,8 +101,25 @@ function normalizeAgentId(config) {
 
 function normalizeCentralApiBaseUrl(config) {
   const fromDraft = String(config.centralApiBaseUrl || "").trim();
-  const fromEnv = String(import.meta.env.VITE_THORONDOR_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || "").trim();
+  const fromEnv = String(
+    import.meta.env.VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL
+      || import.meta.env.VITE_THORONDOR_API_BASE_URL
+      || import.meta.env.VITE_API_BASE_URL
+      || ""
+  ).trim();
   return (fromDraft || fromEnv).replace(/\/+$/, "");
+}
+
+function generateAgentToken(byteLength = 32) {
+  const bytes = new Uint8Array(byteLength);
+  if (globalThis.crypto?.getRandomValues) {
+    globalThis.crypto.getRandomValues(bytes);
+  } else {
+    for (let index = 0; index < bytes.length; index += 1) {
+      bytes[index] = Math.floor(Math.random() * 256);
+    }
+  }
+  return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
 export function buildThorondorAgentFiles(draft) {
@@ -116,6 +133,8 @@ export function buildThorondorAgentFiles(draft) {
     logPaths
   };
   config.agentId = config.agentId || normalizeAgentId(config);
+  config.agentToken = String(config.agentToken || generateAgentToken()).trim();
+  config.centralEnrollmentToken = String(config.centralEnrollmentToken || "").trim();
   config.centralApiBaseUrl = normalizeCentralApiBaseUrl(config);
 
   const isWindows = config.targetOs === "windows";
@@ -148,6 +167,7 @@ export function buildThorondorPythonAgent(config) {
   return `#!/usr/bin/env python3
 import json
 import glob
+import hmac
 import ipaddress
 import os
 import platform
@@ -182,6 +202,8 @@ LISTEN_HOST = ${JSON.stringify(resolveListenHost(config))}
 LISTEN_PORT = ${Number(config.port) || 8765}
 POLL_INTERVAL_SECONDS = ${Number(config.intervalSeconds) || 30}
 CENTRAL_API_BASE_URL = ${JSON.stringify(config.centralApiBaseUrl)}
+AGENT_TOKEN = ${JSON.stringify(config.agentToken)}
+CENTRAL_ENROLLMENT_TOKEN = ${JSON.stringify(config.centralEnrollmentToken)}
 INSTALL_USER = ${JSON.stringify(config.installUser || "thorondor")}
 NETWORK_SCOPE = ${JSON.stringify(config.networkScope || "lan")}
 CORS_ORIGIN = ${JSON.stringify(String(config.corsOrigin || "*").trim() || "*")}
@@ -216,7 +238,7 @@ MAX_CUSTOM_LOG_FILES = 8
 HEADERS = {
     "Access-Control-Allow-Origin": CORS_ORIGIN,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Headers": "Content-Type, X-Thorondor-Agent-Token",
     "Access-Control-Max-Age": "600",
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8"
@@ -231,12 +253,15 @@ def central_api_root():
     base = str(CENTRAL_API_BASE_URL or "").rstrip("/")
     if not base:
         return ""
+    parsed = urlparse(base)
+    if not parsed.scheme or not parsed.netloc:
+        return ""
     if base.endswith("/thorondor/api"):
         return base
     return base + "/thorondor/api"
 
 
-def central_request(method, path, payload=None):
+def central_request(method, path, payload=None, enrollment=False):
     root = central_api_root()
     if not root:
         return None
@@ -245,8 +270,11 @@ def central_request(method, path, payload=None):
     headers = {
         "Accept": "application/json",
         "Content-Type": "application/json",
-        "User-Agent": f"Thorondor-Agent/{AGENT_VERSION}"
+        "User-Agent": f"Thorondor-Agent/{AGENT_VERSION}",
+        "X-Thorondor-Agent-Token": AGENT_TOKEN
     }
+    if enrollment and CENTRAL_ENROLLMENT_TOKEN:
+        headers["X-Thorondor-Agent-Enroll-Token"] = CENTRAL_ENROLLMENT_TOKEN
     if payload is not None:
         data = json.dumps(payload).encode("utf-8")
 
@@ -277,7 +305,7 @@ def register_with_central():
         },
         "heartbeat": now_iso()
     }
-    central_request("POST", "/agents/register", payload)
+    central_request("POST", "/agents/register", payload, enrollment=True)
 
 
 def run_command(command):
@@ -1549,6 +1577,21 @@ class ThorondorHandler(BaseHTTPRequestHandler):
         raw = self.rfile.read(length).decode("utf-8")
         return json.loads(raw) if raw.strip() else {}
 
+    def _request_token(self):
+        token = str(self.headers.get("X-Thorondor-Agent-Token", "") or "").strip()
+        if token:
+            return token
+        authorization = str(self.headers.get("Authorization", "") or "").strip()
+        if authorization.lower().startswith("bearer "):
+            return authorization[7:].strip()
+        return ""
+
+    def _is_local_authorized(self):
+        return bool(AGENT_TOKEN) and hmac.compare_digest(self._request_token(), AGENT_TOKEN)
+
+    def _write_unauthorized(self):
+        self._write_json(401, {"ok": False, "error": "agent_token_required"})
+
     def do_OPTIONS(self):
         self.send_response(204)
         for key, value in HEADERS.items():
@@ -1569,6 +1612,9 @@ class ThorondorHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path in ["/telemetry", "/logs"]:
+            if not self._is_local_authorized():
+                self._write_unauthorized()
+                return
             payload = collect_payload()
             if parsed.path == "/logs":
                 self._write_json(200, payload["logs"])
@@ -1577,6 +1623,9 @@ class ThorondorHandler(BaseHTTPRequestHandler):
             return
 
         if parsed.path == "/response/blocks":
+            if not self._is_local_authorized():
+                self._write_unauthorized()
+                return
             self._write_json(200, {
                 "blocked": list_blocked_ips(),
                 "timestamp": now_iso()
@@ -1589,6 +1638,9 @@ class ThorondorHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         try:
+            if parsed.path in ["/response/block-ip", "/response/unblock-ip"] and not self._is_local_authorized():
+                self._write_unauthorized()
+                return
             body = self._read_json_body()
             if parsed.path == "/response/block-ip":
                 self._write_json(200, block_ip(body.get("ip"), body.get("reason", "manual"), self.client_address[0]))
@@ -1986,6 +2038,7 @@ export function buildThorondorInstallInstructions(config) {
   const isWindows = config.targetOs === "windows";
   const baseUrl = normalizeReceiverBaseUrl(config);
   const port = Number(config.port) || 8765;
+  const agentToken = String(config.agentToken || "");
   const networkScope = normalizeThorondorNetworkScope(config.networkScope);
   const installerName = isWindows ? "crear-e-instalar-thorondor-agent-msi.ps1" : "install-thorondor-agent.sh";
   const serviceFileName = buildServiceFileName(config);
@@ -2023,10 +2076,11 @@ id ${config.installUser || "thorondor"}
 sudo -l -U ${config.installUser || "thorondor"} | grep -E 'THORONDOR_(FIREWALL|DIAGNOSTICS)' || true
 sudo find /etc/systemd/system -maxdepth 1 \\( -iname '*thorondor*.service' -o -iname '*-agent.service' \\) -print`;
   const localValidation = isWindows
-    ? `Invoke-RestMethod http://127.0.0.1:${port}/health
-Invoke-RestMethod http://127.0.0.1:${port}/telemetry | ConvertTo-Json -Depth 4`
+    ? `$thorondorHeaders = @{ 'X-Thorondor-Agent-Token' = '${agentToken}' }
+Invoke-RestMethod http://127.0.0.1:${port}/health
+Invoke-RestMethod -Headers $thorondorHeaders http://127.0.0.1:${port}/telemetry | ConvertTo-Json -Depth 4`
     : `curl -s http://127.0.0.1:${port}/health
-curl -s http://127.0.0.1:${port}/telemetry | python3 -m json.tool | head -60`;
+curl -s -H 'X-Thorondor-Agent-Token: ${agentToken}' http://127.0.0.1:${port}/telemetry | python3 -m json.tool | head -60`;
   const serviceCheck = isWindows
     ? `Get-ScheduledTask -TaskName ThorondorAgent -ErrorAction SilentlyContinue | Select-Object TaskName,State
 Get-ScheduledTaskInfo -TaskName ThorondorAgent -ErrorAction SilentlyContinue`
@@ -2036,7 +2090,7 @@ sudo journalctl -u ${serviceFileName} -n 80 --no-pager`;
   const remoteValidationCommand = networkScope === "local"
     ? null
     : `curl -v --connect-timeout 5 ${baseUrl}/health
-curl -s ${baseUrl}/telemetry`;
+curl -s -H 'X-Thorondor-Agent-Token: ${agentToken}' ${baseUrl}/telemetry`;
   const networkNote = networkScope === "local"
     ? "Este host está en modo local: no abras firewall. El agente debe responder solo en 127.0.0.1 desde la misma máquina."
     : networkScope === "lan"

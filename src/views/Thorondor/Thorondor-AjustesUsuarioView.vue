@@ -498,7 +498,7 @@ export default {
     async toggleUserAuthorization(user) {
       if (!user?.id || this.adminSavingUserId) return;
 
-      const nextValue = !Boolean(user.usuarioAutorizado || user.usuario_autorizado);
+      const nextValue = !(user.usuarioAutorizado || user.usuario_autorizado);
       try {
         this.adminSavingUserId = user.id;
         const updated = await updateThorondorAdminUserAuthorization(user.id, nextValue);

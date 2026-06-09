@@ -377,12 +377,12 @@ export default {
 
         deploymentScopeDescription() {
             if (this.isLocalDeployment) {
-                return "El navegador y el agente viven en la misma máquina. El agente escucha en 127.0.0.1 y no necesitas abrir firewall ni exponer puertos a la red.";
+                return "El agente escucha en 127.0.0.1 para validacion local y sincroniza la monitorizacion real con la API central autenticada.";
             }
             if (this.isLanDeployment) {
-                return "El navegador consulta al agente por una IP privada, una VPN o una red de administración. Debes permitir el puerto solo desde el cliente o la subred autorizada.";
+                return "El agente puede exponer health en IP privada o VPN, pero telemetria y comandos deben ir por la API central con token.";
             }
-            return "El navegador consulta al agente por IP pública o DNS. Usa firewall con origen restringido, HTTPS y proxy frontal si la aplicación se sirve por HTTPS.";
+            return "Usa remoto solo con firewall restrictivo. La ingesta publica debe ir por HTTPS contra la API central y token de agente.";
         },
 
         hostOsLabel() {
@@ -396,8 +396,8 @@ export default {
         installationHighlights() {
             return [
                 {
-                    label: "HTTP pull",
-                    copy: "En modo local/LAN el navegador consulta al agente por HTTP. Si activas API central, el agente también sincroniza heartbeat y telemetría contra el back."
+                    label: "API central",
+                    copy: "El front consulta el back con JWT y el agente sincroniza heartbeat, telemetria, logs y resultados con su token propio."
                 },
                 {
                     label: this.deploymentScopeLabel,
@@ -452,7 +452,7 @@ export default {
                     badge: this.deploymentScopeLabel,
                     copy: `Decide si el agente será local, LAN/VPN o remoto. En este momento está seleccionado ${this.deploymentScopeLabel}.`,
                     purpose: "Evita registrar una URL incorrecta y determina si habrá que abrir firewall, usar IP privada, VPN, DNS público o HTTPS.",
-                    expected: "Tienes clara la URL base que usará el navegador para consultar /health, /telemetry y logs."
+                    expected: "Tienes clara la API central publica y la URL local o de red para validar /health."
                 },
                 {
                     index: "02",
@@ -500,13 +500,13 @@ export default {
                     purpose: "Separa un fallo de instalación de un fallo de red y evita exponer el agente a orígenes innecesarios.",
                     expected: this.isLocalDeployment
                         ? "El puerto solo responde desde el propio host."
-                        : "Desde la máquina que abre Thorondor puedes llegar a /health sin abrir el puerto a todo Internet."
+                        : "Desde la red autorizada puedes llegar a /health sin abrir el puerto a todo Internet."
                 },
                 {
                     index: "07",
                     title: "Validar endpoints",
                     badge: "HTTP",
-                    copy: "Primero prueba /health en localhost, después /telemetry y finalmente la URL real que usará el navegador.",
+                    copy: "Primero prueba /health en localhost, despues /telemetry con token y finalmente la sincronizacion contra la API central.",
                     purpose: "Comprueba proceso, JSON, permisos de lectura, CORS, firewall, NAT, DNS y TLS antes de dar el host por bueno.",
                     expected: "Recibes JSON con status ok, heartbeat, system, metrics, security y logs."
                 },
@@ -585,7 +585,7 @@ export default {
                         {
                             title: "Validar health y telemetry",
                             badge: "HTTP",
-                            command: "curl -s http://127.0.0.1:<PUERTO>/health\ncurl -s http://127.0.0.1:<PUERTO>/telemetry | python3 -m json.tool | head -40",
+                            command: "curl -s http://127.0.0.1:<PUERTO>/health\ncurl -s -H 'X-Thorondor-Agent-Token: <TOKEN_AGENTE>' http://127.0.0.1:<PUERTO>/telemetry | python3 -m json.tool | head -40",
                             purpose: "Comprueba que el proceso escucha en local y que el payload JSON tiene estructura válida antes de abrir red o registrar el host.",
                             when: "Si falla la importación de psutil, reejecuta el instalador y revisa la salida de pip dentro del venv.",
                             expected: "JSON con status ok y telemetría con system, metrics, security, logs y heartbeat."
@@ -668,7 +668,7 @@ export default {
                         {
                             title: "Health y telemetry local",
                             badge: "HTTP",
-                            command: "Invoke-RestMethod http://127.0.0.1:<PUERTO>/health\nInvoke-RestMethod http://127.0.0.1:<PUERTO>/telemetry",
+                            command: "$headers = @{ 'X-Thorondor-Agent-Token' = '<TOKEN_AGENTE>' }\nInvoke-RestMethod http://127.0.0.1:<PUERTO>/health\nInvoke-RestMethod -Headers $headers http://127.0.0.1:<PUERTO>/telemetry",
                             purpose: "Comprueba el endpoint de salud y el payload completo en localhost antes de registrar la URL final en Thorondor.",
                             when: "Si el puerto está ocupado, cambia el puerto en el generador y regenera el agente.",
                             expected: "Objetos JSON con status ok, port, heartbeat, system y metrics."
@@ -715,8 +715,8 @@ export default {
                     badge: "JSON",
                     copy: "Comprueba estructura de payload antes de abrirlo a la red.",
                     command: this.isWindowsHostOs
-                        ? "Invoke-RestMethod http://127.0.0.1:<PUERTO>/telemetry | ConvertTo-Json -Depth 4"
-                        : "curl -s http://127.0.0.1:<PUERTO>/telemetry | python3 -m json.tool | grep -E '\"(system|metrics|security|logs|heartbeat)\"'",
+                        ? "$headers = @{ 'X-Thorondor-Agent-Token' = '<TOKEN_AGENTE>' }\nInvoke-RestMethod -Headers $headers http://127.0.0.1:<PUERTO>/telemetry | ConvertTo-Json -Depth 4"
+                        : "curl -s -H 'X-Thorondor-Agent-Token: <TOKEN_AGENTE>' http://127.0.0.1:<PUERTO>/telemetry | python3 -m json.tool | grep -E '\"(system|metrics|security|logs|heartbeat)\"'",
                     confirms: "El payload contiene los bloques raíz que consume Vuex.",
                     expected: "Aparecen system, metrics, security, logs y heartbeat."
                 }

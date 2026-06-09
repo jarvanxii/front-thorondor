@@ -40,9 +40,12 @@ export const THORONDOR_SOCIAL_AUTH_PROVIDERS = [
 
 const DEFAULT_CALLBACK_PATH = '/auth/callback'
 const THORONDOR_SESSION_STORAGE_KEY = 'thorondor.session'
-const THORONDOR_JWT_STORAGE_KEY = 'thorondor.jwt'
+const THORONDOR_JWT_STORAGE_KEY = 'thorondor.jwt.session'
+const THORONDOR_LEGACY_JWT_STORAGE_KEY = 'thorondor.jwt'
 const AUTH_REQUEST_TIMEOUT_MS = 15000
 const TOKEN_EXPIRY_SKEW_MS = 30000
+
+let thorondorJwtMemoryToken = null
 
 function getEnvValue(key) {
   return import.meta.env[key]?.trim?.() || ''
@@ -179,9 +182,7 @@ export function isThorondorJwtTokenValid(token) {
   const normalized = normalizeThorondorJwtToken(token)
   if (!normalized) return false
 
-  if (!normalized.expiresAt) {
-    return true
-  }
+  if (!normalized.expiresAt) return false
 
   const expiry = new Date(normalized.expiresAt).getTime()
   return Number.isFinite(expiry) && expiry > Date.now() + TOKEN_EXPIRY_SKEW_MS
@@ -190,13 +191,19 @@ export function isThorondorJwtTokenValid(token) {
 export function getStoredThorondorJwtToken() {
   if (typeof window === 'undefined') return null
 
+  if (isThorondorJwtTokenValid(thorondorJwtMemoryToken)) {
+    return thorondorJwtMemoryToken
+  }
+
   try {
-    const raw = window.localStorage.getItem(THORONDOR_JWT_STORAGE_KEY)
+    window.localStorage.removeItem(THORONDOR_LEGACY_JWT_STORAGE_KEY)
+    const raw = window.sessionStorage.getItem(THORONDOR_JWT_STORAGE_KEY)
     const token = normalizeThorondorJwtToken(raw ? JSON.parse(raw) : null)
     if (!isThorondorJwtTokenValid(token)) {
       clearThorondorJwtToken()
       return null
     }
+    thorondorJwtMemoryToken = token
     return token
   } catch {
     clearThorondorJwtToken()
@@ -213,21 +220,25 @@ export function saveThorondorJwtToken(payload) {
     return null
   }
 
+  thorondorJwtMemoryToken = token
   try {
-    window.localStorage.setItem(THORONDOR_JWT_STORAGE_KEY, JSON.stringify(token))
+    window.localStorage.removeItem(THORONDOR_LEGACY_JWT_STORAGE_KEY)
+    window.sessionStorage.setItem(THORONDOR_JWT_STORAGE_KEY, JSON.stringify(token))
   } catch {
-    // El JWT tambien vive en memoria de Vuex; localStorage solo evita pedirlo en cada render.
+    // El JWT tambien vive en memoria de Vuex; sessionStorage solo evita pedirlo en cada render.
   }
   return token
 }
 
 export function clearThorondorJwtToken() {
+  thorondorJwtMemoryToken = null
   if (typeof window === 'undefined') return
 
   try {
-    window.localStorage.removeItem(THORONDOR_JWT_STORAGE_KEY)
+    window.sessionStorage.removeItem(THORONDOR_JWT_STORAGE_KEY)
+    window.localStorage.removeItem(THORONDOR_LEGACY_JWT_STORAGE_KEY)
   } catch {
-    // Nada que limpiar si el navegador bloquea localStorage.
+    // Nada que limpiar si el navegador bloquea el storage.
   }
 }
 

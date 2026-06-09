@@ -145,19 +145,19 @@ export const THORONDOR_NETWORK_SCOPE_OPTIONS = [
     value: "local",
     label: "Localhost",
     shortLabel: "Local",
-    copy: "El navegador consulta el agente en el mismo equipo, normalmente mediante http://127.0.0.1:<puerto>."
+    copy: "El agente escucha solo en localhost para comprobaciones locales; la monitorizacion real se sincroniza contra la API central."
   },
   {
     value: "lan",
     label: "LAN / VPN",
     shortLabel: "LAN",
-    copy: "El navegador llega al agente por IP privada, VPN o red de administración. Es el modo recomendado para laboratorio y homelab."
+    copy: "El agente puede escuchar en IP privada o VPN, pero telemetria y comandos viajan por la API central autenticada."
   },
   {
     value: "public",
     label: "Remoto / IP pública / DNS",
     shortLabel: "Remoto",
-    copy: "El navegador llega al agente mediante una IP pública o un dominio. Usa firewall restrictivo y, si la web va por HTTPS, endpoint HTTPS."
+    copy: "Usa este modo solo con firewall restrictivo; la ingesta publica debe pasar por la API central HTTPS y token de agente."
   }
 ];
 
@@ -218,6 +218,15 @@ export const THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS = [
 
 function joinThorondorLogPaths(paths) {
   return paths.join("\n");
+}
+
+function getDefaultThorondorAgentCentralApiBaseUrl() {
+  return String(
+    import.meta.env?.VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL
+      || import.meta.env?.VITE_THORONDOR_API_BASE_URL
+      || import.meta.env?.VITE_API_BASE_URL
+      || ""
+  ).trim();
 }
 
 function normalizeLogPathList(value) {
@@ -422,6 +431,7 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
     distro: defaultDistro,
     osVersion: getThorondorDefaultOsVersionForTarget(normalizedTargetOs, defaultDistro),
     receiverUrl: "http://127.0.0.1:8765",
+    centralApiBaseUrl: getDefaultThorondorAgentCentralApiBaseUrl(),
     networkScope: "local",
     corsOrigin: "*",
     port: 8765,

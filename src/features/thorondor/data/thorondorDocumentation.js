@@ -1,19 +1,19 @@
 export const thorondorDocumentation = `
 # Thorondor como SIEM personal
 
-Thorondor es una consola de observabilidad y seguridad para hosts propios. El modelo base es deliberadamente simple:
-cada host ejecuta un agente Python, el navegador consulta a esos agentes por HTTP y la aplicación conserva histórico en
-IndexedDB. Si se activa la persistencia remota, ese mismo dataset se sincroniza con una API respaldada por base de datos
-para mantener logs, alertas, reglas y agentes disponibles desde cualquier navegador.
+Thorondor es una consola de observabilidad y seguridad para hosts propios. El modelo base actual usa una API central:
+cada host ejecuta un agente Python, el agente se registra contra el back con token propio y sincroniza telemetria,
+logs y resultados de comandos por HTTPS. La aplicacion conserva IndexedDB como cache local y, si el usuario esta
+autorizado, sincroniza su workspace privado con una base de datos por API.
 
 ## Componentes
 
-- **Agente Python**: proceso HTTP ligero instalado en Linux o Windows. Expone \`/health\`, \`/telemetry\`, \`/logs\` y endpoints manuales de respuesta.
-- **Frontend Vue**: registra agentes, ejecuta polling, normaliza la telemetría y pinta dashboard, detalle y alertas.
+- **Agente Python**: proceso instalado en Linux o Windows. Expone \`/health\` para comprobacion local y protege \`/telemetry\`, \`/logs\` y respuesta manual con token de agente.
+- **Frontend Vue**: autentica al usuario, consulta la consola central con JWT y pinta dashboard, detalle y alertas.
 - **IndexedDB**: base local del navegador para snapshots, eventos, logs, reglas, alertas y estado de conexión.
-- **Persistencia remota**: API opcional con base de datos para workspaces sincronizados.
+- **Persistencia remota**: API con base de datos para workspaces sincronizados y aislados por usuario autorizado.
 - **Motor de reglas**: evaluación JavaScript de umbrales, heartbeat, autenticación, sudo e integridad de ficheros.
-- **Empaquetado Windows**: asistente único que genera `ThorondorAgent.msi`, lo deja en el Escritorio y lo instala con `msiexec`.
+- **Empaquetado Windows**: asistente único que genera \`ThorondorAgent.msi\`, lo deja en el Escritorio y lo instala con \`msiexec\`.
 
 ## Telemetría
 
@@ -27,10 +27,10 @@ El payload de \`/telemetry\` se organiza en bloques estables:
 
 ## Comunicacion
 
-El navegador hace peticiones HTTP al endpoint registrado del agente. Ese endpoint puede ser \`127.0.0.1\`, una IP privada,
-una IP de VPN, una IP pública o un FQDN. El host no llama al frontend: el flujo siempre es pull desde el navegador.
-Eso reduce dependencias, pero exige conectividad directa desde el navegador al puerto o reverse proxy del agente. Si el
-endpoint es público, usa allowlist de origen en firewall, TLS y un proxy frontal controlado cuando la aplicación se sirva por HTTPS.
+El navegador no debe consultar agentes directamente en despliegues reales. El front llama al back con
+\`Authorization: Bearer <jwt>\`; el agente llama a \`/thorondor/api/agents/**\` con \`X-Thorondor-Agent-Token\`.
+El primer registro requiere ademas \`X-Thorondor-Agent-Enroll-Token\`. Si se usa Cloudflare Tunnel, front y API deben ir
+por HTTPS y los puertos locales de agentes no deben abrirse a Internet salvo con firewall restrictivo.
 
 ## Persistencia y retención
 

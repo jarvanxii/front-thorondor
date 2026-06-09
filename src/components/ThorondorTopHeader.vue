@@ -89,7 +89,7 @@
                   <div class="modal-panel-heading">
                     <span>Perfil local</span>
                     <strong>Identidad del operador</strong>
-                    <small>Estos datos quedan en este navegador hasta que integremos JWT y usuarios reales.</small>
+                    <small>Estos datos complementan la sesion OAuth/JWT activa y solo ajustan la vista local.</small>
                   </div>
                   <div class="settings-form-grid">
                     <label class="settings-field">
@@ -356,12 +356,12 @@ export default {
         {
           key: 'lockInactiveSession',
           label: 'Bloquear sesiones inactivas',
-          copy: 'Dejar preparado el cierre de acceso local cuando exista autenticación real.',
+          copy: 'Cerrar la vista local tras inactividad aunque la sesion OAuth siga activa.',
         },
         {
           key: 'twoFactorPrepared',
           label: 'Doble factor preparado',
-          copy: 'Reserva la opción para activar 2FA cuando el login con JWT esté integrado.',
+          copy: 'Reserva la opcion para exigir 2FA desde el proveedor OAuth cuando se active la politica.',
         },
       ],
       emailSettingItems: [

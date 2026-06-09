@@ -151,6 +151,36 @@
                     </div>
                     <input id="receiver-url" v-model="agentDraft.receiverUrl" :placeholder="receiverUrlPlaceholder" class="form-control input-dark" />
                 </div>
+                <div class="control-field">
+                    <div class="field-heading">
+                        <label class="field-label" for="central-api-base-url">URL publica de la API central</label>
+                        <div class="context-help">
+                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'centralApiBaseUrl' }" aria-label="Ayuda sobre la API central" @click.stop="togglePinnedHelp('centralApiBaseUrl')">
+                                ?
+                                <span class="help-popover" @click.stop>
+                                    <strong>{{ fieldGuides.centralApiBaseUrl.title }}</strong>
+                                    {{ fieldGuides.centralApiBaseUrl.copy }}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <input id="central-api-base-url" v-model="agentDraft.centralApiBaseUrl" :placeholder="fieldGuides.centralApiBaseUrl.placeholder" class="form-control input-dark" />
+                </div>
+                <div class="control-field">
+                    <div class="field-heading">
+                        <label class="field-label" for="central-enrollment-token">Token de enrolamiento</label>
+                        <div class="context-help">
+                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'centralEnrollmentToken' }" aria-label="Ayuda sobre el token de enrolamiento" @click.stop="togglePinnedHelp('centralEnrollmentToken')">
+                                ?
+                                <span class="help-popover" @click.stop>
+                                    <strong>{{ fieldGuides.centralEnrollmentToken.title }}</strong>
+                                    {{ fieldGuides.centralEnrollmentToken.copy }}
+                                </span>
+                            </button>
+                        </div>
+                    </div>
+                    <input id="central-enrollment-token" v-model="centralEnrollmentToken" type="password" autocomplete="off" :placeholder="fieldGuides.centralEnrollmentToken.placeholder" class="form-control input-dark" />
+                </div>
                 <div v-if="!isLocalScope" class="control-field">
                     <div class="field-heading">
                         <label class="field-label" for="host-ip">{{ hostAddressLabel }}</label>
@@ -586,7 +616,7 @@
                         </div>
                         <div class="embedded-artifact-row">
                             <label>Validación</label>
-                            <span>Usa las instrucciones generadas para comprobar /health y /telemetry tras ejecutar el instalador.</span>
+                            <span>Usa las instrucciones generadas para comprobar /health y /telemetry con token tras ejecutar el instalador.</span>
                         </div>
                     </div>
                 </div>
@@ -796,7 +826,17 @@ const FIELD_GUIDES = {
     receiverUrl: {
         title: "Por qué registrar esta URL",
         placeholder: "Ej. http://127.0.0.1:8765, http://192.168.1.50:8765 o https://thorondor.midominio.com",
-        copy: "Es la dirección base que usará este navegador para consultar al agente. Cambia según el modo: Local usa 127.0.0.1, LAN usa IP privada o VPN, Remoto usa IP pública o DNS."
+        copy: "Es la direccion local o de red que queda registrada para comprobar el servicio del agente. La telemetria operativa viaja por la API central."
+    },
+    centralApiBaseUrl: {
+        title: "API central alcanzable por el agente",
+        placeholder: "Ej. https://api.thorondor.midominio.com o http://192.168.0.253:8082",
+        copy: "Debe ser una URL absoluta alcanzable desde el host monitorizado. No uses /api aqui: esa ruta solo funciona dentro del navegador."
+    },
+    centralEnrollmentToken: {
+        title: "Token de alta del agente",
+        placeholder: "Pega el valor de THORONDOR_AGENT_ENROLLMENT_TOKEN",
+        copy: "Autoriza el primer registro del agente en el back. El instalador genera ademas un token propio del agente y el back guarda solo su hash."
     },
     networkScope: {
         title: "Alcance de red",
@@ -854,6 +894,8 @@ const ACTION_HELP_CARDS = [
 const REQUIRED_GENERATION_FIELDS_LINUX = [
     { key: "displayName", label: "Nombre visible del host", id: "host-display-name" },
     { key: "systemName", label: "Identificador técnico del sistema", id: "system-name" },
+    { key: "centralApiBaseUrl", label: "URL publica de la API central", id: "central-api-base-url" },
+    { key: "centralEnrollmentToken", label: "Token de enrolamiento", id: "central-enrollment-token" },
     { key: "receiverUrl", label: "URL accesible del agente", id: "receiver-url" },
     { key: "port", label: "Puerto HTTP del agente", id: "receiver-port" }
 ];
@@ -861,6 +903,8 @@ const REQUIRED_GENERATION_FIELDS_LINUX = [
 const REQUIRED_GENERATION_FIELDS_WINDOWS = [
     { key: "displayName", label: "Nombre visible del host", id: "host-display-name" },
     { key: "systemName", label: "Identificador técnico del sistema", id: "system-name" },
+    { key: "centralApiBaseUrl", label: "URL publica de la API central", id: "central-api-base-url" },
+    { key: "centralEnrollmentToken", label: "Token de enrolamiento", id: "central-enrollment-token" },
     { key: "receiverUrl", label: "URL accesible del agente", id: "receiver-url" },
     { key: "port", label: "Puerto HTTP del agente", id: "receiver-port" }
 ];
@@ -885,6 +929,18 @@ function hasValidPort(value) {
     return Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535;
 }
 
+function generateSecretToken(byteLength = 32) {
+    const bytes = new Uint8Array(byteLength);
+    if (globalThis.crypto?.getRandomValues) {
+        globalThis.crypto.getRandomValues(bytes);
+    } else {
+        for (let index = 0; index < bytes.length; index += 1) {
+            bytes[index] = Math.floor(Math.random() * 256);
+        }
+    }
+    return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
 export default {
     name: "ThorondorGeneradorAgentesView",
 
@@ -900,6 +956,7 @@ export default {
             agentDraft: buildThorondorAgentDraft(),
             generatedBundle: null,
             generatedSnapshot: null,
+            centralEnrollmentToken: "",
             pinnedHelpKey: null
         };
     },
@@ -1252,6 +1309,8 @@ export default {
             const fields = [...baseFields];
 
             return fields.filter(({ key }) => {
+                if (key === "centralEnrollmentToken") return !hasTrimmedText(this.centralEnrollmentToken);
+                if (key === "centralApiBaseUrl") return !hasValidHttpUrl(draft.centralApiBaseUrl);
                 if (key === "receiverUrl") return !hasValidHttpUrl(draft.receiverUrl);
                 if (key === "port") return !hasValidPort(draft.port);
                 return !hasTrimmedText(draft[key]);
@@ -1294,6 +1353,7 @@ export default {
                 distro: normalizedDistro,
                 osVersion: normalizedOsVersion,
                 receiverUrl: String(draft.receiverUrl ?? base.receiverUrl),
+                centralApiBaseUrl: String(draft.centralApiBaseUrl ?? base.centralApiBaseUrl),
                 networkScope: normalizeThorondorNetworkScope(draft.networkScope ?? base.networkScope),
                 corsOrigin: String(draft.corsOrigin ?? base.corsOrigin),
                 hostIp: String(draft.hostIp ?? base.hostIp),
@@ -1331,6 +1391,9 @@ export default {
                 distro: draft.distro || "Otra",
                 osVersion: draft.osVersion.trim(),
                 receiverUrl: record.receiverUrl,
+                centralApiBaseUrl: record.centralApiBaseUrl,
+                centralEnrollmentToken: this.centralEnrollmentToken.trim(),
+                agentToken: generateSecretToken(),
                 networkScope: record.networkScope,
                 corsOrigin: record.corsOrigin,
                 hostIp: record.hostIp,
@@ -1369,6 +1432,7 @@ export default {
                 distro: normalizedSource.distro || "Otra",
                 osVersion: normalizedSource.osVersion.trim(),
                 receiverUrl,
+                centralApiBaseUrl: normalizedSource.centralApiBaseUrl.trim(),
                 networkScope,
                 corsOrigin: normalizedSource.corsOrigin.trim() || "*",
                 hostIp,

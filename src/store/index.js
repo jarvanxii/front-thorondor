@@ -29,11 +29,7 @@ import {
   sweepThorondorPersistence,
 } from '@/features/thorondor/services/thorondorPersistence'
 import {
-  blockThorondorIp as postThorondorIpBlock,
-  buildThorondorAgentEndpoints,
   buildThorondorRequestRules,
-  fetchThorondorBlockedIps,
-  unblockThorondorIp as postThorondorIpUnblock,
 } from '@/features/thorondor/services/thorondorApi'
 import {
   createThorondorCentralCommand,
@@ -431,20 +427,6 @@ function normalizeErrorDetails(error) {
   }
 }
 
-function normalizeResponseDetails(response) {
-  return {
-    message: response?.message || response?.error || '',
-    detail: response?.detail || response?.stderr || response?.stdout || '',
-    status: 0,
-    statusText: '',
-    method: '',
-    endpoint: '',
-    code: response?.error || '',
-    hints: Array.isArray(response?.hints) ? response.hints : [],
-    payload: response || null,
-  }
-}
-
 function hasThorondorApiToken(token) {
   return isThorondorJwtTokenValid(token)
 }
@@ -576,7 +558,7 @@ export default createStore({
         authenticated: false,
         user: null,
         providers: [],
-        ...(value || {}),
+        ...value,
       }
     },
 
@@ -1136,53 +1118,6 @@ export default createStore({
         })
         return blocked
       }
-
-      const endpoint = buildThorondorAgentEndpoints(agent).blocksUrl
-      commit('setThorondorIpBlockOperation', {
-        agentId: agent.id,
-        status: 'loading',
-        action: 'refresh',
-        message: 'Consultando bloqueos del agente...',
-        endpoint,
-        method: 'GET',
-      })
-
-      try {
-        const response = await fetchThorondorBlockedIps(agent)
-        const blocked = Array.isArray(response?.blocked) ? response.blocked : []
-        commit('setThorondorBlockedIps', { agentId: agent.id, blocked })
-        commit('setThorondorIpBlockOperation', {
-          agentId: agent.id,
-          status: 'success',
-          action: 'refresh',
-          message: `${blocked.length} bloqueo(s) sincronizados desde el agente.`,
-          endpoint,
-          method: 'GET',
-          payload: response || null,
-        })
-        return blocked
-      } catch (error) {
-        const details = normalizeErrorDetails(error)
-        commit('setThorondorIpBlockOperation', {
-          agentId: agent.id,
-          status: 'error',
-          action: 'refresh',
-          message: details.message,
-          detail: details.detail,
-          statusCode: details.status,
-          statusText: details.statusText,
-          method: details.method || 'GET',
-          endpoint: details.endpoint || endpoint,
-          code: details.code,
-          hints: details.hints,
-          payload: details.payload,
-        })
-        commit(
-          'pushThorondorError',
-          `No se pudieron consultar los bloqueos de ${agent.displayName}: ${error.message}`,
-        )
-        throw error
-      }
     },
 
     async blockThorondorIp({ state, commit, dispatch }, payload) {
@@ -1272,88 +1207,6 @@ export default createStore({
           throw error
         }
       }
-
-      const endpoint = buildThorondorAgentEndpoints(agent).blockIpUrl
-      commit('setThorondorIpBlockOperation', {
-        agentId: agent.id,
-        status: 'loading',
-        action: 'block',
-        ip: payload.ip,
-        message: `Solicitando bloqueo de ${payload.ip}...`,
-        endpoint,
-        method: 'POST',
-      })
-
-      try {
-        const response = await postThorondorIpBlock(agent, {
-          ip: payload.ip,
-          reason: payload.reason || 'manual',
-        })
-        const blocked = Array.isArray(response?.blocked) ? response.blocked : []
-        const ok = response?.ok !== false
-        const details = normalizeResponseDetails(response)
-        commit('setThorondorBlockedIps', { agentId: agent.id, blocked })
-        commit('recordThorondorResponseAction', {
-          agentId: agent.id,
-          agentName: agent.displayName,
-          action: 'block',
-          ip: payload.ip,
-          ok,
-          message: details.message || '',
-          detail: details.detail || '',
-        })
-        commit('setThorondorIpBlockOperation', {
-          agentId: agent.id,
-          status: ok ? 'success' : 'error',
-          action: 'block',
-          ip: payload.ip,
-          message: details.message || (ok ? 'IP bloqueada.' : 'No se pudo bloquear la IP.'),
-          detail: details.detail,
-          endpoint,
-          method: 'POST',
-          code: details.code,
-          hints: ok ? [] : details.hints,
-          payload: response || null,
-        })
-        if (!ok) {
-          commit(
-            'pushThorondorError',
-            `No se pudo bloquear ${payload.ip} en ${agent.displayName}: ${details.message || details.detail || 'el agente devolvio ok=false'}`,
-          )
-        }
-        return response
-      } catch (error) {
-        const details = normalizeErrorDetails(error)
-        commit('recordThorondorResponseAction', {
-          agentId: agent.id,
-          agentName: agent.displayName,
-          action: 'block',
-          ip: payload.ip,
-          ok: false,
-          message: details.message,
-          detail: details.detail,
-        })
-        commit('setThorondorIpBlockOperation', {
-          agentId: agent.id,
-          status: 'error',
-          action: 'block',
-          ip: payload.ip,
-          message: details.message,
-          detail: details.detail,
-          statusCode: details.status,
-          statusText: details.statusText,
-          method: details.method || 'POST',
-          endpoint: details.endpoint || endpoint,
-          code: details.code,
-          hints: details.hints,
-          payload: details.payload,
-        })
-        commit(
-          'pushThorondorError',
-          `No se pudo bloquear ${payload.ip} en ${agent.displayName}: ${error.message}`,
-        )
-        throw error
-      }
     },
 
     async unblockThorondorIp({ state, commit, dispatch }, payload) {
@@ -1442,85 +1295,6 @@ export default createStore({
           })
           throw error
         }
-      }
-
-      const endpoint = buildThorondorAgentEndpoints(agent).unblockIpUrl
-      commit('setThorondorIpBlockOperation', {
-        agentId: agent.id,
-        status: 'loading',
-        action: 'unblock',
-        ip: payload.ip,
-        message: `Solicitando desbloqueo de ${payload.ip}...`,
-        endpoint,
-        method: 'POST',
-      })
-
-      try {
-        const response = await postThorondorIpUnblock(agent, { ip: payload.ip })
-        const blocked = Array.isArray(response?.blocked) ? response.blocked : []
-        const ok = response?.ok !== false
-        const details = normalizeResponseDetails(response)
-        commit('setThorondorBlockedIps', { agentId: agent.id, blocked })
-        commit('recordThorondorResponseAction', {
-          agentId: agent.id,
-          agentName: agent.displayName,
-          action: 'unblock',
-          ip: payload.ip,
-          ok,
-          message: details.message || '',
-          detail: details.detail || '',
-        })
-        commit('setThorondorIpBlockOperation', {
-          agentId: agent.id,
-          status: ok ? 'success' : 'error',
-          action: 'unblock',
-          ip: payload.ip,
-          message: details.message || (ok ? 'IP desbloqueada.' : 'No se pudo desbloquear la IP.'),
-          detail: details.detail,
-          endpoint,
-          method: 'POST',
-          code: details.code,
-          hints: ok ? [] : details.hints,
-          payload: response || null,
-        })
-        if (!ok) {
-          commit(
-            'pushThorondorError',
-            `No se pudo desbloquear ${payload.ip} en ${agent.displayName}: ${details.message || details.detail || 'el agente devolvio ok=false'}`,
-          )
-        }
-        return response
-      } catch (error) {
-        const details = normalizeErrorDetails(error)
-        commit('recordThorondorResponseAction', {
-          agentId: agent.id,
-          agentName: agent.displayName,
-          action: 'unblock',
-          ip: payload.ip,
-          ok: false,
-          message: details.message,
-          detail: details.detail,
-        })
-        commit('setThorondorIpBlockOperation', {
-          agentId: agent.id,
-          status: 'error',
-          action: 'unblock',
-          ip: payload.ip,
-          message: details.message,
-          detail: details.detail,
-          statusCode: details.status,
-          statusText: details.statusText,
-          method: details.method || 'POST',
-          endpoint: details.endpoint || endpoint,
-          code: details.code,
-          hints: details.hints,
-          payload: details.payload,
-        })
-        commit(
-          'pushThorondorError',
-          `No se pudo desbloquear ${payload.ip} en ${agent.displayName}: ${error.message}`,
-        )
-        throw error
       }
     },
 
