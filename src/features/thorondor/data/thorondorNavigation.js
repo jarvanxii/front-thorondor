@@ -1,10 +1,10 @@
 export const THORONDOR_TOP_NAV_ITEMS = [
   { label: 'Inicio', routeName: 'thorondor-information' },
-  { label: 'Dashboard', routeName: 'thorondor-dashboard' },
-  { label: 'Hosts', routeName: 'thorondor-agents' },
-  { label: 'Eventos', routeName: 'thorondor-events' },
   { label: 'Instalación', routeName: 'thorondor-installation-guide' },
-  { label: 'Generador', routeName: 'thorondor-agent-generator' },
+  { label: 'Generador de Agentes', routeName: 'thorondor-agent-generator' },
+  { label: 'Dashboard', routeName: 'thorondor-dashboard' },
+  { label: 'Eventos', routeName: 'thorondor-events' },
+  { label: 'Hosts', routeName: 'thorondor-agents' },
 ]
 
 export const THORONDOR_SIDEBAR_GROUPS = [
