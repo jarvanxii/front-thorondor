@@ -152,7 +152,7 @@ export default {
 
 .login-layout {
   display: grid;
-  grid-template-columns: minmax(0, min(100svh, calc(100vw - 420px))) minmax(420px, 1fr);
+  grid-template-columns: minmax(0, min(150svh, calc(100vw - 460px))) minmax(460px, 1fr);
   width: 100%;
   height: 100vh;
   height: 100svh;
@@ -179,14 +179,7 @@ export default {
   position: absolute;
   inset: 0;
   z-index: 1;
-  background:
-    linear-gradient(90deg, rgba(2, 4, 7, 0.04) 0%, rgba(2, 4, 7, 0.02) 64%, rgba(2, 4, 7, 0.34) 100%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.026) 1px, transparent 1px);
-  background-size:
-    auto,
-    64px 64px,
-    64px 64px;
+  background: linear-gradient(90deg, rgba(2, 4, 7, 0.02) 0%, rgba(2, 4, 7, 0.02) 68%, rgba(2, 4, 7, 0.34) 100%);
   content: '';
   pointer-events: none;
 }
@@ -216,7 +209,7 @@ export default {
 .login-card {
   position: relative;
   align-content: center;
-  justify-items: end;
+  justify-items: center;
   width: 100%;
   height: 100%;
   gap: 14px;
@@ -224,13 +217,22 @@ export default {
   min-height: 100svh;
   overflow: hidden;
   padding: clamp(24px, 3.5vw, 44px);
-  padding-right: clamp(32px, 5vw, 96px);
+  padding-left: clamp(32px, 4vw, 78px);
+  padding-right: clamp(24px, 3vw, 56px);
   border-left: 1px solid rgba(236, 194, 119, 0.24);
   border-radius: 0;
   background:
     radial-gradient(circle at 52% 18%, rgba(218, 166, 92, 0.14), transparent 34%),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
     linear-gradient(180deg, rgba(19, 23, 31, 0.98), rgba(6, 9, 14, 0.995)),
     #070a0f;
+  background-size:
+    auto,
+    64px 64px,
+    64px 64px,
+    auto,
+    auto;
   box-shadow:
     -32px 0 86px rgba(0, 0, 0, 0.46),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -254,9 +256,11 @@ export default {
 
 .login-card-header {
   gap: 7px;
+  text-align: center;
 }
 
 .section-kicker {
+  justify-self: center;
   color: #d6a15c;
   font-size: 0.76rem;
   font-weight: 850;
