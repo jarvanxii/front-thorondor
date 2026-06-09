@@ -28,8 +28,8 @@ Thorondor ya incluye pantalla de login, acceso local temporal y botones de acces
 Configura la API en `.env` a partir de `.env.example`:
 
 ```sh
-VITE_THORONDOR_API_BASE_URL=http://localhost:18080
-VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL=http://localhost:18080
+VITE_THORONDOR_API_BASE_URL=http://localhost:8088
+VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL=http://localhost:8088
 VITE_THORONDOR_AUTH_CALLBACK_PATH=/auth/callback
 ```
 
@@ -37,8 +37,16 @@ En produccion con Nginx o Cloudflare Tunnel bajo el mismo origen, usa el proxy d
 
 ```sh
 VITE_THORONDOR_API_BASE_URL=/api
-VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL=https://<api-publica>
+VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL=https://api.thorondor.app
 ```
+
+Despliegue previsto:
+
+- Nginx sirve el front compilado en `127.0.0.1:444`.
+- La API Spring Boot escucha en `127.0.0.1:8088`.
+- Cloudflare Tunnel publica `thorondor.app` y `www.thorondor.app` contra el front.
+- `api.thorondor.app` apunta a la API para OAuth, agentes y llamadas externas.
+- No abrir `444` ni `8088` en el router; `cloudflared` crea la salida hacia Cloudflare.
 
 El frontend redirige a estos endpoints de la API:
 
@@ -57,10 +65,10 @@ Los usuarios OAuth nacen con `usuario_admin=false` y `usuario_autorizado=false`.
 
 Los callbacks OAuth registrados en cada proveedor deben apuntar al back publico:
 
-- `https://<api-publica>/login/oauth2/code/google`
-- `https://<api-publica>/login/oauth2/code/microsoft`
-- `https://<api-publica>/login/oauth2/code/github`
-- `https://<api-publica>/login/oauth2/code/apple`
+- `https://api.thorondor.app/login/oauth2/code/google`
+- `https://api.thorondor.app/login/oauth2/code/microsoft`
+- `https://api.thorondor.app/login/oauth2/code/github`
+- `https://api.thorondor.app/login/oauth2/code/apple`
 
 ## Persistencia de datos
 
