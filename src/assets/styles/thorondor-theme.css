@@ -1,7 +1,7 @@
 .thorondor-page {
   --thorondor-header-offset: var(--main-header-height, 68px);
-  --thorondor-content-gap: 28px;
-  --thorondor-content-gap-mobile: 18px;
+  --thorondor-content-gap: 22px;
+  --thorondor-content-gap-mobile: 14px;
   --thorondor-surface: #151a21;
   --thorondor-surface-strong: #0b1016;
   --thorondor-line: rgba(236, 194, 119, 0.18);
@@ -10,7 +10,7 @@
   width: min(100%, 1480px);
   min-height: calc(100vh - var(--main-header-height, 68px));
   margin: 0 auto;
-  padding: var(--thorondor-content-gap) clamp(20px, 2.4vw, 38px) 64px;
+  padding: var(--thorondor-content-gap) clamp(18px, 2.2vw, 32px) 56px;
   background: transparent;
   font-family: 'Inter', sans-serif;
   overflow-x: clip;
@@ -22,11 +22,11 @@
   background: var(--thorondor-panel-background);
   border: 1px solid var(--thorondor-line);
   border-radius: 4px;
-  padding: 26px;
-  margin-bottom: 24px;
+  padding: 20px;
+  margin-bottom: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    0 20px 44px rgba(0, 0, 0, 0.24);
+    inset 0 1px 0 rgba(255, 255, 255, 0.028),
+    0 12px 26px rgba(0, 0, 0, 0.18);
   min-width: 0;
 }
 
@@ -41,8 +41,8 @@
 
 .thorondor-page .intro-box {
   display: grid;
-  gap: 24px;
-  padding-bottom: 30px;
+  gap: 18px;
+  padding-bottom: 22px;
 }
 
 .thorondor-page .intro-box .section-heading > .section-kicker:first-child {
@@ -53,21 +53,21 @@
 .thorondor-page .section-topline {
   display: grid;
   grid-template-columns: minmax(0, 1.45fr) minmax(220px, 320px);
-  gap: 24px;
+  gap: 18px;
   align-items: start;
 }
 
 .thorondor-page .section-heading,
 .thorondor-page .module-header {
   display: grid;
-  gap: 8px;
+  gap: 7px;
 }
 
 .thorondor-page .section-kicker {
   color: var(--thorondor-gold);
-  font-size: 0.78rem;
-  font-weight: 700;
-  letter-spacing: 0.12em;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
@@ -75,22 +75,24 @@
 .thorondor-page .module-title {
   margin: 0;
   color: #f8fafc;
-  font-size: clamp(1.56rem, 2.15vw, 2.12rem);
-  font-weight: 700;
+  font-size: clamp(1.28rem, 1.75vw, 1.72rem);
+  font-weight: 780;
+  line-height: 1.14;
 }
 
 .thorondor-page .section-copy,
 .thorondor-page .module-copy {
   margin: 0;
   color: #cfd6de;
-  line-height: 1.75;
-  max-width: 90ch;
+  font-size: 0.95rem;
+  line-height: 1.56;
+  max-width: 76ch;
 }
 
 .thorondor-page .intro-summary,
 .thorondor-page .phase-badge-block {
   display: grid;
-  gap: 10px;
+  gap: 8px;
 }
 
 .thorondor-page .intro-summary {
@@ -136,7 +138,7 @@
 
 .thorondor-page .intro-point {
   display: grid;
-  gap: 10px;
+  gap: 8px;
   min-width: 0;
   padding: 0 22px;
   border-right: 1px solid rgba(236, 194, 119, 0.12);
@@ -161,14 +163,15 @@
 
 .thorondor-page .intro-point span {
   color: #aebbd0;
-  line-height: 1.65;
+  font-size: 0.94rem;
+  line-height: 1.52;
 }
 
 .thorondor-page .guide-grid,
 .thorondor-page .metric-grid,
 .thorondor-page .card-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .thorondor-page .guide-grid {
@@ -223,8 +226,8 @@
 .thorondor-page .metric-card,
 .thorondor-page .signal-card {
   display: grid;
-  gap: 8px;
-  padding: 16px;
+  gap: 7px;
+  padding: 14px;
   height: 100%;
 }
 
@@ -233,9 +236,9 @@
 .thorondor-page .signal-card label,
 .thorondor-page .field-label {
   color: #dce3eb;
-  font-size: 0.81rem;
-  font-weight: 700;
-  letter-spacing: 0.04em;
+  font-size: 0.8rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
   text-transform: uppercase;
 }
 
@@ -244,7 +247,8 @@
 .thorondor-page .signal-card small,
 .thorondor-page .helper-copy {
   color: #9aa6b3;
-  line-height: 1.65;
+  font-size: 0.94rem;
+  line-height: 1.5;
 }
 
 .thorondor-page .metric-card span,
@@ -269,18 +273,18 @@
   background: var(--thorondor-soft-background);
   border: 1px solid rgba(236, 194, 119, 0.28);
   color: #f0c77e;
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: 0.76rem;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
 .thorondor-page .verdict-card {
   display: flex;
-  gap: 14px;
+  gap: 12px;
   align-items: flex-start;
   border-radius: 4px;
   border: 1px solid rgba(176, 184, 194, 0.2);
-  padding: 16px;
+  padding: 14px;
 }
 
 .thorondor-page .verdict-success {
@@ -317,14 +321,15 @@
 .thorondor-page .verdict-body p {
   margin: 0;
   color: #cfd6de;
-  line-height: 1.7;
+  font-size: 0.95rem;
+  line-height: 1.55;
 }
 
 .thorondor-page .control-grid {
   display: grid;
-  gap: 16px;
+  gap: 12px;
   grid-template-columns: repeat(4, minmax(0, 1fr));
-  margin-bottom: 16px;
+  margin-bottom: 14px;
 }
 
 .thorondor-page .compact-grid {
@@ -332,8 +337,9 @@
 }
 
 .thorondor-page .control-field {
+  position: relative;
   display: grid;
-  gap: 8px;
+  gap: 7px;
   min-width: 0;
 }
 
@@ -355,6 +361,14 @@
 
 .thorondor-page .input-dark::placeholder {
   color: #9aa6b3;
+}
+
+.thorondor-page .readonly-field {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  color: #9aa6b3 !important;
+  cursor: default;
 }
 
 .thorondor-page .input-dark:focus {
@@ -409,7 +423,7 @@
 .thorondor-page .btn-quiet {
   border-radius: 4px;
   font-weight: 600;
-  padding: 9px 14px;
+  padding: 8px 12px;
   min-width: 0;
   white-space: normal;
 }
@@ -451,30 +465,31 @@
 
 .thorondor-page .tool-card {
   display: grid;
-  gap: 12px;
-  padding: 16px;
+  gap: 10px;
+  padding: 14px;
   height: 100%;
   align-content: start;
 }
 
 .thorondor-page .stack-panel {
   display: grid;
-  gap: 16px;
+  gap: 12px;
 }
 
 .thorondor-page .card-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   min-width: 0;
 }
 
 .thorondor-page .card-head :is(h2, h3, h4, h5) {
   margin: 0;
   color: #f8fafc;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.96rem;
+  font-weight: 760;
+  line-height: 1.28;
 }
 
 .thorondor-page .mini-badge {
@@ -487,7 +502,7 @@
   background: var(--thorondor-soft-background);
   color: #cfd6de;
   font-size: 0.74rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
   white-space: normal;
   text-align: center;
@@ -518,8 +533,8 @@
   word-break: break-word;
   font-family: 'Courier New', monospace;
   color: #cfd6de;
-  font-size: 0.84rem;
-  line-height: 1.65;
+  font-size: 0.88rem;
+  line-height: 1.55;
 }
 
 .thorondor-page .inline-code {
@@ -554,7 +569,7 @@
   padding: 5px 10px;
   border-radius: 4px;
   font-size: 0.78rem;
-  font-weight: 700;
+  font-weight: 800;
   text-transform: uppercase;
 }
 
@@ -579,13 +594,13 @@
 }
 
 .thorondor-page .mini-grid {
-  gap: 12px;
+  gap: 10px;
 }
 
 .thorondor-page .mini-stat {
   flex: 1 1 30%;
   min-width: 140px;
-  padding: 12px;
+  padding: 11px;
   border-radius: 4px;
   border: 1px solid rgba(176, 184, 194, 0.16);
   background: var(--thorondor-soft-background);
@@ -594,14 +609,14 @@
 .thorondor-page .mini-stat label {
   display: block;
   color: #9aa6b3;
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   margin-bottom: 4px;
   text-transform: uppercase;
 }
 
 .thorondor-page .mini-stat span {
   color: #f8fafc;
-  font-weight: 600;
+  font-weight: 760;
   overflow-wrap: anywhere;
 }
 
@@ -625,7 +640,7 @@
   border: 1px solid rgba(176, 184, 194, 0.24);
   background: var(--thorondor-nested-background);
   color: #dbe5ef;
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 
 .thorondor-page .detail-tab.active {
@@ -636,7 +651,7 @@
 
 .thorondor-page .timeline-list {
   display: grid;
-  gap: 14px;
+  gap: 12px;
 }
 
 .thorondor-page .timeline-entry {
@@ -793,12 +808,12 @@
 @media (max-width: 900px) {
   .thorondor-page {
     width: 100%;
-    padding: 20px 18px 52px;
+    padding: 16px 16px 46px;
   }
 
   .thorondor-page .section-box {
-    padding: 20px;
-    margin-bottom: 18px;
+    padding: 16px;
+    margin-bottom: 14px;
     border-color: rgba(190, 198, 209, 0.16);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.026),
@@ -806,8 +821,8 @@
   }
 
   .thorondor-page .intro-box {
-    gap: 18px;
-    padding-bottom: 22px;
+    gap: 14px;
+    padding-bottom: 18px;
   }
 
   .thorondor-page .section-topline,
@@ -817,7 +832,7 @@
 
   .thorondor-page .section-name,
   .thorondor-page .module-title {
-    font-size: clamp(1.36rem, 3.8vw, 1.78rem);
+    font-size: clamp(1.22rem, 3.4vw, 1.58rem);
   }
 
   .thorondor-page .section-copy,
@@ -847,7 +862,7 @@
 
   .thorondor-page .table {
     min-width: 720px;
-    font-size: 0.82rem;
+    font-size: 0.86rem;
   }
 }
 
@@ -907,13 +922,13 @@
   .thorondor-page .metric-card label,
   .thorondor-page .signal-card label,
   .thorondor-page .field-label {
-    font-size: 0.68rem;
-    letter-spacing: 0.07em;
+    font-size: 0.75rem;
+    letter-spacing: 0.04em;
   }
 
   .thorondor-page .section-name,
   .thorondor-page .module-title {
-    font-size: clamp(1.24rem, 6vw, 1.58rem);
+    font-size: clamp(1.18rem, 5.2vw, 1.42rem);
   }
 
   .thorondor-page .mini-grid {
@@ -937,14 +952,14 @@
   }
 
   .thorondor-page .result-pre {
-    font-size: 0.76rem;
+    font-size: 0.82rem;
     line-height: 1.55;
   }
 
   .thorondor-page .state-chip,
   .thorondor-page .mini-badge {
     padding: 4px 8px;
-    font-size: 0.66rem;
+    font-size: 0.72rem;
   }
 
   .thorondor-page .inline-actions .btn,

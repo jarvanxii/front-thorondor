@@ -6,14 +6,13 @@
                     <span class="section-kicker">Generador dinámico</span>
                     <h1 class="section-name">Generador de agentes</h1>
                     <p class="section-copy">
-                        Crea un instalador autocontenido para Windows o Linux con el agente, los logs seleccionados,
-                        el autoarranque opcional y las reglas que usará el panel para consultar el host.
+                        Genera un instalador por host con endpoints, logs, persistencia y autoarranque opcional.
                     </p>
                 </header>
                 <aside class="generator-hero-summary" aria-label="Resumen del generador">
                     <span>Build</span>
                     <strong>Instalador único</strong>
-                    <small>Genera el paquete, registra el host después y prueba el polling cuando el agente esté listo.</small>
+                    <small>Generar, registrar y validar polling.</small>
                 </aside>
             </div>
 
@@ -225,7 +224,7 @@
                             </button>
                         </div>
                     </div>
-                    <input id="poll-interval" v-model.number="agentDraft.intervalSeconds" type="number" min="10" class="form-control input-dark" />
+                    <input id="poll-interval" v-model.number="agentDraft.intervalSeconds" type="number" min="10" class="form-control input-dark" :placeholder="fieldGuides.intervalSeconds.placeholder" />
                 </div>
                 <div v-if="!isWindows" class="control-field">
                     <div class="field-heading">
@@ -805,89 +804,90 @@ const WINDOWS_DIAGNOSTIC_LOG_OPTIONS = buildDiagnosticLogOptions(
 
 const FIELD_GUIDES = {
     displayName: {
-        title: "Para qué sirve este nombre",
-        placeholder: "Ej. Servidor web de laboratorio",
-        copy: "Es el nombre legible que verás en dashboard, detalle, reglas y alertas. Usa algo que te deje reconocer el equipo sin abrir su ficha técnica."
+        title: "Nombre visible",
+        placeholder: "Nombre visible del host",
+        copy: "Etiqueta usada en dashboard, detalle, reglas y alertas."
     },
     systemName: {
         title: "Identificador interno",
-        placeholder: "Ej. srv-web-01",
-        copy: "Se usa para construir IDs y nombres de archivos. Conviene que sea corto, estable y fácil de rastrear en Linux y en el frontend."
+        placeholder: "Identificador técnico del sistema",
+        copy: "Base para IDs y nombres de archivo. Usa un valor corto y estable."
     },
     distro: {
         title: "Familia Linux real",
-        copy: "Selecciona la familia del host para orientar la instalación, las rutas y los comandos de la guía. Si no encaja claramente, usa Otra."
+        copy: "Define rutas, paquetes y comandos de instalación. Usa Otra si no encaja."
     },
     osVersion: {
         title: "Modelo del sistema",
-        placeholder: "Ej. Ubuntu 24.04 LTS, Rocky Linux 9 o Windows Server 2022",
-        copy: "El modelo ayuda a orientar comandos, paquetes, grupos de lectura y compatibilidad del instalador generado."
+        placeholder: "Modelo del sistema",
+        copy: "Ajusta paquetes, permisos y compatibilidad del instalador."
     },
     receiverUrl: {
         title: "Por qué registrar esta URL",
-        placeholder: "Ej. http://127.0.0.1:8765, http://192.168.1.50:8765 o https://thorondor.midominio.com",
-        copy: "Es la direccion local o de red que queda registrada para comprobar el servicio del agente. La telemetria operativa viaja por la API central."
+        placeholder: "URL accesible del agente",
+        copy: "URL usada para comprobar el servicio del agente. La telemetría operativa viaja por la API central."
     },
     centralApiBaseUrl: {
         title: "API central alcanzable por el agente",
-        placeholder: "Ej. https://api.thorondor.midominio.com o http://192.168.0.253:8082",
-        copy: "Debe ser una URL absoluta alcanzable desde el host monitorizado. No uses /api aqui: esa ruta solo funciona dentro del navegador."
+        placeholder: "https://api.tu-dominio.com",
+        copy: "URL absoluta alcanzable desde el host. No uses /api: esa ruta es del navegador."
     },
     centralEnrollmentToken: {
         title: "Token de alta del agente",
-        placeholder: "Pega el valor de THORONDOR_AGENT_ENROLLMENT_TOKEN",
-        copy: "Autoriza el primer registro del agente en el back. El instalador genera ademas un token propio del agente y el back guarda solo su hash."
+        placeholder: "Token de enrolamiento",
+        copy: "Autoriza el alta inicial. El agente genera token propio; el back guarda su hash."
     },
     networkScope: {
         title: "Alcance de red",
-        copy: "Clasifica cómo se alcanza el agente: Local, LAN o Remoto. En Remoto usa firewall restrictivo y HTTPS si la aplicación se sirve por HTTPS."
+        copy: "Local, LAN o Remoto. En Remoto usa HTTPS y origen restringido."
     },
     hostIp: {
         title: "Dirección operativa del host",
-        placeholder: "Ej. 192.168.1.50, 203.0.113.20 o thorondor.midominio.com",
-        copy: "Es opcional si la URL ya incluye la IP o el dominio. Rellénalo solo cuando quieras dejar una referencia clara del host monitorizado."
+        placeholder: "127.0.0.1 o host.tu-dominio.com",
+        copy: "Opcional si la URL ya incluye IP o dominio. Sirve como referencia del host."
     },
     port: {
         title: "Puerto HTTP del agente",
-        placeholder: "Ej. 8765",
-        copy: "Debe coincidir con el puerto que escuchará el script, el que abras en firewall y el que luego probarás con curl desde la red."
+        placeholder: "8765",
+        copy: "Debe coincidir con el agente, firewall y pruebas curl."
     },
     intervalSeconds: {
         title: "Cadencia de muestreo",
-        copy: "Define cada cuántos segundos quieres refrescar la telemetría. Es el ritmo base del agente y de las reglas de petición que genera el frontend."
+        placeholder: "30",
+        copy: "Intervalo de refresco para telemetría y reglas de petición."
     },
     installUser: {
         title: "Usuario del servicio",
-        placeholder: "Ej. thorondor",
-        copy: "Es la cuenta Linux que ejecutará el agente. Debe tener acceso a la carpeta de trabajo y, si procede, a grupos como adm o systemd-journal."
+        placeholder: "thorondor",
+        copy: "Cuenta Linux del agente. Debe acceder a carpeta de trabajo y grupos de lectura."
     },
     serviceName: {
         title: "Nombre técnico del servicio",
-        placeholder: "Ej. thorondor-agent",
-        copy: "Marca el nombre base de la unidad systemd que el instalador creará dentro del host. Cuanto más claro sea, más fácil será mantenerlo con systemctl y journalctl."
+        placeholder: "thorondor-agent",
+        copy: "Nombre base de la unidad systemd creada por el instalador."
     },
     additionalLogPaths: {
         title: "Logs diagnósticos",
-        copy: "Escribe una ruta por línea para incluir logs de aplicaciones, sistema, firewall o IDS. Puedes usar globs, directorios y en Windows fuentes winlog://System, winlog://Application o winlog://Security."
+        copy: "Una ruta por línea. Admite globs, directorios y winlog://System, Application o Security."
     },
     modules: {
         title: "Qué bloques recoger",
-        copy: "Activa solo lo que te aporta valor. Menos módulos implica menos ruido, menos lecturas innecesarias y una telemetría más fácil de interpretar."
+        copy: "Activa solo módulos necesarios. Menos lecturas, menos ruido."
     },
     generateSystemd: {
         title: "Despliegue persistente",
-        copy: "Actívalo si quieres que el instalador deje el agente arrancando automáticamente: systemd en Linux o una tarea programada en Windows. Si lo desactivas, solo deja el agente listo para arranque manual."
+        copy: "Crea autoarranque: systemd en Linux o tarea programada en Windows."
     }
 };
 
 const ACTION_HELP_CARDS = [
     {
-        title: "Por qué registrar el host en el front",
-        copy: "Registrar el host guarda en el navegador su ficha, sus endpoints y sus reglas de petición. Sin ese paso, el panel no sabe qué agente existe ni a dónde consultar sus datos."
+        title: "Registro del host",
+        copy: "Guarda ficha, endpoints y reglas de petición en el panel."
     },
     {
-        title: "Qué hace Probar polling",
-        copy: "Lanza al instante un health check y una recogida de telemetría contra los hosts ya registrados. Sirve para validar conectividad, refrescar heartbeat y poblar alertas sin esperar al siguiente ciclo automático."
+        title: "Prueba de polling",
+        copy: "Ejecuta health check y telemetría contra hosts registrados."
     }
 ];
 
@@ -927,6 +927,23 @@ function hasValidHttpUrl(value) {
 function hasValidPort(value) {
     const parsed = Number(value);
     return Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535;
+}
+
+function clearTemplateOnlyDraftFields(draft = {}) {
+    const copy = { ...draft };
+    const noIdentity = !hasTrimmedText(copy.displayName) && !hasTrimmedText(copy.systemName);
+
+    if (!noIdentity) return copy;
+
+    if (String(copy.receiverUrl || "") === "http://127.0.0.1:8765") copy.receiverUrl = "";
+    if (String(copy.hostIp || "") === "127.0.0.1") copy.hostIp = "";
+    if (String(copy.installUser || "") === "thorondor") copy.installUser = "";
+    if (String(copy.serviceName || "") === "thorondor-agent") copy.serviceName = "";
+    if (Number(copy.port) === 8765) copy.port = "";
+    if (Number(copy.intervalSeconds) === 30) copy.intervalSeconds = "";
+    if (hasTrimmedText(copy.centralApiBaseUrl)) copy.centralApiBaseUrl = "";
+
+    return copy;
 }
 
 function generateSecretToken(byteLength = 32) {
@@ -1000,8 +1017,8 @@ export default {
 
         selectedOsHint() {
             return this.isWindows
-                ? "Descarga un único asistente: genera ThorondorAgent.msi, lo deja en el Escritorio y lo instala con msiexec."
-                : "Descarga un shell autocontenido. Detecta apt, dnf o pacman, crea un entorno Python aislado y prepara systemd si activas autoarranque.";
+                ? "Asistente único: genera MSI, lo copia al Escritorio y ejecuta msiexec."
+                : "Shell único: detecta paquetes, crea venv y prepara systemd si aplica.";
         },
 
         simpleInstallTitle() {
@@ -1010,8 +1027,8 @@ export default {
 
         simpleInstallCopy() {
             return this.isWindows
-                ? "Ejecuta el asistente como administrador. No tendrás que tocar WiX ni mover archivos sueltos: el MSI se crea e instala en el propio Windows."
-                : "Ejecuta el .sh con sudo. Puedes ajustar distro, usuario, rutas de logs, módulos y servicio sin montar piezas sueltas.";
+                ? "Ejecuta como administrador. El MSI se crea e instala en el propio host."
+                : "Ejecuta con sudo. Ajusta distro, usuario, logs, módulos y servicio.";
         },
 
         moduleOptions() {
@@ -1051,9 +1068,9 @@ export default {
         },
 
         receiverUrlPlaceholder() {
-            if (this.isLocalScope) return "Ej. http://127.0.0.1:8765";
-            if (this.isLanScope) return "Ej. http://192.168.1.50:8765 o http://10.8.0.12:8765";
-            return "Ej. https://thorondor.midominio.com o http://203.0.113.20:8765";
+            if (this.isLocalScope) return "http://127.0.0.1:8765";
+            if (this.isLanScope) return "http://192.168.0.25:8765";
+            return "https://agente.tu-dominio.com";
         },
 
         hostAddressLabel() {
@@ -1083,7 +1100,7 @@ export default {
 
         generateButtonTitle() {
             return this.isGenerateReady
-                ? "Genera el paquete y descarga el instalador único sin registrar todavía el host."
+                ? "Genera y descarga el instalador único."
                 : `Completa primero: ${this.missingRequiredFieldLabels.join(", ")}`;
         },
 
@@ -1101,6 +1118,18 @@ export default {
             return this.thorondorState.persistence || {};
         },
 
+        currentSessionUser() {
+            return this.thorondorState.session?.user || null;
+        },
+
+        isCurrentUserAuthorized() {
+            return Boolean(
+                this.currentSessionUser?.canUseCloudPersistence
+                    || this.currentSessionUser?.usuarioAutorizado
+                    || this.currentSessionUser?.usuario_autorizado
+            );
+        },
+
         selectedPersistenceMode() {
             return this.persistenceStatus.requestedMode || this.persistenceStatus.effectiveMode || "local";
         },
@@ -1109,7 +1138,15 @@ export default {
             return this.persistenceStatus.effectiveMode || "local";
         },
 
+        canUseDatabasePersistence() {
+            return Boolean(this.persistenceStatus.cloudAllowed && this.isCurrentUserAuthorized);
+        },
+
         persistenceModeTitle() {
+            if (!this.canUseDatabasePersistence) {
+                return "IndexedDB local obligatorio";
+            }
+
             if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
                 return "API no configurada";
             }
@@ -1120,39 +1157,48 @@ export default {
         },
 
         persistenceModeDescription() {
+            if (!this.canUseDatabasePersistence) {
+                return this.persistenceStatus.cloudAccessReason || "Usuario no autorizado para usar BBDD por API.";
+            }
+
             if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
-                return "Falta configurar la URL de la API. Mientras tanto Thorondor mantiene los datos en IndexedDB para no perder trabajo.";
+                return "API sin configurar. Thorondor usa IndexedDB local.";
             }
 
             if (this.persistenceEffectiveMode === "cloud") {
-                return "Los cambios se guardan en IndexedDB como caché y se sincronizan con la API del back para tener persistencia centralizada.";
+                return "IndexedDB actúa como caché y la API centraliza la persistencia.";
             }
 
-            return "Los hosts, reglas, eventos y borradores se guardan solo en el navegador mediante IndexedDB.";
+            return "Hosts, reglas, eventos y borradores se guardan en este navegador.";
         },
 
         persistenceOptions() {
             const cloudConfigured = Boolean(this.persistenceStatus.cloudConfigured);
             const effectiveMode = this.persistenceEffectiveMode;
+            const cloudDisabledReason = !this.isCurrentUserAuthorized
+                ? "Usuario no autorizado"
+                : !this.persistenceStatus.cloudAllowed
+                    ? "Sin permiso"
+                    : !cloudConfigured
+                        ? "Sin API"
+                        : "";
 
             return [
                 {
                     value: "local",
                     label: "IndexedDB local",
-                    copy: "Datos guardados en este navegador. Ideal para pruebas rápidas y laboratorio.",
+                    copy: "Datos guardados en este navegador.",
                     status: effectiveMode === "local" ? "Activo" : "Disponible",
                     disabled: false
                 },
                 {
                     value: "cloud",
                     label: "API del back",
-                    copy: cloudConfigured
-                        ? "Persistencia centralizada en la API, con IndexedDB como caché local."
-                        : "Configura VITE_THORONDOR_API_BASE_URL para activar la persistencia con API.",
-                    status: cloudConfigured
-                        ? (effectiveMode === "cloud" ? "Activo" : "Disponible")
-                        : "Sin API",
-                    disabled: !cloudConfigured
+                    copy: cloudDisabledReason
+                        ? "Requiere usuario autorizado por un admin."
+                        : "Persistencia centralizada en la API, con IndexedDB como caché local.",
+                    status: cloudDisabledReason || (effectiveMode === "cloud" ? "Activo" : "Disponible"),
+                    disabled: Boolean(cloudDisabledReason)
                 }
             ];
         },
@@ -1165,11 +1211,11 @@ export default {
                 },
                 {
                     label: "Conexión clara",
-                    copy: "URL, puerto y alcance definen desde dónde consultará el panel."
+                    copy: "URL, puerto y alcance definen el acceso."
                 },
                 {
                     label: "Autoarranque",
-                    copy: "Puedes dejar servicio/tarea al iniciar o usar ejecución manual."
+                    copy: "Servicio al iniciar o ejecución manual."
                 },
                 {
                     label: "Flujo separado",
@@ -1329,7 +1375,7 @@ export default {
         normalizeDraftShape(source = {}) {
             const targetOs = source?.targetOs === "windows" ? "windows" : "linux";
             const base = buildThorondorAgentDraft(targetOs);
-            const draft = cloneDraft(source || {});
+            const draft = clearTemplateOnlyDraftFields(cloneDraft(source || {}));
             const additionalLogPaths = !draft.additionalLogPaths || isThorondorDefaultDiagnosticLogPathList(draft.additionalLogPaths)
                 ? getThorondorDefaultLogPathsForOs(targetOs)
                 : draft.additionalLogPaths;
@@ -1462,6 +1508,8 @@ export default {
 
         async setPersistenceMode(mode) {
             if (mode === this.selectedPersistenceMode) return;
+            const option = this.persistenceOptions.find((item) => item.value === mode);
+            if (option?.disabled) return;
             await this.$store.dispatch("setThorondorPersistenceMode", mode);
         },
 
@@ -1929,7 +1977,7 @@ export default {
 .diagnostic-log-option:hover,
 .diagnostic-log-option:focus-within,
 .diagnostic-log-option.is-help-open {
-    z-index: 5000;
+    z-index: 30;
     border-color: rgba(203, 213, 225, 0.42);
     background: var(--thorondor-nested-background);
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
@@ -2009,7 +2057,7 @@ export default {
 
 .context-help:hover,
 .context-help:focus-within {
-    z-index: 3000;
+    z-index: 40;
 }
 
 .help-trigger {
@@ -2032,7 +2080,7 @@ export default {
 
 .help-trigger:hover,
 .help-trigger.is-pinned {
-    z-index: 3001;
+    z-index: 41;
     border-color: rgba(203, 213, 225, 0.62);
     background: var(--thorondor-soft-background);
     color: #ffffff;
@@ -2057,7 +2105,7 @@ export default {
     transform: translateY(8px);
     pointer-events: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
-    z-index: 4000;
+    z-index: 50;
 }
 
 .help-popover::before {

@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Motor de reglas"
       :title="selectedAgent ? `Reglas de ${selectedAgent.displayName}` : 'Reglas del host'"
-      copy="Configura las condiciones que convierten telemetría y eventos en alertas para el ordenador monitorizado seleccionado. Cada host mantiene su propio conjunto de reglas."
+      copy="Define umbrales por host. Telemetría y eventos generan alertas cuando cumplen condición."
       badge="Rules"
       :badge-note="`${selectedRules.length} reglas configuradas para este host.`"
     />
@@ -59,8 +59,7 @@
                 </tr>
                 <tr v-if="!selectedRules.length">
                   <td colspan="6" class="text-muted">
-                    Este host aun no tiene reglas. Puedes restaurar la base recomendada o crear una
-                    regla nueva.
+                    Sin reglas para este host. Restaura base o crea una regla.
                   </td>
                 </tr>
               </tbody>
@@ -71,7 +70,7 @@
         <aside class="rule-studio">
           <article class="tool-card rule-helper-card">
             <header class="card-head">
-              <h5>Plantillas recomendadas</h5>
+              <h5>Plantillas base</h5>
               <span class="mini-badge">Presets</span>
             </header>
             <nav class="preset-grid" aria-label="Plantillas de reglas">
@@ -94,13 +93,13 @@
 
           <article class="tool-card rule-preview-card">
             <header class="card-head">
-              <h5>Resumen de la regla</h5>
+              <h5>Regla actual</h5>
               <span class="mini-badge">{{ ruleDraft.enabled ? 'Activa' : 'Pausada' }}</span>
             </header>
             <section class="rule-preview-grid">
               <article class="preview-line">
                 <label>Nombre</label>
-                <span>{{ ruleDraft.name || 'Sin nombre todavía' }}</span>
+                <span>{{ ruleDraft.name || 'Sin nombre' }}</span>
               </article>
               <article class="preview-line">
                 <label>Tipo</label>
@@ -131,7 +130,7 @@
             <section class="control-grid compact-grid">
               <label class="control-field" for="rule-name">
                 <span class="field-label">Nombre</span>
-                <input id="rule-name" v-model="ruleDraft.name" class="form-control input-dark" />
+                <input id="rule-name" v-model="ruleDraft.name" class="form-control input-dark" placeholder="Nombre de la regla" />
               </label>
               <label class="control-field" for="rule-type">
                 <span class="field-label">Tipo</span>
@@ -149,6 +148,7 @@
                   type="number"
                   min="1"
                   class="form-control input-dark"
+                  placeholder="Umbral"
                 />
               </label>
               <label class="control-field" for="rule-duration">
@@ -159,6 +159,7 @@
                   type="number"
                   min="1"
                   class="form-control input-dark"
+                  placeholder="Minutos"
                 />
               </label>
               <label class="control-field full-span" for="rule-scope">
@@ -182,6 +183,7 @@
                   v-model="ruleDraft.description"
                   rows="3"
                   class="form-control input-dark textarea-dark"
+                  placeholder="Descripción operativa"
                 ></textarea>
               </label>
               <section class="control-field full-span">
@@ -298,16 +300,16 @@ export default {
     helperNotes() {
       return [
         {
-          title: 'Empieza por reglas simples',
-          copy: 'CPU, RAM, disco y heartbeat suelen darte la mejor base para validar que la monitorización funciona bien.',
+          title: 'Base mínima',
+          copy: 'CPU, RAM, disco y heartbeat validan la señal inicial.',
         },
         {
-          title: 'Evita umbrales demasiado bajos',
-          copy: 'Si disparas alertas por ruido normal del sistema, el panel perdera valor operativo en muy poco tiempo.',
+          title: 'Umbral estable',
+          copy: 'Evita alertas por actividad normal del sistema.',
         },
         {
-          title: 'Ajusta por host cuando haga falta',
-          copy: 'Los servidores más cargados o los equipos de laboratorio no deberían compartir siempre los mismos umbrales.',
+          title: 'Perfil por host',
+          copy: 'Ajusta umbrales según carga y rol del sistema.',
         },
       ]
     },

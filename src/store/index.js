@@ -441,6 +441,15 @@ function buildAnonymousThorondorSession() {
   }
 }
 
+function isThorondorUserAuthorizedForCloudPersistence(user) {
+  return Boolean(user?.canUseCloudPersistence || user?.usuarioAutorizado || user?.usuario_autorizado)
+}
+
+function disableThorondorCloudPersistence(reason) {
+  setThorondorCloudPersistenceAccess(false, reason)
+  saveThorondorPersistenceMode('local')
+}
+
 async function refreshThorondorTokenForSession(session) {
   if (!session?.authenticated) {
     clearThorondorJwtToken()
@@ -457,23 +466,20 @@ async function refreshThorondorTokenForSession(session) {
 
 function configureThorondorCloudAccess(session, token) {
   const authenticated = Boolean(session?.authenticated)
-  const authorized = Boolean(session?.user?.canUseCloudPersistence || session?.user?.usuarioAutorizado)
+  const authorized = isThorondorUserAuthorizedForCloudPersistence(session?.user)
 
   if (!authenticated) {
-    setThorondorCloudPersistenceAccess(false, 'Inicia sesion para usar persistencia cloud.')
+    disableThorondorCloudPersistence('Inicia sesion para usar BBDD por API.')
     return
   }
 
   if (!hasThorondorApiToken(token)) {
-    setThorondorCloudPersistenceAccess(false, 'Token JWT requerido para usar BBDD por API.')
+    disableThorondorCloudPersistence('Token JWT requerido para usar BBDD por API.')
     return
   }
 
   if (!authorized) {
-    setThorondorCloudPersistenceAccess(
-      false,
-      'Un usuario admin debe autorizar esta cuenta para usar BBDD por API.',
-    )
+    disableThorondorCloudPersistence('Un usuario admin debe autorizar esta cuenta para usar BBDD por API.')
     return
   }
 
@@ -976,6 +982,18 @@ export default createStore({
         return false
       }
 
+      if (!isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)) {
+        disableThorondorCloudPersistence(
+          'Un usuario admin debe autorizar esta cuenta para usar BBDD por API.',
+        )
+        commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
+        commit('setThorondorCentralStatus', {
+          status: 'auth-required',
+          lastError: 'Usuario no autorizado para usar BBDD por API.',
+        })
+        return false
+      }
+
       commit('setThorondorCentralStatus', {
         status: 'syncing',
         lastError: '',
@@ -1013,6 +1031,24 @@ export default createStore({
     async setThorondorPersistenceMode({ commit, state }, mode) {
       const nextMode = mode === 'cloud' ? 'cloud' : 'local'
       const currentDraft = state.thorondor.generatorDraft || buildThorondorAgentDraft()
+
+      if (
+        nextMode === 'cloud' &&
+        (
+          !isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user) ||
+          !hasThorondorApiToken(state.thorondor.token) ||
+          !state.thorondor.persistence?.cloudAllowed
+        )
+      ) {
+        disableThorondorCloudPersistence(
+          'Un usuario admin debe autorizar esta cuenta para usar BBDD por API.',
+        )
+        const fallbackStatus = getThorondorPersistenceStatus({
+          syncStatus: 'cloud-blocked',
+        })
+        commit('setThorondorPersistenceStatus', fallbackStatus)
+        return fallbackStatus
+      }
 
       saveThorondorPersistenceMode(nextMode)
 

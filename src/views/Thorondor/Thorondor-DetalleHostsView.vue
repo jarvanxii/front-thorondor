@@ -6,12 +6,11 @@
                     <span class="section-kicker">Análisis por host</span>
                     <h1 class="section-name">Detalle por host</h1>
                     <p class="section-copy">
-                        Selecciona un agente para inspeccionar sus métricas, procesos, timeline de seguridad, logs,
-                        alertas e histórico. Esta vista concentra la investigación operativa de cada sistema.
+                        Métricas, procesos, seguridad, logs, alertas e histórico del sistema seleccionado.
                     </p>
                 </div>
                 <div class="phase-badge-block">
-                    <span class="phase-badge">Deep Dive</span>
+                    <span class="phase-badge">Host</span>
                     <small>{{ selectedAgent ? selectedAgent.displayName : "Sin sistema seleccionado" }}</small>
                 </div>
             </div>
@@ -566,7 +565,7 @@
                 </div>
                 <div class="control-field full-span">
                     <label class="field-label" for="log-search">Filtro de texto libre</label>
-                    <input id="log-search" v-model="logFilters.text" class="form-control input-dark" placeholder="ssh, sudo, error, nginx..." />
+                    <input id="log-search" v-model="logFilters.text" class="form-control input-dark" placeholder="Filtro de texto libre" />
                 </div>
             </div>
 

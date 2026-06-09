@@ -390,14 +390,17 @@ export default {
 }
 
 .login-field {
+  position: relative;
   display: grid;
   gap: 7px;
 }
 
 .login-field span {
   color: #dce3eb;
-  font-size: 0.82rem;
-  font-weight: 850;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
 }
 
 .login-field input {

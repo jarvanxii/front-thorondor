@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Buscador SIEM"
       title="Eventos globales"
-      copy="Consulta todos los eventos recibidos por Thorondor sin entrar host por host. Filtra por sistema, severidad, tipo, origen, IP y texto libre para investigar actividad transversal."
+      copy="Eventos recibidos por Thorondor. Filtra por sistema, severidad, tipo, origen, IP y texto."
       badge="Central"
       :badge-note="`${filteredEvents.length} eventos en la vista actual.`"
     >
@@ -46,18 +46,18 @@
 
       <label class="control-field" for="events-ip">
         <span class="field-label">IP origen</span>
-        <input id="events-ip" v-model.trim="filters.sourceIp" class="form-control input-dark" placeholder="203.0.113.24" />
+        <input id="events-ip" v-model.trim="filters.sourceIp" class="form-control input-dark" placeholder="IP origen" />
       </label>
 
       <label class="control-field search-field" for="events-query">
         <span class="field-label">Busqueda</span>
-        <input id="events-query" v-model.trim="filters.q" class="form-control input-dark" placeholder="ssh, sudo, 500, usuario..." />
+        <input id="events-query" v-model.trim="filters.q" class="form-control input-dark" placeholder="Búsqueda libre" />
       </label>
     </section>
 
     <section class="section-box">
       <header class="card-head">
-        <h2>Histórico de eventos</h2>
+        <h2>Eventos</h2>
         <span class="mini-badge">{{ filteredEvents.length }}</span>
       </header>
 

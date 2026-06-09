@@ -6,9 +6,8 @@
                     <span class="section-kicker">Despliegue controlado</span>
                     <h1 class="section-name">Instalación del agente</h1>
                     <p class="section-copy">
-                        El formulario genera un único instalador por host. Ese archivo escribe el agente, configura sus
-                        parámetros, instala dependencias y prepara el arranque automático solo cuando lo decides. La
-                        validación se hace por endpoints simples: <code>/health</code> y <code>/telemetry</code>.
+                        Un instalador por host. Configura agente, dependencias, autoarranque opcional y endpoints
+                        <code>/health</code> y <code>/telemetry</code>.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -46,16 +45,15 @@
         <section class="section-box beginner-section">
             <div class="section-topline">
                 <div class="module-header">
-                    <span class="section-kicker">Para empezar sin experiencia</span>
-                    <h2 class="module-title">Qué opción elegir en cada caso</h2>
+                    <span class="section-kicker">Selección operativa</span>
+                    <h2 class="module-title">Alcance recomendado</h2>
                     <p class="module-copy">
-                        Si es tu primera prueba, empieza por el camino más sencillo. Cuando el agente responda en local,
-                        pasa a LAN/VPN y deja remoto para el final.
+                        Elige local para validación, LAN/VPN para red privada y remoto sólo con HTTPS y origen restringido.
                     </p>
                 </div>
                 <div class="phase-badge-block">
-                    <span class="phase-badge">Inicio</span>
-                    <small>De menos a más exposición.</small>
+                    <span class="phase-badge">Alcance</span>
+                    <small>Exposición mínima necesaria.</small>
                 </div>
             </div>
 
@@ -74,9 +72,7 @@
                     <span class="section-kicker">Secuencia</span>
                     <h2 class="module-title">Runbook completo de instalación</h2>
                     <p class="module-copy">
-                        Sigue este orden para evitar instalaciones a medias: primero decides cómo se va a alcanzar el
-                        host, después generas el instalador, lo ejecutas con permisos elevados, validas el proceso y
-                        solo entonces registras el endpoint como operativo.
+                        Define alcance, genera instalador, ejecuta con permisos elevados, valida endpoints y registra el host.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -112,7 +108,7 @@
         <div class="guide-section-title">
             <span>Instalación</span>
             <h2>Instalación del agente</h2>
-            <p>Prepara el host, valida el endpoint y deja el servicio persistente según el sistema operativo y el tipo de conexión elegido.</p>
+            <p>Configura host, endpoint, servicio persistente y validación HTTP.</p>
         </div>
 
         <section class="section-box guide-phase-header">
@@ -377,12 +373,12 @@ export default {
 
         deploymentScopeDescription() {
             if (this.isLocalDeployment) {
-                return "El agente escucha en 127.0.0.1 para validacion local y sincroniza la monitorizacion real con la API central autenticada.";
+                return "Agente en 127.0.0.1 para validación local. Datos reales por API autenticada.";
             }
             if (this.isLanDeployment) {
-                return "El agente puede exponer health en IP privada o VPN, pero telemetria y comandos deben ir por la API central con token.";
+                return "Health en IP privada o VPN. Telemetría y comandos por API con token.";
             }
-            return "Usa remoto solo con firewall restrictivo. La ingesta publica debe ir por HTTPS contra la API central y token de agente.";
+            return "Remoto sólo con HTTPS, firewall restrictivo y token de agente.";
         },
 
         hostOsLabel() {
@@ -397,7 +393,7 @@ export default {
             return [
                 {
                     label: "API central",
-                    copy: "El front consulta el back con JWT y el agente sincroniza heartbeat, telemetria, logs y resultados con su token propio."
+                    copy: "Front con JWT. Agente con token propio."
                 },
                 {
                     label: this.deploymentScopeLabel,
@@ -405,11 +401,11 @@ export default {
                 },
                 {
                     label: "Permisos explícitos",
-                    copy: "Los logs protegidos se leen mediante grupos del sistema o permisos concretos. No se debe ejecutar el agente como root salvo diagnóstico puntual."
+                    copy: "Logs protegidos mediante grupos o permisos concretos."
                 },
                 {
                     label: "Persistencia de datos",
-                    copy: "El modo local guarda histórico en IndexedDB. El modo sincronizado conserva snapshots, eventos, logs, reglas y alertas en base de datos."
+                    copy: "Local en IndexedDB. Sincronizado en base de datos."
                 }
             ];
         },
@@ -419,27 +415,27 @@ export default {
                 {
                     label: "Prueba en el mismo equipo",
                     when: "Elige Local",
-                    copy: "Instala el agente en el ordenador donde abres Thorondor. No abre firewall y sirve para comprobar que el instalador funciona."
+                    copy: "Mismo equipo que el navegador. Sin firewall."
                 },
                 {
                     label: "Servidor de casa, laboratorio o empresa",
                     when: "Elige LAN / VPN",
-                    copy: "Usa la IP privada del host y permite el puerto solo desde tu equipo, VPN o red de administración."
+                    copy: "IP privada o VPN. Puerto limitado a red de administración."
                 },
                 {
                     label: "Servidor fuera de tu red",
                     when: "Elige Remoto",
-                    copy: "Usa DNS o IP pública, origen restringido y HTTPS/proxy. No lo uses como primera prueba."
+                    copy: "DNS público, HTTPS y origen restringido."
                 },
                 {
                     label: "Windows",
                     when: "Ejecuta como administrador",
-                    copy: "Descargas un asistente PowerShell que crea un MSI real, lo instala y deja una copia en el Escritorio."
+                    copy: "PowerShell crea MSI, instala y deja copia en Escritorio."
                 },
                 {
                     label: "Linux",
                     when: "Ejecuta con sudo",
-                    copy: "Descargas un .sh único. Crea /opt/thorondor-agent, venv, permisos y systemd si activas autoarranque."
+                    copy: ".sh único. Crea /opt, venv, permisos y systemd."
                 }
             ];
         },
@@ -450,35 +446,35 @@ export default {
                     index: "01",
                     title: "Definir alcance de red",
                     badge: this.deploymentScopeLabel,
-                    copy: `Decide si el agente será local, LAN/VPN o remoto. En este momento está seleccionado ${this.deploymentScopeLabel}.`,
-                    purpose: "Evita registrar una URL incorrecta y determina si habrá que abrir firewall, usar IP privada, VPN, DNS público o HTTPS.",
-                    expected: "Tienes clara la API central publica y la URL local o de red para validar /health."
+                    copy: `Alcance seleccionado: ${this.deploymentScopeLabel}.`,
+                    purpose: "Define URL, firewall, VPN, DNS y HTTPS.",
+                    expected: "API central y URL de /health definidas."
                 },
                 {
                     index: "02",
                     title: "Generar instalador",
                     badge: "Build",
-                    copy: "Entra en el generador, elige Linux o Windows, revisa host, puerto, módulos y fuentes de logs, y descarga el único archivo resultante.",
-                    purpose: "El instalador queda ligado a ese host: contiene agente Python, configuración, módulos, logs seleccionados y política de autoarranque.",
-                    expected: "Descargas install-thorondor-agent.sh en Linux o crear-e-instalar-thorondor-agent-msi.ps1 en Windows."
+                    copy: "Elige sistema, host, puerto, módulos y logs. Descarga un archivo.",
+                    purpose: "Incluye agente, configuración, módulos, logs y autoarranque.",
+                    expected: "Descarga .sh en Linux o asistente MSI en Windows."
                 },
                 {
                     index: "03",
                     title: "Copiar al host monitorizado",
                     badge: "Transfer",
-                    copy: "Lleva el instalador al servidor o equipo que quieres vigilar usando SFTP, SCP, USB, consola cloud o el canal seguro que ya uses.",
-                    purpose: "La instalación debe ejecutarse dentro del host que va a exponer el agente, no en el equipo desde el que administras Thorondor.",
-                    expected: "El archivo está en una ruta temporal del host, por ejemplo /tmp o la carpeta Descargas."
+                    copy: "Copia el instalador al sistema monitorizado por canal seguro.",
+                    purpose: "La instalación se ejecuta en el host que expone el agente.",
+                    expected: "Archivo disponible en ruta temporal del host."
                 },
                 {
                     index: "04",
                     title: "Ejecutar con permisos elevados",
                     badge: "Install",
                     copy: this.isWindowsHostOs
-                        ? "Ejecuta el asistente PowerShell como Administrador. El propio asistente genera ThorondorAgent.msi y lo instala con msiexec."
-                        : "Ejecuta el .sh con sudo. El script crea rutas, entorno Python aislado, permisos y systemd si activaste autoarranque.",
-                    purpose: "Permite escribir en ProgramData u /opt, instalar dependencias, crear servicio persistente y preparar lectura de logs protegidos.",
-                    expected: "La consola termina con instalación completada y deja el agente listo para responder en el puerto configurado."
+                        ? "Ejecuta PowerShell como Administrador. Genera MSI e instala con msiexec."
+                        : "Ejecuta .sh con sudo. Crea rutas, venv, permisos y systemd.",
+                    purpose: "Escribe ProgramData u /opt, instala dependencias y prepara logs.",
+                    expected: "Agente instalado y escuchando en el puerto configurado."
                 },
                 {
                     index: "05",

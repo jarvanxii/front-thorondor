@@ -27,26 +27,23 @@
             </p>
         </section>
 
-        <section class="section-box">
+        <section class="section-box architecture-section">
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Arquitectura</span>
-                    <h2 class="module-title">Flujo técnico extremo a extremo</h2>
+                    <h2 class="module-title">Flujo operativo del agente</h2>
                     <p class="module-copy">
-                        El generador produce un agente Python parametrizado (host, puerto, módulos, usuario de servicio)
-                        que se despliega en el sistema destino. El frontend realiza polling HTTP al agente, decodifica
-                        el JSON de telemetría, lo persiste en el modo activo (IndexedDB local o base de datos) y
-                        aplica las reglas de correlación registradas. Solo hace falta conectividad directa desde el
-                        navegador hasta la URL registrada del agente.
+                        Agente Python en el host, polling HTTP desde el navegador y persistencia local o remota según
+                        autorización del usuario.
                     </p>
                 </div>
                 <div class="phase-badge-block">
-                    <span class="phase-badge">Flow</span>
-                    <small>Backend opcional para cuenta.</small>
+                    <span class="phase-badge">HTTPS</span>
+                    <small>Cloudflare Tunnel recomendado.</small>
                 </div>
             </div>
 
-            <div class="card-grid">
+            <div class="card-grid architecture-grid">
                 <article class="tool-card" v-for="item in architectureCards" :key="item.label">
                     <div class="card-head">
                         <h5>{{ item.label }}</h5>
@@ -61,10 +58,9 @@
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Persistencia</span>
-                    <h2 class="module-title">Qué guarda el navegador y cómo se limpia</h2>
+                    <h2 class="module-title">Persistencia y limpieza</h2>
                     <p class="module-copy">
-                        Thorondor usa Vuex con una capa de persistencia intercambiable: IndexedDB local o API con base de
-                        datos. Lo antiguo se purga automáticamente.
+                        Vuex escribe en IndexedDB o en la API. El histórico se purga por ventana de retención.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -86,15 +82,14 @@
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Primeros pasos</span>
-                    <h2 class="module-title">Ruta recomendada para empezar sin perderte</h2>
+                    <h2 class="module-title">Secuencia de puesta en marcha</h2>
                     <p class="module-copy">
-                        Si vas a usar Thorondor por primera vez, sigue este orden. La barra lateral ya enlaza cada paso
-                        a su vista correspondiente para que puedas avanzar sin volver atrás.
+                        Orden operativo para instalar agente, registrar host, validar telemetría y ajustar reglas.
                     </p>
                 </div>
                 <div class="phase-badge-block">
-                    <span class="phase-badge">Onboarding</span>
-                    <small>Secuencia pensada para principiantes.</small>
+                    <span class="phase-badge">Runbook</span>
+                    <small>Una vista por paso.</small>
                 </div>
             </div>
 
@@ -155,13 +150,13 @@ export default {
                     label: "Snapshots",
                     value: String(Object.values(this.thorondorSnapshots).flat().length),
                     tone: "tone-blue",
-                    note: "Histórico resumido por host monitorizado."
+                    note: "Resumen por host monitorizado."
                 },
                 {
                     label: "Última limpieza",
                     value: this.thorondorState.lastSweepAt ? this.formatRelativeTime(this.thorondorState.lastSweepAt) : "Pendiente",
                     tone: "tone-neutral",
-                    note: "Thorondor borra histórico antiguo para no saturar memoria."
+                    note: "Purgado automático según retención."
                 }
             ];
         },
@@ -187,32 +182,32 @@ export default {
                 {
                     label: "1. Genera el agente",
                     badge: "Frontend",
-                    copy: "El generador pide lo mínimo: alcance de red, Linux o Windows, host, URL y puerto. Linux descarga un único .sh; Windows descarga un asistente que crea e instala ThorondorAgent.msi sin piezas sueltas."
+                    copy: "Define sistema, URL y puerto. Linux genera un .sh; Windows prepara e instala el MSI."
                 },
                 {
                     label: "2. Despliega en el host",
                     badge: "Host",
-                    copy: "Linux: cuenta sin shell, /opt/thorondor-agent/, venv propio, grupos adm+systemd-journal y unidad systemd. Windows: C:\\ProgramData\\Thorondor-Agent\\, MSI, psutil y tarea en Task Scheduler con RunLevel Highest."
+                    copy: "Linux usa systemd y venv propio. Windows usa ProgramData, psutil y Task Scheduler."
                 },
                 {
-                    label: "3. El navegador hace polling",
+                    label: "3. Polling de telemetría",
                     badge: "Polling",
-                    copy: "Petición HTTP GET al /telemetry del agente cada N segundos. El agente responde JSON con system, metrics (CPU, RAM, disco por partición, temperatura), security (logins, sudo, file integrity) y logs."
+                    copy: "GET /telemetry por intervalo. Respuesta JSON con sistema, métricas, seguridad y logs."
                 },
                 {
                     label: "4. Persistencia de datos",
                     badge: "Storage",
-                    copy: "El store Vuex decodifica el payload y lo distribuye por la fachada de persistencia: IndexedDB local o API con base de datos. IndexedDB queda siempre como caché local."
+                    copy: "Vuex normaliza el payload. IndexedDB guarda local; la API sincroniza usuarios autorizados."
                 },
                 {
                     label: "5. Correlación y alertas",
                     badge: "Rules",
-                    copy: "El motor de reglas JavaScript evalúa thresholds de CPU, RAM, heartbeat, frecuencia de fallos de autenticación, sudo fuera de whitelist y cambios en el baseline de integridad de archivos."
+                    copy: "Reglas locales evalúan CPU, RAM, heartbeat, auth, sudo e integridad."
                 },
                 {
                     label: "6. Exposición remota",
                     badge: "Network",
-                    copy: "Para remoto, registra una URL que el navegador pueda resolver. Si es pública, usa firewall con origen restringido, HTTPS y proxy frontal cuando el frontend se sirva por HTTPS."
+                    copy: "Usa URL resoluble por el navegador. En real: HTTPS, origen restringido y Cloudflare Tunnel."
                 }
             ];
         },
@@ -220,20 +215,20 @@ export default {
         startSteps() {
             return [
                 {
-                    label: "Paso 1 — Guía de instalación",
-                    copy: "Selecciona solo Linux o Windows y sigue el flujo directo: generar instalador único, ejecutarlo como administrador y validar endpoints."
+                    label: "1. Instalación",
+                    copy: "Elige Linux o Windows, genera instalador único y valida endpoints."
                 },
                 {
-                    label: "Paso 2 — Generador de agentes",
-                    copy: "Rellena hostname, URL accesible, IP o DNS del host, alcance de red y puerto (ej. 8765). Toca los ajustes avanzados solo si necesitas cambiar logs, módulos o servicio."
+                    label: "2. Agente",
+                    copy: "Define hostname, URL accesible, IP o DNS, alcance y puerto."
                 },
                 {
-                    label: "Paso 3 — Despliega y valida",
-                    copy: "Copia el instalador al host, ejecútalo como administrador, valida /health y /telemetry y revisa systemd o Task Scheduler si activaste autoarranque. En Windows el asistente genera e instala el MSI."
+                    label: "3. Validación",
+                    copy: "Ejecuta como administrador, comprueba /health y /telemetry, y revisa autoarranque."
                 },
                 {
-                    label: "Paso 4 — Dashboard y alertas",
-                    copy: "El host aparece en el dashboard con heartbeat, CPU, RAM y disco. Ajusta las reglas de monitorización según el rol del sistema y revisa las alertas desde la vista de reglas."
+                    label: "4. Operación",
+                    copy: "Revisa heartbeat, métricas y reglas. Ajusta umbrales por rol del host."
                 }
             ];
         }
@@ -246,25 +241,21 @@ export default {
     position: relative;
     isolation: isolate;
     display: grid;
-    gap: 14px;
-    margin-bottom: 18px;
+    gap: 12px;
+    margin-bottom: 14px;
     min-height: 0;
-    padding: clamp(14px, 1.8vw, 22px) clamp(18px, 2.6vw, 30px);
+    padding: clamp(14px, 1.6vw, 18px) clamp(16px, 2.2vw, 24px);
     overflow: hidden;
     border: 1px solid rgba(236, 194, 119, 0.18);
     border-radius: 4px;
     background: var(--thorondor-panel-background);
     box-shadow:
-        inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 18px 42px rgba(0, 0, 0, 0.28);
+        inset 0 1px 0 rgba(255, 255, 255, 0.035),
+        0 12px 28px rgba(0, 0, 0, 0.2);
 }
 
 .home-overview::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 45%);
+    display: none;
 }
 
 .home-overview::after {
@@ -278,8 +269,8 @@ export default {
 
 .home-overview-main {
     display: grid;
-    grid-template-columns: minmax(140px, 180px) minmax(300px, 1fr) minmax(220px, 270px);
-    gap: clamp(18px, 2.4vw, 34px);
+    grid-template-columns: minmax(130px, 160px) minmax(300px, 1fr) minmax(210px, 250px);
+    gap: clamp(14px, 2vw, 24px);
     min-width: 0;
     align-items: center;
 }
@@ -293,11 +284,11 @@ export default {
 
 .hero-wordmark {
     display: block;
-    width: min(100%, clamp(140px, 12vw, 168px));
+    width: min(100%, clamp(126px, 10.8vw, 150px));
     height: auto;
     object-fit: contain;
     object-position: left center;
-    filter: contrast(1.06) saturate(1.04) drop-shadow(0 10px 16px rgba(0, 0, 0, 0.32));
+    filter: contrast(1.04) saturate(1.02) drop-shadow(0 8px 12px rgba(0, 0, 0, 0.26));
 }
 
 .sr-only {
@@ -313,22 +304,22 @@ export default {
 
 .hero-message {
     display: grid;
-    gap: 7px;
+    gap: 6px;
     min-width: 0;
 }
 
 .hero-message h2 {
     margin: 0;
     color: #f8fafc;
-    font-size: clamp(1.28rem, 2vw, 1.8rem);
-    line-height: 1.05;
+    font-size: clamp(1.18rem, 1.6vw, 1.48rem);
+    line-height: 1.15;
 }
 
 .hero-summary {
     max-width: 48ch;
     margin: 0;
     color: #c9d3df;
-    font-size: clamp(0.9rem, 0.95vw, 0.98rem);
+    font-size: 0.94rem;
     line-height: 1.45;
 }
 
@@ -339,7 +330,7 @@ export default {
     min-width: 0;
     margin: 0;
     padding: 0;
-    width: min(100%, 270px);
+    width: min(100%, 250px);
     justify-self: end;
     border: 1px solid rgba(196, 204, 214, 0.16);
     background: var(--thorondor-nested-background);
@@ -347,11 +338,11 @@ export default {
 
 .hero-status-bar div {
     display: flex;
-    min-height: 40px;
+    min-height: 38px;
     align-items: center;
     justify-content: space-between;
     gap: 14px;
-    padding: 7px 11px;
+    padding: 7px 10px;
 }
 
 .hero-status-bar div + div {
@@ -361,9 +352,9 @@ export default {
 .hero-status-bar dt {
     margin: 0;
     color: #96a4b4;
-    font-size: 0.62rem;
+    font-size: 0.74rem;
     font-weight: 800;
-    letter-spacing: 0.08em;
+    letter-spacing: 0.04em;
     text-transform: uppercase;
 }
 
@@ -376,10 +367,10 @@ export default {
 
 .home-overview-note {
     margin: 0;
-    padding-top: 12px;
+    padding-top: 10px;
     border-top: 1px solid rgba(196, 204, 214, 0.14);
     color: #aebac8;
-    font-size: 0.86rem;
+    font-size: 0.9rem;
     line-height: 1.45;
 }
 
@@ -387,9 +378,27 @@ export default {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.architecture-section .section-topline {
+    align-items: end;
+}
+
+.architecture-section .module-copy {
+    max-width: 68ch;
+}
+
+.architecture-grid .tool-card {
+    min-height: 0;
+}
+
+.architecture-grid .section-copy {
+    max-width: 58ch;
+    font-size: 0.94rem;
+    line-height: 1.48;
+}
+
 @media (max-width: 1180px) {
     .home-overview-main {
-        grid-template-columns: minmax(140px, 170px) minmax(300px, 1fr);
+        grid-template-columns: minmax(124px, 150px) minmax(300px, 1fr);
     }
 
     .hero-status-bar {
@@ -406,9 +415,9 @@ export default {
 }
 
 @media (max-width: 760px) {
-    .home-overview {
-        margin-bottom: 14px;
-        padding: 14px;
+        .home-overview {
+        margin-bottom: 12px;
+        padding: 12px;
         border-radius: 3px;
     }
 
@@ -418,11 +427,11 @@ export default {
     }
 
     .hero-wordmark {
-        width: min(100%, 140px);
+        width: min(100%, 128px);
     }
 
     .hero-message h2 {
-        font-size: clamp(1.14rem, 6vw, 1.38rem);
+        font-size: clamp(1.08rem, 5vw, 1.28rem);
     }
 
     .hero-summary {
@@ -431,7 +440,7 @@ export default {
     }
 
     .home-overview-note {
-        font-size: 0.82rem;
+        font-size: 0.86rem;
     }
 
     .hero-status-bar {
@@ -450,7 +459,7 @@ export default {
     }
 
     .hero-status-bar dt {
-        font-size: 0.58rem;
+        font-size: 0.72rem;
     }
 
     .hero-status-bar dd {
@@ -464,11 +473,11 @@ export default {
 
 @media (max-width: 420px) {
     .hero-wordmark {
-        width: min(100%, 128px);
+        width: min(100%, 118px);
     }
 
     .hero-status-bar dt {
-        font-size: 0.52rem;
+        font-size: 0.7rem;
     }
 
     .hero-status-bar dd {

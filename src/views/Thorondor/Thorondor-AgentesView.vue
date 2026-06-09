@@ -6,8 +6,7 @@
                     <span class="section-kicker">Inventario de agentes</span>
                     <h1 class="section-name">Agentes</h1>
                     <p class="section-copy">
-                        Aqui tienes el censo de agentes registrados en tu navegador: alcance de red, endpoint,
-                        heartbeat, módulos activos, historial de conexiones y accesos rápidos para revisar o retirar un host.
+                        Censo de agentes: alcance, endpoint, heartbeat, módulos, historial y acciones de retirada.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -65,7 +64,7 @@
         <section class="section-box">
             <div class="tool-card">
                 <div class="card-head">
-                    <h5>Historial de conexiones del sistema seleccionado</h5>
+                    <h5>Conexiones del sistema seleccionado</h5>
                     <span class="mini-badge">{{ selectedAgent ? selectedAgent.displayName : "Sin selección" }}</span>
                 </div>
                 <div class="table-wrap scrollable-wrap">
@@ -111,19 +110,19 @@ export default {
             return [
                 {
                     label: "Inventario local",
-                    copy: "Cada agente queda asociado a esta instancia del navegador y puede apuntar a localhost, LAN, VPN o endpoint público."
+                    copy: "Agentes asociados a esta instancia: localhost, LAN, VPN o endpoint público."
                 },
                 {
                     label: "Estado operativo",
-                    copy: "La tabla resume si cada host está respondiendo, si acumula retraso de heartbeat o si ya no devuelve datos."
+                    copy: "Respuesta, retraso de heartbeat y disponibilidad de datos."
                 },
                 {
                     label: "Trazabilidad",
-                    copy: "El historial de conexiones te ayuda a distinguir un problema de red, de firewall o de propio agente."
+                    copy: "Historial para aislar red, firewall o agente."
                 },
                 {
                     label: "Retirada limpia",
-                    copy: "Eliminar un agente lo saca del inventario local y evita que el navegador siga intentando consultarlo."
+                    copy: "Eliminar detiene consultas desde el inventario local."
                 }
             ];
         }

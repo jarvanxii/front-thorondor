@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Visibilidad general"
       title="Dashboard general"
-      copy="Resume el estado de todos los agentes, el Último heartbeat, el consumo principal, las alertas activas y los eventos de seguridad que más importan en las Últimas 24 horas."
+      copy="Estado de agentes, heartbeat, consumo, alertas activas y eventos de las últimas 24 horas."
       badge="Live"
       :badge-note="`Último polling: ${thorondorLastPollAt ? formatRelativeTime(thorondorLastPollAt) : 'Pendiente'}`"
     >
@@ -17,7 +17,7 @@
     <section class="section-box">
       <article class="tool-card">
         <header class="card-head">
-          <h5>Evolucion de CPU y RAM de las Últimas 2 horas</h5>
+          <h5>CPU y RAM - últimas 2 horas</h5>
           <span class="mini-badge">Chart.js</span>
         </header>
         <ThorondorLineChart
@@ -90,7 +90,7 @@
         </article>
       </section>
       <p v-else class="empty-box">
-        No hay agentes registrados todavía. Empieza por la vista de generador.
+        Sin agentes registrados. Usa el generador para crear el primero.
       </p>
     </section>
 
@@ -98,7 +98,7 @@
       <section class="dashboard-table-grid">
         <article class="tool-card">
           <header class="card-head">
-            <h5>Eventos de seguridad en las Últimas 24 horas</h5>
+            <h5>Eventos de seguridad 24h</h5>
             <span class="mini-badge">24h</span>
           </header>
           <section class="table-wrap">

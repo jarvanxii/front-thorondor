@@ -151,7 +151,7 @@ export default {
   top: var(--main-header-height);
   bottom: 0;
   left: 0;
-  z-index: 2500;
+  z-index: 8900;
   display: grid;
   width: var(--sidebar-width);
   grid-template-rows: auto auto minmax(0, 1fr);

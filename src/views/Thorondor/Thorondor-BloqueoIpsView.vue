@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Respuesta defensiva"
       title="Bloqueo de IPs"
-      copy="Gestiona bloqueos manuales por sistema monitorizado, revisa las IPs que ya están cortadas y usa los intentos fallidos recientes como punto de partida para responder desde Thorondor."
+      copy="Bloqueos manuales por host. Revisión de IPs cortadas e intentos fallidos recientes."
       badge="Manual"
       :badge-note="`${totalBlockedIps} IPs bloqueadas en está sesión.`"
     />
@@ -38,7 +38,7 @@
                 id="block-ip"
                 v-model.trim="draft.ip"
                 class="form-control input-dark"
-                placeholder="203.0.113.24"
+                placeholder="IP a bloquear (ej. 203.0.113.24)"
               />
               <small v-if="ipValidationMessage" class="field-feedback">
                 {{ ipValidationMessage }}
@@ -50,7 +50,7 @@
                 id="block-reason"
                 v-model.trim="draft.reason"
                 class="form-control input-dark"
-                placeholder="Intentos fallidos continuos"
+                placeholder="Bloqueo manual desde Thorondor"
               />
             </label>
           </section>
@@ -327,7 +327,7 @@ export default {
       draft: {
         agentId: '',
         ip: '',
-        reason: 'Bloqueo manual desde Thorondor',
+        reason: '',
       },
       busy: false,
       refreshing: false,

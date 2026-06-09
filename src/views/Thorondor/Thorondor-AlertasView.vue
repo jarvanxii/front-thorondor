@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Centro de alertas"
       :title="selectedAgent ? `Alertas de ${selectedAgent.displayName}` : 'Alertas del host'"
-      copy="Vista operativa del ordenador monitorizado seleccionado. Las alertas se revisan por host para que la investigación no mezcle señales de sistemas distintos."
+      copy="Alertas del host seleccionado. Revisión por estado, severidad y fecha."
       :badge="selectedAgentCard ? selectedAgentCard.status.label : 'Sin host'"
       :badge-note="`${filteredAlerts.length} alertas en la vista actual.`"
     />
@@ -36,7 +36,7 @@
 
     <section class="section-box">
       <header class="card-head">
-        <h2>Linea temporal de alertas</h2>
+        <h2>Timeline de alertas</h2>
         <span class="mini-badge">{{ filteredAlerts.length }}</span>
       </header>
 

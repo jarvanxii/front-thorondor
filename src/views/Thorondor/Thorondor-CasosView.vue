@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Investigación"
       :title="selectedAgent ? `Casos de ${selectedAgent.displayName}` : 'Casos del host'"
-      copy="Agrupa alertas, comandos y acciones defensivas del ordenador seleccionado para investigar sin mezclar evidencias de otros sistemas."
+      copy="Casos por host con alertas, comandos, notas y acciones defensivas."
       badge="Case"
       :badge-note="`${selectedCases.length} casos asociados a este host.`"
     />
@@ -46,7 +46,7 @@
               id="case-owner"
               v-model.trim="caseDraft.owner"
               class="form-control input-dark"
-              placeholder="Analista"
+              placeholder="Responsable"
             />
           </label>
 
@@ -56,7 +56,7 @@
               id="case-title"
               v-model.trim="caseDraft.title"
               class="form-control input-dark"
-              placeholder="Investigación de actividad sospechosa"
+              placeholder="Título del caso"
             />
           </label>
 
@@ -67,7 +67,7 @@
               v-model.trim="caseDraft.note"
               rows="4"
               class="form-control input-dark textarea-dark"
-              placeholder="Contexto, hipotesis inicial o siguiente paso."
+              placeholder="Nota inicial"
             ></textarea>
           </label>
         </section>
@@ -82,7 +82,7 @@
 
       <article class="tool-card">
         <header class="card-head">
-          <h2>Cola de investigación</h2>
+          <h2>Casos abiertos</h2>
           <span class="mini-badge">{{ openCases.length }} abiertos</span>
         </header>
 
@@ -111,7 +111,7 @@
         </ul>
 
         <p v-else class="empty-box">
-          Este host no tiene casos todavía. Crea uno desde una alerta o desde una nota manual.
+          Sin casos para este host. Crea uno desde alerta o nota manual.
         </p>
       </article>
     </section>
@@ -119,7 +119,7 @@
     <section class="section-box">
       <article class="tool-card">
         <header class="card-head">
-          <h2>Timeline operativo del host</h2>
+          <h2>Timeline del host</h2>
           <span class="mini-badge">{{ hostTimeline.length }}</span>
         </header>
 
@@ -135,7 +135,7 @@
         </ol>
 
         <p v-else class="empty-box">
-          Sin alertas, comandos ni acciones defensivas recientes para construir timeline.
+          Sin eventos recientes para construir timeline.
         </p>
       </article>
     </section>

@@ -15,7 +15,11 @@
     </nav>
 
     <nav class="thorondor-account-nav" aria-label="Ajustes de usuario">
-      <button v-if="thorondorErrors.length" class="error-square" type="button" aria-label="Ver incidencias de Thorondor"
+      <section class="authorization-status" :class="{ 'is-authorized': isCurrentUserAuthorized }" aria-live="polite">
+        <span>{{ authorizationStatusLabel }}</span>
+      </section>
+
+      <button class="error-square" :class="{ 'is-empty': !thorondorErrors.length }" type="button" aria-label="Ver incidencias de Thorondor"
         aria-haspopup="menu" :aria-expanded="errorMenuOpen.toString()" @click.stop="toggleErrorMenu">
         <span></span>
         <strong>{{ thorondorErrors.length }}</strong>
@@ -31,6 +35,10 @@
           <article v-for="error in thorondorErrors" :key="error.id" class="error-menu-item">
             <strong>{{ error.message }}</strong>
             <small>{{ formatErrorTime(error.timestamp) }}</small>
+          </article>
+          <article v-if="!thorondorErrors.length" class="error-menu-item error-menu-item--empty">
+            <strong>Sin incidencias activas</strong>
+            <small>El header seguirá mostrando el contador aunque esté a cero.</small>
           </article>
         </section>
       </transition>
@@ -48,7 +56,7 @@
         <section v-if="settingsMenuOpen" class="settings-dropdown" role="menu">
           <header class="settings-dropdown-header">
             <span>Usuario activo</span>
-            <strong>{{ operatorSettings.displayName }}</strong>
+            <strong>{{ operatorDisplayName }}</strong>
             <small>{{ operatorSettings.role }} - sesión local</small>
           </header>
           <button v-for="item in accountMenuItems" :key="item.key" type="button" class="settings-menu-item"
@@ -94,7 +102,7 @@
                   <div class="settings-form-grid">
                     <label class="settings-field">
                       <span>Nombre visible</span>
-                      <input v-model.trim="operatorSettings.displayName" type="text" />
+                      <input v-model.trim="operatorSettings.displayName" type="text" placeholder="Nombre visible" />
                     </label>
                     <label class="settings-field">
                       <span>Rol operativo</span>
@@ -106,7 +114,7 @@
                     </label>
                     <label class="settings-field settings-field--full">
                       <span>Email de alertas</span>
-                      <input v-model.trim="operatorSettings.alertEmail" type="email" />
+                      <input v-model.trim="operatorSettings.alertEmail" type="email" placeholder="Email de alertas" />
                     </label>
                   </div>
                 </article>
@@ -161,7 +169,7 @@
                   </label>
                   <label class="settings-field">
                     <span>Retención local</span>
-                    <input :value="`${retentionDays} días`" type="text" disabled />
+                    <output class="settings-readonly-value">{{ retentionDays }} días</output>
                   </label>
                 </div>
               </section>
@@ -267,9 +275,9 @@ const THORONDOR_OPERATOR_SETTINGS_KEY = 'thorondor.operator.settings'
 
 function buildDefaultOperatorSettings() {
   return {
-    displayName: 'Adm 3',
+    displayName: '',
     role: 'Administrador',
-    alertEmail: 'admin@thorondor.local',
+    alertEmail: '',
     timezone: 'Europe/Madrid',
     digestCadence: 'Tiempo real',
     density: 'Equilibrada',
@@ -289,10 +297,14 @@ function buildDefaultOperatorSettings() {
 
 function mergeOperatorSettings(value = {}) {
   const defaults = buildDefaultOperatorSettings()
+  const displayName = value.displayName === 'Adm 3' ? '' : value.displayName
+  const alertEmail = value.alertEmail === 'admin@thorondor.local' ? '' : value.alertEmail
 
   return {
     ...defaults,
     ...value,
+    displayName: displayName ?? defaults.displayName,
+    alertEmail: alertEmail ?? defaults.alertEmail,
     security: {
       ...defaults.security,
       ...value.security,
@@ -411,6 +423,22 @@ export default {
       return (this.thorondorState.alerts || []).filter((alert) => alert.status === 'active')
     },
 
+    currentSessionUser() {
+      return this.thorondorState.session?.user || null
+    },
+
+    isCurrentUserAuthorized() {
+      return Boolean(
+        this.currentSessionUser?.canUseCloudPersistence ||
+          this.currentSessionUser?.usuarioAutorizado ||
+          this.currentSessionUser?.usuario_autorizado,
+      )
+    },
+
+    authorizationStatusLabel() {
+      return this.isCurrentUserAuthorized ? 'usuario autorizado' : 'usuario no autorizado'
+    },
+
     retentionDays() {
       return this.thorondorState.retentionDays || 30
     },
@@ -427,6 +455,10 @@ export default {
       return this.persistenceStatus.effectiveMode || 'local'
     },
 
+    canUseDatabasePersistence() {
+      return Boolean(this.persistenceStatus.cloudAllowed && this.isCurrentUserAuthorized)
+    },
+
     activeSettingsModalConfig() {
       return (
         this.accountMenuItems.find((item) => item.key === this.activeSettingsModal) ||
@@ -438,7 +470,15 @@ export default {
       return `thorondor-settings-${this.activeSettingsModal || 'panel'}`
     },
 
+    operatorDisplayName() {
+      return String(this.operatorSettings.displayName || '').trim() || 'Operador local'
+    },
+
     persistenceModeTitle() {
+      if (!this.canUseDatabasePersistence) {
+        return 'IndexedDB local obligatorio'
+      }
+
       if (this.selectedPersistenceMode === 'cloud' && !this.persistenceStatus.cloudConfigured) {
         return 'API no configurada'
       }
@@ -449,6 +489,10 @@ export default {
     },
 
     persistenceModeDescription() {
+      if (!this.canUseDatabasePersistence) {
+        return this.persistenceStatus.cloudAccessReason || 'Usuario no autorizado para usar BBDD por API.'
+      }
+
       if (this.selectedPersistenceMode === 'cloud' && !this.persistenceStatus.cloudConfigured) {
         return 'Falta configurar la URL de la API. La consola mantiene IndexedDB para no perder datos.'
       }
@@ -463,6 +507,13 @@ export default {
     persistenceOptions() {
       const cloudConfigured = Boolean(this.persistenceStatus.cloudConfigured)
       const effectiveMode = this.persistenceEffectiveMode
+      const cloudDisabledReason = !this.isCurrentUserAuthorized
+        ? 'Usuario no autorizado'
+        : !this.persistenceStatus.cloudAllowed
+          ? 'Sin permiso'
+          : !cloudConfigured
+            ? 'Sin API'
+            : ''
 
       return [
         {
@@ -475,11 +526,11 @@ export default {
         {
           value: 'cloud',
           label: 'API del back',
-          copy: cloudConfigured
-            ? 'Persistencia centralizada en la API, con IndexedDB como caché local.'
-            : 'Configura VITE_THORONDOR_API_BASE_URL para activar la persistencia con API.',
-          status: cloudConfigured ? (effectiveMode === 'cloud' ? 'Activo' : 'Disponible') : 'Sin API',
-          disabled: !cloudConfigured,
+          copy: cloudDisabledReason
+            ? 'Requiere usuario autorizado por un admin.'
+            : 'Persistencia centralizada en la API, con IndexedDB como caché local.',
+          status: cloudDisabledReason || (effectiveMode === 'cloud' ? 'Activo' : 'Disponible'),
+          disabled: Boolean(cloudDisabledReason),
         },
       ]
     },
@@ -634,6 +685,12 @@ export default {
 
     async setPersistenceMode(mode) {
       if (mode === this.selectedPersistenceMode || this.persistenceChanging) return
+      const option = this.persistenceOptions.find((item) => item.value === mode)
+      if (option?.disabled) {
+        this.settingsFeedbackTone = 'error'
+        this.settingsFeedback = option.status || 'Usuario no autorizado para usar BBDD por API.'
+        return
+      }
 
       this.persistenceChanging = true
       this.settingsFeedback = ''
@@ -677,7 +734,7 @@ export default {
 .thorondor-primary-header {
   position: fixed;
   inset: 0 0 auto;
-  z-index: 2600;
+  z-index: 9000;
   display: grid;
   grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(92px, auto);
   width: 100%;
@@ -784,6 +841,39 @@ export default {
   gap: 8px;
 }
 
+.authorization-status {
+  display: inline-flex;
+  min-height: 44px;
+  max-width: 160px;
+  align-items: center;
+  justify-content: center;
+  padding: 0 12px;
+  border: 1px solid rgba(248, 113, 113, 0.34);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(69, 24, 27, 0.74), rgba(19, 15, 18, 0.94));
+  color: #fecaca;
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    0 10px 18px rgba(0, 0, 0, 0.2);
+}
+
+.authorization-status.is-authorized {
+  border-color: rgba(74, 222, 128, 0.36);
+  background: linear-gradient(180deg, rgba(18, 83, 49, 0.62), rgba(13, 24, 20, 0.94));
+  color: #bbf7d0;
+}
+
+.authorization-status span {
+  overflow: hidden;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.04em;
+  line-height: 1.15;
+  text-align: center;
+  text-overflow: ellipsis;
+  text-transform: uppercase;
+}
+
 .settings-square {
   display: inline-flex;
   align-items: center;
@@ -839,6 +929,21 @@ export default {
   background: linear-gradient(180deg, rgba(91, 28, 34, 0.98), rgba(38, 16, 22, 0.98));
 }
 
+.error-square.is-empty {
+  border-color: rgba(176, 184, 194, 0.24);
+  background: var(--thorondor-nested-background);
+  color: #d9e2ec;
+}
+
+.error-square.is-empty span {
+  background: #6b7280;
+  box-shadow: 0 0 0 4px rgba(156, 163, 175, 0.12);
+}
+
+.error-menu-item--empty {
+  cursor: default;
+}
+
 .settings-square {
   width: 44px;
 }
@@ -864,7 +969,7 @@ export default {
   position: fixed;
   top: var(--main-header-height);
   right: 24px;
-  z-index: 2700;
+  z-index: 9100;
   display: grid;
   width: min(360px, calc(100vw - 48px));
   max-height: calc(100vh - var(--main-header-height));
@@ -1023,7 +1128,7 @@ export default {
 .settings-modal-backdrop {
   position: fixed;
   inset: var(--main-header-height) 0 0;
-  z-index: 3000;
+  z-index: 9200;
   display: grid;
   place-items: center;
   padding: clamp(12px, 2.4vw, 28px);
@@ -1150,6 +1255,7 @@ export default {
 }
 
 .settings-field {
+  position: relative;
   display: grid;
   gap: 6px;
   min-width: 0;
@@ -1168,7 +1274,8 @@ export default {
 }
 
 .settings-field input,
-.settings-field select {
+.settings-field select,
+.settings-readonly-value {
   width: 100%;
   min-height: 40px;
   border: 1px solid rgba(176, 184, 194, 0.2);
@@ -1178,6 +1285,12 @@ export default {
   font: inherit;
   outline: none;
   padding: 0 11px;
+}
+
+.settings-readonly-value {
+  display: flex;
+  align-items: center;
+  color: #9aa6b3;
 }
 
 .settings-field input:focus,
@@ -1534,6 +1647,16 @@ export default {
     height: 38px;
   }
 
+  .authorization-status {
+    min-height: 38px;
+    max-width: 112px;
+    padding: 0 8px;
+  }
+
+  .authorization-status span {
+    font-size: 0.58rem;
+  }
+
   .error-dropdown {
     right: 14px;
   }
@@ -1590,6 +1713,16 @@ export default {
   .sidebar-toggle {
     width: 36px;
     height: 36px;
+  }
+
+  .authorization-status {
+    max-width: 88px;
+    min-height: 36px;
+    padding: 0 6px;
+  }
+
+  .authorization-status span {
+    font-size: 0.52rem;
   }
 
   .sidebar-toggle span {

@@ -220,15 +220,6 @@ function joinThorondorLogPaths(paths) {
   return paths.join("\n");
 }
 
-function getDefaultThorondorAgentCentralApiBaseUrl() {
-  return String(
-    import.meta.env?.VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL
-      || import.meta.env?.VITE_THORONDOR_API_BASE_URL
-      || import.meta.env?.VITE_API_BASE_URL
-      || ""
-  ).trim();
-}
-
 function normalizeLogPathList(value) {
   return String(value || "")
     .split(/\r?\n/)
@@ -430,12 +421,12 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
     systemName: "",
     distro: defaultDistro,
     osVersion: getThorondorDefaultOsVersionForTarget(normalizedTargetOs, defaultDistro),
-    receiverUrl: "http://127.0.0.1:8765",
-    centralApiBaseUrl: getDefaultThorondorAgentCentralApiBaseUrl(),
+    receiverUrl: "",
+    centralApiBaseUrl: "",
     networkScope: "local",
     corsOrigin: "*",
-    port: 8765,
-    intervalSeconds: 30,
+    port: "",
+    intervalSeconds: "",
     additionalLogPaths: getThorondorDefaultLogPathsForOs(normalizedTargetOs),
     modules: {
       systemMetrics: true,
@@ -453,9 +444,9 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
       smartMonitor: false
     },
     generateSystemd: normalizedTargetOs !== "windows",
-    hostIp: "127.0.0.1",
-    installUser: "thorondor",
-    serviceName: "thorondor-agent",
+    hostIp: "",
+    installUser: "",
+    serviceName: "",
     autoStart: true,
     notes: ""
   };

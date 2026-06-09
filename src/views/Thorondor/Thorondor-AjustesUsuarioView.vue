@@ -5,7 +5,7 @@
         <span class="section-kicker">Ajustes</span>
         <h1 class="module-title">Cuenta y seguridad</h1>
         <p class="module-copy">
-          Centro de control del operador: cuenta, seguridad, preferencias, notificaciones y persistencia del workspace.
+          Cuenta, seguridad, preferencias, notificaciones y persistencia del workspace.
         </p>
       </div>
 
@@ -36,7 +36,7 @@
         <div class="control-grid compact-grid">
           <div class="control-field">
             <label class="field-label" for="display-name">Nombre visible</label>
-            <input id="display-name" v-model="settings.displayName" class="form-control input-dark" type="text" />
+            <input id="display-name" v-model="settings.displayName" class="form-control input-dark" type="text" placeholder="Nombre visible" />
           </div>
           <div class="control-field">
             <label class="field-label" for="user-role">Rol</label>
@@ -48,7 +48,7 @@
           </div>
           <div class="control-field full-span">
             <label class="field-label" for="alert-email">Email de alertas</label>
-            <input id="alert-email" v-model="settings.alertEmail" class="form-control input-dark" type="email" />
+            <input id="alert-email" v-model="settings.alertEmail" class="form-control input-dark" type="email" placeholder="Email de alertas" />
           </div>
         </div>
       </article>
@@ -110,7 +110,7 @@
         </div>
         <div class="control-field">
           <label class="field-label" for="retention">Retención local</label>
-          <input id="retention" :value="`${retentionDays} días`" class="form-control input-dark" type="text" disabled />
+          <output id="retention" class="form-control input-dark readonly-field">{{ retentionDays }} días</output>
         </div>
       </div>
     </section>
@@ -121,13 +121,12 @@
           <span class="section-kicker">Notificaciones</span>
           <h2 class="module-title">Alertas por email</h2>
           <p class="module-copy">
-            Esta parte queda preparada para más adelante. Durante las pruebas local/LAN no envía correos ni cambia el
-            comportamiento del SIEM.
+            Configuración SMTP pendiente. Sin envío de correo en esta fase.
           </p>
         </div>
         <div class="phase-badge-block">
           <span class="phase-badge">Pendiente</span>
-          <small>SMTP se integrará en una fase posterior.</small>
+          <small>SMTP pendiente de integración.</small>
         </div>
       </div>
 
@@ -163,7 +162,7 @@
           <strong>{{ persistenceLabel }}</strong>
           <small>{{ persistenceCopy }}</small>
           <small v-if="persistenceStatus.lastError" class="settings-warning">
-            Ultimo intentó cloud: {{ persistenceStatus.lastError }}
+            Último intento cloud: {{ persistenceStatus.lastError }}
           </small>
         </div>
       </article>
@@ -201,7 +200,7 @@
           <span class="section-kicker">Panel admin</span>
           <h2 class="module-title">Usuarios de la plataforma</h2>
           <p class="module-copy">
-            Gestion de acceso a persistencia cloud y revision de cuentas registradas.
+            Gestión de acceso cloud y revisión de cuentas registradas.
           </p>
         </div>
         <button class="btn btn-main" type="button" :disabled="adminLoading" @click="loadAdminUsers()">
@@ -304,9 +303,9 @@ export default {
     return {
       thorondorLogo,
       settings: {
-        displayName: "Adm 3",
+        displayName: "",
         role: "Administrador",
-        alertEmail: "admin@thorondor.local",
+        alertEmail: "",
         timezone: "Europe/Madrid",
         digestCadence: "Tiempo real",
         density: "Equilibrada"
@@ -372,7 +371,7 @@ export default {
     },
 
     currentDisplayName() {
-      return this.currentSessionUser?.displayName || this.settings.displayName;
+      return this.currentSessionUser?.displayName || this.settings.displayName || "Operador local";
     },
 
     isSessionAdmin() {

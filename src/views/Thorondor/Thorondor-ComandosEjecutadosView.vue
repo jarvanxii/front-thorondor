@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Auditoria temporal"
       :title="selectedAgent ? `Comandos de ${selectedAgent.displayName}` : 'Comandos del host'"
-      copy="Revisa actividad de comandos detectada en el ordenador monitorizado seleccionado, con usuario, origen y acciones defensivas lanzadas desde Thorondor ordenadas por fecha."
+      copy="Comandos detectados por host: usuario, origen, ejecución y acciones defensivas."
       badge="Audit"
       :badge-note="`${filteredCommandEvents.length} eventos visibles.`"
     />
@@ -46,7 +46,7 @@
               id="command-user"
               v-model.trim="filters.user"
               class="form-control input-dark"
-              placeholder="root, admin, svc..."
+              placeholder="Usuario"
             />
           </label>
           <label class="control-field" for="command-text">
@@ -55,7 +55,7 @@
               id="command-text"
               v-model.trim="filters.command"
               class="form-control input-dark"
-              placeholder="apt, powershell, net..."
+              placeholder="Comando"
             />
           </label>
         </section>
@@ -65,7 +65,7 @@
     <section class="section-box">
       <article class="tool-card">
         <header class="card-head">
-          <h5>Linea temporal</h5>
+          <h5>Timeline</h5>
           <button class="btn btn-quiet" @click="pollNow">Actualizar</button>
         </header>
         <section class="table-wrap audit-table-wrap">
