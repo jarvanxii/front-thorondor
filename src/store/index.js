@@ -43,6 +43,8 @@ import {
   getStoredThorondorJwtToken,
   getStoredThorondorSession,
   isThorondorJwtTokenValid,
+  logoutThorondorSession as requestThorondorLogout,
+  saveThorondorSession,
 } from '@/features/thorondor/services/thorondorAuth'
 import {
   deriveThorondorAgentStatus,
@@ -429,6 +431,14 @@ function normalizeErrorDetails(error) {
 
 function hasThorondorApiToken(token) {
   return isThorondorJwtTokenValid(token)
+}
+
+function buildAnonymousThorondorSession() {
+  return {
+    authenticated: false,
+    user: null,
+    providers: [],
+  }
 }
 
 async function refreshThorondorTokenForSession(session) {
@@ -926,6 +936,25 @@ export default createStore({
       configureThorondorCloudAccess(session, token)
       commit('setThorondorSession', session)
       commit('setThorondorToken', token)
+      commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
+      return session
+    },
+
+    async logoutThorondorSession({ commit }) {
+      const anonymousSession = buildAnonymousThorondorSession()
+      let session = anonymousSession
+
+      try {
+        session = (await requestThorondorLogout()) || anonymousSession
+      } catch (error) {
+        saveThorondorSession(anonymousSession)
+        commit('pushThorondorError', `No se pudo cerrar la sesion remota: ${error.message}`)
+      }
+
+      clearThorondorJwtToken()
+      configureThorondorCloudAccess(session, null)
+      commit('setThorondorSession', session)
+      commit('setThorondorToken', null)
       commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
       return session
     },

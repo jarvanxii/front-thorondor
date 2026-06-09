@@ -56,9 +56,11 @@
             <strong>{{ item.label }}</strong>
             <span>{{ item.copy }}</span>
           </button>
-          <div class="settings-menu-footer">
-            <span>Sesión local</span>
-            <small>Autenticación remota pendiente de integrar.</small>
+          <div class="settings-menu-footer settings-menu-footer--action">
+            <button type="button" class="settings-logout-button" role="menuitem" :disabled="logoutLoading"
+              @click="handleLogout">
+              {{ logoutLoading ? 'Cerrando sesión...' : 'Cerrar sesión' }}
+            </button>
           </div>
         </section>
       </transition>
@@ -317,6 +319,7 @@ export default {
       settingsSaving: false,
       settingsFeedback: '',
       settingsFeedbackTone: 'success',
+      logoutLoading: false,
       persistenceChanging: false,
       operatorSettings: buildDefaultOperatorSettings(),
       accountMenuItems: [
@@ -528,6 +531,24 @@ export default {
 
     closeErrorMenu() {
       this.errorMenuOpen = false
+    },
+
+    async handleLogout() {
+      if (this.logoutLoading) return
+
+      this.logoutLoading = true
+      try {
+        await this.$store.dispatch('logoutThorondorSession')
+        this.closeSettingsMenu()
+        this.closeErrorMenu()
+        this.closeSettingsModal()
+
+        if (this.$route.name !== 'thorondor-login') {
+          await this.$router.replace({ name: 'thorondor-login' })
+        }
+      } finally {
+        this.logoutLoading = false
+      }
     },
 
     openSettingsModal(key) {
@@ -947,6 +968,45 @@ export default {
 
 .settings-menu-footer {
   background: rgba(10, 13, 17, 0.86);
+}
+
+.settings-menu-footer--action {
+  gap: 0;
+  padding: 12px 16px;
+}
+
+.settings-logout-button {
+  display: inline-flex;
+  width: 100%;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid rgba(248, 113, 113, 0.36);
+  border-radius: 4px;
+  background: linear-gradient(180deg, rgba(96, 34, 38, 0.9), rgba(42, 18, 22, 0.96));
+  color: #fee2e2;
+  cursor: var(--cursor-pointer), pointer;
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 900;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    opacity 0.16s ease;
+}
+
+.settings-logout-button:hover,
+.settings-logout-button:focus-visible {
+  border-color: rgba(254, 202, 202, 0.58);
+  background: linear-gradient(180deg, rgba(124, 38, 45, 0.96), rgba(58, 20, 26, 0.98));
+  color: #fff7f7;
+  outline: none;
+}
+
+.settings-logout-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.62;
 }
 
 .settings-menu-enter-active,
