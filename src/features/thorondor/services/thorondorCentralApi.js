@@ -35,6 +35,7 @@ async function requestCentral(path, options = {}) {
     const response = await fetch(`${basePath}${path}`, {
       cache: 'no-store',
       mode: 'cors',
+      credentials: 'include',
       ...options,
       headers: {
         Accept: 'application/json',

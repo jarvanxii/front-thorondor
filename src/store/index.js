@@ -42,6 +42,10 @@ import {
   isThorondorCentralConfigured,
 } from '@/features/thorondor/services/thorondorCentralApi'
 import {
+  fetchThorondorSession,
+  getStoredThorondorSession,
+} from '@/features/thorondor/services/thorondorAuth'
+import {
   deriveThorondorAgentStatus,
   evaluateThorondorRules,
 } from '@/features/thorondor/services/thorondorRules'
@@ -97,6 +101,7 @@ function createThorondorState() {
     responseActions: [],
     generatorDraft: buildThorondorAgentDraft(),
     errors: [],
+    session: getStoredThorondorSession(),
     lastPollAt: null,
     central: {
       enabled: isThorondorCentralConfigured(),
@@ -512,6 +517,15 @@ export default createStore({
       }
     },
 
+    setThorondorSession(state, value) {
+      state.thorondor.session = {
+        authenticated: false,
+        user: null,
+        providers: [],
+        ...(value || {}),
+      }
+    },
+
     hydrateThorondorState(state, payload) {
       state.thorondor.initialized = true
       state.thorondor.persistence = {
@@ -822,6 +836,12 @@ export default createStore({
 
       commit('setThorondorBootstrapping', true)
       try {
+        try {
+          commit('setThorondorSession', await fetchThorondorSession())
+        } catch {
+          commit('setThorondorSession', getStoredThorondorSession())
+        }
+
         const persistenceStatus = await openThorondorPersistence()
         commit('setThorondorPersistenceStatus', persistenceStatus)
         const persisted = await loadThorondorPersistence()
@@ -853,6 +873,12 @@ export default createStore({
       } finally {
         commit('setThorondorBootstrapping', false)
       }
+    },
+
+    async refreshThorondorSession({ commit }) {
+      const session = await fetchThorondorSession()
+      commit('setThorondorSession', session)
+      return session
     },
 
     async syncThorondorCentralConsole({ commit, state }) {

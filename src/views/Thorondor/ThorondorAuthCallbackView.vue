@@ -37,16 +37,40 @@ export default {
   data() {
     return {
       thorondorLogo,
+      sessionStatus: 'checking',
+      session: null,
+      sessionError: '',
+    }
+  },
+
+  async mounted() {
+    if (this.hasProviderError) {
+      this.sessionStatus = 'error'
+      return
+    }
+
+    try {
+      const session = await this.$store.dispatch('refreshThorondorSession')
+      this.session = session
+      this.sessionStatus = session.authenticated ? 'success' : 'error'
+      if (session.authenticated) {
+        window.setTimeout(() => {
+          this.$router.replace({ name: 'thorondor-information' })
+        }, 900)
+      }
+    } catch (error) {
+      this.sessionStatus = 'error'
+      this.sessionError = error.message
     }
   },
 
   computed: {
     hasProviderError() {
-      return Boolean(this.$route.query.error)
-    },
-
-    hasAuthCode() {
-      return Boolean(this.$route.query.code || this.$route.query.state)
+      return Boolean(
+        this.$route.query.error ||
+          this.$route.query.auth === 'error' ||
+          this.$route.query.auth === 'provider_not_configured',
+      )
     },
 
     statusLabel() {
@@ -54,11 +78,15 @@ export default {
         return 'El proveedor ha devuelto un error'
       }
 
-      if (this.hasAuthCode) {
-        return 'Respuesta de proveedor detectada'
+      if (this.sessionStatus === 'success') {
+        return 'Sesion iniciada'
       }
 
-      return 'Comprobando sesión'
+      if (this.sessionStatus === 'error') {
+        return 'No hay sesion activa'
+      }
+
+      return 'Comprobando sesion'
     },
 
     title() {
@@ -66,19 +94,38 @@ export default {
         return 'No se pudo completar el acceso'
       }
 
-      return 'Validando sesión'
+      if (this.sessionStatus === 'success') {
+        return 'Acceso validado'
+      }
+
+      if (this.sessionStatus === 'error') {
+        return 'No se pudo validar la sesion'
+      }
+
+      return 'Validando sesion'
     },
 
     description() {
       if (this.hasProviderError) {
-        return 'Cuando conectemos la API, está pantalla mostrará el detalle del error y permitirá reintentar con el proveedor correcto.'
+        return (
+          this.$route.query.message ||
+          'El proveedor no esta disponible o no pudo completar el flujo OAuth.'
+        )
       }
 
-      if (this.hasAuthCode) {
-        return 'Esta ruta queda preparada para cerrar el flujo con la API, validar estado y cargar la sesión del workspace sin guardar secretos en el navegador.'
+      if (this.sessionStatus === 'success') {
+        const name = this.session?.user?.displayName || this.session?.user?.email || 'operador'
+        return `Sesion iniciada como ${name}. Te llevamos a la consola.`
       }
 
-      return 'Esta pantalla queda preparada para recibir el retorno de Google, Microsoft, GitHub o Apple después de que la API cree la sesión segura.'
+      if (this.sessionStatus === 'error') {
+        return (
+          this.sessionError ||
+          'El backend no devolvio una sesion autenticada. Revisa cookies, CORS y callback OAuth.'
+        )
+      }
+
+      return 'Cerrando el flujo con la API y cargando la sesion del workspace sin guardar secretos en el navegador.'
     },
   },
 }

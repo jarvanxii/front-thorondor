@@ -66,6 +66,7 @@ async function requestThorondorCloud(path, options = {}) {
     const response = await fetch(`${config.basePath}${path}`, {
       cache: 'no-store',
       mode: 'cors',
+      credentials: 'include',
       ...options,
       headers: {
         ...buildCloudHeaders(),

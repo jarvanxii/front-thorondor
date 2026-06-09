@@ -38,8 +38,18 @@ El frontend redirige a estos endpoints de la API:
 - `/auth/oauth/microsoft`
 - `/auth/oauth/github`
 - `/auth/oauth/apple`
+- `/auth/session`
+- `/auth/providers`
+- `/auth/logout`
 
-Cada redireccion envia `flow=web`, `return_to` con la ruta de callback del frontend y `remember_device` cuando el usuario lo marque. La API debe generar `state`/`nonce`, aplicar PKCE cuando corresponda, guardar secretos en servidor, intercambiar el codigo con el proveedor, crear la sesion y devolver al frontend con cookie `httpOnly`, `Secure` y `SameSite`.
+Cada redireccion envia `flow=web`, `return_to` con la ruta de callback del frontend y `remember_device` cuando el usuario lo marque. La API conserva secretos en servidor, intercambia el codigo con el proveedor, crea la sesion y devuelve al frontend con la cookie `THORONDOR_SESSION` `httpOnly`. En produccion con Cloudflare Tunnel usa HTTPS publico, `THORONDOR_AUTH_COOKIE_SECURE=true` y `THORONDOR_AUTH_COOKIE_SAME_SITE=None` si front y API quedan en hostnames distintos.
+
+Los callbacks OAuth registrados en cada proveedor deben apuntar al back publico:
+
+- `https://<api-publica>/login/oauth2/code/google`
+- `https://<api-publica>/login/oauth2/code/microsoft`
+- `https://<api-publica>/login/oauth2/code/github`
+- `https://<api-publica>/login/oauth2/code/apple`
 
 ## Persistencia de datos
 
@@ -55,7 +65,7 @@ VITE_THORONDOR_PERSISTENCE_MODE=local
 VITE_THORONDOR_WORKSPACE_ID=default
 ```
 
-Cuando `VITE_THORONDOR_PERSISTENCE_MODE=cloud`, la API debe exponer:
+Cuando `VITE_THORONDOR_PERSISTENCE_MODE=cloud`, la API expone:
 
 - `GET /thorondor/workspaces/:workspaceId/dataset`
 - `PUT /thorondor/workspaces/:workspaceId/dataset`
