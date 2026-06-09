@@ -30,7 +30,7 @@ Configura la API en `.env` a partir de `.env.example`:
 ```sh
 VITE_THORONDOR_API_BASE_URL=http://localhost:8088
 VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL=http://localhost:8088
-VITE_THORONDOR_AUTH_CALLBACK_PATH=/auth/callback
+VITE_THORONDOR_AUTH_CALLBACK_PATH=/login/callback
 ```
 
 En produccion con Nginx o Cloudflare Tunnel bajo el mismo origen, usa el proxy del servidor:
@@ -45,7 +45,7 @@ Despliegue previsto:
 - Nginx sirve el front compilado en `127.0.0.1:444`.
 - La API Spring Boot escucha en `127.0.0.1:8088`.
 - Cloudflare Tunnel publica `thorondor.app` y `www.thorondor.app` contra el front.
-- `api.thorondor.app` apunta a la API para OAuth, agentes y llamadas externas.
+- `api.thorondor.app` apunta a la API para agentes y llamadas externas directas.
 - No abrir `444` ni `8088` en el router; `cloudflared` crea la salida hacia Cloudflare.
 
 El frontend redirige a estos endpoints de la API:
@@ -63,12 +63,14 @@ Cada redireccion envia `flow=web`, `return_to` con la ruta de callback del front
 
 Los usuarios OAuth nacen con `usuario_admin=false` y `usuario_autorizado=false`. Solo los usuarios admin ven el panel admin en ajustes. Desde ese panel se puede autorizar a otros usuarios para persistencia en BBDD por API; los no autorizados quedan forzados a IndexedDB aunque `VITE_THORONDOR_PERSISTENCE_MODE=cloud`. La monitorizacion y las acciones sobre hosts requieren JWT validado por la API; una cuenta sin token puede entrar a ver la aplicacion, pero no puede consultar hosts ni encolar comandos. Los agentes se registran en la API central con `X-Thorondor-Agent-Enroll-Token` y luego sincronizan con `X-Thorondor-Agent-Token`; el back guarda solo el hash del token por agente.
 
-Los callbacks OAuth registrados en cada proveedor deben apuntar al back publico:
+Los callbacks OAuth registrados en cada proveedor para el login web deben apuntar al origen del front:
 
-- `https://api.thorondor.app/login/oauth2/code/google`
-- `https://api.thorondor.app/login/oauth2/code/microsoft`
-- `https://api.thorondor.app/login/oauth2/code/github`
-- `https://api.thorondor.app/login/oauth2/code/apple`
+- `https://thorondor.app/login/oauth2/code/google`
+- `https://thorondor.app/login/oauth2/code/microsoft`
+- `https://thorondor.app/login/oauth2/code/github`
+- `https://thorondor.app/login/oauth2/code/apple`
+
+El proxy `/api` de Nginx deja que el navegador inicie OAuth contra la API sin cambiar de origen. Usar callbacks en `api.thorondor.app` solo tiene sentido si se configura dominio de cookie compartido y CORS/cookies cross-origin de forma explicita.
 
 ## Persistencia de datos
 

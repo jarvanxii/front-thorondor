@@ -17,11 +17,16 @@
             v-for="provider in socialProviders"
             :key="provider.id"
             class="social-login-button"
-            :class="{ 'is-loading': socialAuthBusyProvider === provider.id }"
+            :class="{
+              'is-loading': socialAuthBusyProvider === provider.id,
+              'is-unavailable': provider.checked && !provider.configured,
+            }"
             type="button"
-            :disabled="Boolean(socialAuthBusyProvider)"
+            :disabled="Boolean(socialAuthBusyProvider) || (provider.checked && !provider.configured)"
             :aria-label="`Continuar con ${provider.label}`"
-            :title="provider.description"
+            :title="provider.checked && !provider.configured
+              ? `${provider.label} pendiente de configurar en la API`
+              : provider.description"
             @click="startSocialLogin(provider)"
           >
             <img :src="provider.icon" alt="" aria-hidden="true" />
@@ -94,6 +99,8 @@
 import loginBanner from '@/assets/images/brand/banner_login.png'
 import {
   THORONDOR_SOCIAL_AUTH_PROVIDERS,
+  fetchThorondorSession,
+  getThorondorAuthConfig,
   startThorondorSocialAuth,
 } from '@/features/thorondor/services/thorondorAuth'
 
@@ -103,7 +110,8 @@ export default {
   data() {
     return {
       loginBanner,
-      socialProviders: THORONDOR_SOCIAL_AUTH_PROVIDERS,
+      providerAvailability: {},
+      providersLoaded: false,
       socialAuthBusyProvider: '',
       showPassword: false,
       feedbackMessage: '',
@@ -115,8 +123,46 @@ export default {
     }
   },
 
+  computed: {
+    socialProviders() {
+      return THORONDOR_SOCIAL_AUTH_PROVIDERS.map((provider) => ({
+        ...provider,
+        checked: this.providersLoaded,
+        configured: this.providerAvailability[provider.id] !== false,
+      }))
+    },
+  },
+
+  mounted() {
+    this.loadProviderConfiguration()
+  },
+
   methods: {
+    async loadProviderConfiguration() {
+      if (!getThorondorAuthConfig().apiBaseUrl) {
+        return
+      }
+
+      try {
+        const session = await fetchThorondorSession()
+        this.providerAvailability = Object.fromEntries(
+          (session.providers || []).map((provider) => [
+            provider.id,
+            Boolean(provider.configured),
+          ]),
+        )
+        this.providersLoaded = true
+      } catch {
+        this.providersLoaded = false
+      }
+    },
+
     startSocialLogin(provider) {
+      if (provider.checked && !provider.configured) {
+        this.feedbackMessage = `${provider.label} esta pendiente de configurar en el backend.`
+        return
+      }
+
       const result = startThorondorSocialAuth(provider.id, {
         rememberDevice: this.form.rememberDevice,
       })
@@ -366,13 +412,20 @@ export default {
 }
 
 .social-login-button:disabled {
-  cursor: progress;
   opacity: 0.68;
 }
 
 .social-login-button.is-loading {
+  cursor: progress;
   border-color: rgba(236, 194, 119, 0.72);
   box-shadow: 0 0 0 3px rgba(218, 166, 92, 0.15);
+}
+
+.social-login-button.is-unavailable {
+  cursor: not-allowed;
+  background: rgba(148, 163, 184, 0.2);
+  color: #9ca8b7;
+  box-shadow: none;
 }
 
 .social-login-button img {
