@@ -58,10 +58,10 @@ export default {
 .thorondor-app-shell {
   min-height: 100vh;
   background:
-    linear-gradient(90deg, rgba(214, 221, 231, 0.07) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(214, 221, 231, 0.055) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(226, 232, 240, 0.04) 1px, transparent 1px),
-    radial-gradient(circle at 18% 8%, rgba(226, 232, 240, 0.08), transparent 28%),
+    linear-gradient(90deg, rgba(236, 194, 119, 0.04) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(236, 194, 119, 0.032) 1px, transparent 1px),
+    linear-gradient(135deg, rgba(226, 232, 240, 0.025) 1px, transparent 1px),
+    radial-gradient(circle at 18% 8%, rgba(218, 166, 92, 0.09), transparent 28%),
     linear-gradient(180deg, #111720 0%, #0d1219 46%, #080c11 100%);
   background-size:
     40px 40px,
@@ -105,7 +105,7 @@ export default {
 @media (max-width: 900px) {
   .thorondor-app-shell {
     background:
-      radial-gradient(circle at 50% -12%, rgba(226, 232, 240, 0.09), transparent 30%),
+      radial-gradient(circle at 50% -12%, rgba(218, 166, 92, 0.1), transparent 30%),
       linear-gradient(180deg, #111720 0%, #0b1016 54%, #080c11 100%);
     background-size: auto;
   }

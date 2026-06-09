@@ -64,8 +64,10 @@ export default {
   width: 100%;
   margin: 18px 0 0;
   padding: 18px clamp(20px, 2.4vw, 38px);
-  border-top: 1px solid rgba(190, 198, 209, 0.18);
-  background: linear-gradient(180deg, #121820 0%, #0b0f15 100%);
+  border-top: 1px solid rgba(236, 194, 119, 0.18);
+  background:
+    radial-gradient(circle at 0% 0%, rgba(218, 166, 92, 0.08), transparent 34%),
+    linear-gradient(180deg, #121820 0%, #0b0f15 100%);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.035),
     0 -14px 36px rgba(0, 0, 0, 0.2);
@@ -81,7 +83,7 @@ export default {
 }
 
 .footer-brand strong {
-  color: #f1f5f9;
+  color: #f0c77e;
   font-size: 0.9rem;
   font-weight: 800;
 }

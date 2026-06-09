@@ -160,9 +160,9 @@ export default {
   overflow-y: auto;
   background:
     linear-gradient(180deg, rgba(26, 29, 34, 0.98), rgba(12, 15, 19, 0.99)),
-    repeating-linear-gradient(180deg, rgba(255, 255, 255, 0.028) 0 1px, transparent 1px 24px),
+    repeating-linear-gradient(180deg, rgba(236, 194, 119, 0.022) 0 1px, transparent 1px 24px),
     #11151a;
-  border-right: 1px solid rgba(189, 196, 205, 0.16);
+  border-right: 1px solid rgba(236, 194, 119, 0.17);
   box-shadow: 20px 0 44px rgba(0, 0, 0, 0.26);
 }
 
@@ -170,7 +170,7 @@ export default {
   display: grid;
   gap: 12px;
   padding: 12px;
-  border: 1px solid rgba(189, 196, 205, 0.16);
+  border: 1px solid rgba(236, 194, 119, 0.16);
   border-radius: 4px;
   background:
     linear-gradient(180deg, rgba(34, 38, 44, 0.82), rgba(18, 21, 26, 0.9)),
@@ -186,7 +186,7 @@ export default {
 .sidebar-system span,
 .sidebar-nav-group h2 {
   margin: 0;
-  color: #a7b0bb;
+  color: #c4a16b;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -296,11 +296,11 @@ export default {
 }
 
 .sidebar-nav-item.is-active {
-  border-color: rgba(213, 219, 226, 0.2);
-  background: linear-gradient(90deg, rgba(77, 85, 96, 0.42), rgba(35, 40, 47, 0.72));
+  border-color: rgba(236, 194, 119, 0.28);
+  background: linear-gradient(90deg, rgba(126, 93, 42, 0.34), rgba(35, 40, 47, 0.72));
   color: #ffffff;
   box-shadow:
-    inset 3px 0 0 #d4dae1,
+    inset 3px 0 0 var(--thorondor-gold),
     0 10px 18px rgba(0, 0, 0, 0.16);
 }
 
@@ -316,7 +316,7 @@ export default {
 }
 
 .sidebar-nav-item.is-active .nav-marker {
-  background: #e3e7ec;
+  background: var(--thorondor-gold);
 }
 
 .nav-label {

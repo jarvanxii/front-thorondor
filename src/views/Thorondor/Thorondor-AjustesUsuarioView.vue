@@ -289,7 +289,7 @@ import {
   fetchThorondorAdminUsers,
   updateThorondorAdminUserAuthorization
 } from "@/features/thorondor/services/thorondorAuth";
-import thorondorLogo from "@/assets/images/Thorondor-logo.png";
+import thorondorLogo from "@/assets/images/brand/logo_thorondor.png";
 
 export default {
   name: "ThorondorAjustesUsuarioView",
@@ -557,16 +557,20 @@ export default {
   justify-self: end;
   width: min(100%, 360px);
   padding: 14px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid var(--thorondor-gold-line);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.54);
+  background:
+    linear-gradient(180deg, rgba(31, 27, 21, 0.58), rgba(16, 20, 26, 0.64)),
+    rgba(16, 20, 26, 0.54);
 }
 
 .settings-user-summary img {
   width: 58px;
   height: 58px;
   border-radius: 4px;
-  object-fit: cover;
+  object-fit: contain;
+  background: rgba(5, 7, 10, 0.82);
+  box-shadow: inset 0 0 0 1px rgba(236, 194, 119, 0.16);
 }
 
 .settings-user-summary div {

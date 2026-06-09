@@ -3,6 +3,17 @@
 :root {
   --main-header-height: 68px;
   --sidebar-width: 248px;
+  --thorondor-ink: #070a0f;
+  --thorondor-ink-soft: #10151c;
+  --thorondor-panel: #151a21;
+  --thorondor-panel-strong: #0b1016;
+  --thorondor-gold: #d6a15c;
+  --thorondor-gold-strong: #f3cf8c;
+  --thorondor-gold-soft: rgba(218, 166, 92, 0.18);
+  --thorondor-gold-line: rgba(236, 194, 119, 0.22);
+  --thorondor-line: rgba(190, 198, 209, 0.18);
+  --thorondor-text: #f8fafc;
+  --thorondor-muted: #9aa6b3;
   --cursor-default: auto;
   --cursor-pointer: pointer;
   --cursor-text: text;

@@ -664,9 +664,9 @@ export default {
   align-items: center;
   gap: 16px;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(176, 184, 194, 0.18);
+  border-bottom: 1px solid rgba(236, 194, 119, 0.2);
   background:
-    linear-gradient(180deg, rgba(21, 24, 30, 0.985), rgba(12, 15, 19, 0.975)),
+    linear-gradient(180deg, rgba(20, 22, 26, 0.988), rgba(10, 13, 18, 0.978)),
     #12161c;
   box-shadow:
     0 18px 38px rgba(0, 0, 0, 0.34),
@@ -713,10 +713,10 @@ export default {
   gap: 5px;
   overflow-x: auto;
   padding: 5px;
-  border: 1px solid rgba(176, 184, 194, 0.18);
+  border: 1px solid rgba(236, 194, 119, 0.16);
   border-radius: 4px;
   background:
-    linear-gradient(180deg, rgba(36, 41, 49, 0.88), rgba(17, 21, 27, 0.92)), rgba(20, 24, 30, 0.82);
+    linear-gradient(180deg, rgba(34, 35, 34, 0.9), rgba(16, 19, 24, 0.94)), rgba(20, 24, 30, 0.82);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 10px 22px rgba(0, 0, 0, 0.22);
@@ -746,14 +746,14 @@ export default {
 
 .top-nav-link:hover {
   color: #f8fafc;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(218, 166, 92, 0.08);
 }
 
 .top-nav-link.router-link-active {
-  background: linear-gradient(180deg, rgba(196, 204, 214, 0.2), rgba(126, 136, 149, 0.16));
+  background: linear-gradient(180deg, rgba(218, 166, 92, 0.2), rgba(126, 93, 42, 0.16));
   color: #f8fafc;
   box-shadow:
-    inset 0 0 0 1px rgba(226, 232, 240, 0.18),
+    inset 0 0 0 1px rgba(236, 194, 119, 0.2),
     0 8px 16px rgba(0, 0, 0, 0.18);
 }
 

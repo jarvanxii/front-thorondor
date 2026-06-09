@@ -29,7 +29,7 @@
 </template>
 
 <script>
-import thorondorLogo from '@/assets/images/Thorondor-logo.png'
+import thorondorLogo from '@/assets/images/brand/logo_thorondor.png'
 
 export default {
   name: 'ThorondorAuthCallbackView',
@@ -138,9 +138,9 @@ export default {
   place-items: center;
   padding: clamp(22px, 4vw, 48px);
   background:
-    linear-gradient(90deg, rgba(165, 180, 201, 0.105) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(165, 180, 201, 0.085) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(190, 198, 208, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(236, 194, 119, 0.07) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(236, 194, 119, 0.055) 1px, transparent 1px),
+    radial-gradient(circle at 50% 4%, rgba(218, 166, 92, 0.12), transparent 30%),
     linear-gradient(180deg, #0b0f14 0%, #12161c 52%, #07090d 100%);
   background-size:
     40px 40px,
@@ -155,7 +155,7 @@ export default {
   width: min(100%, 520px);
   gap: 24px;
   padding: clamp(24px, 4vw, 34px);
-  border: 1px solid rgba(176, 184, 194, 0.24);
+  border: 1px solid rgba(236, 194, 119, 0.24);
   border-radius: 4px;
   background: linear-gradient(180deg, rgba(28, 33, 40, 0.98), rgba(13, 16, 21, 0.99));
   box-shadow:
@@ -190,6 +190,7 @@ export default {
   width: 48px;
   height: 48px;
   object-fit: contain;
+  background: rgba(5, 7, 10, 0.74);
   filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.42));
 }
 
@@ -236,7 +237,7 @@ export default {
 }
 
 .section-kicker {
-  color: #a8bfd6;
+  color: var(--thorondor-gold);
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.14em;
@@ -276,10 +277,10 @@ export default {
   align-items: center;
   justify-content: center;
   padding: 0 16px;
-  border: 1px solid rgba(226, 232, 240, 0.82);
+  border: 1px solid rgba(236, 194, 119, 0.82);
   border-radius: 4px;
-  background: linear-gradient(180deg, #d7e4ef, #adc0d2);
-  color: #0b1118;
+  background: linear-gradient(180deg, #f3cf8c, #c88935);
+  color: #10100d;
 }
 
 .secondary-link {

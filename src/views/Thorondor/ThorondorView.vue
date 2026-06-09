@@ -3,7 +3,7 @@
         <section class="home-hero" aria-labelledby="thorondor-home-title">
             <article class="hero-copy">
                 <div class="hero-heading-row">
-                    <img class="hero-logo" src="@/assets/images/Thorondor-logo.png" alt="Sello de Thorondor" />
+                    <img class="hero-logo" src="@/assets/images/brand/logo_thorondor.png" alt="Sello de Thorondor" />
                     <div class="hero-heading-text">
                         <span class="section-kicker">SIEM para infraestructura propia</span>
                         <h1 id="thorondor-home-title">Thorondor</h1>
@@ -294,9 +294,11 @@ export default {
     margin-bottom: 18px;
     padding: clamp(14px, 1.6vw, 18px) clamp(18px, 2.4vw, 28px);
     overflow: hidden;
-    border: 1px solid rgba(196, 204, 214, 0.2);
+    border: 1px solid rgba(236, 194, 119, 0.18);
     border-radius: 4px;
-    background: linear-gradient(115deg, #171d25, #0f141b 64%, #0b0f14);
+    background:
+        radial-gradient(circle at 92% 0%, rgba(218, 166, 92, 0.12), transparent 34%),
+        linear-gradient(115deg, #171d25, #0f141b 64%, #0b0f14);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
         0 18px 42px rgba(0, 0, 0, 0.28);
@@ -308,7 +310,7 @@ export default {
     inset: auto 22px 0;
     z-index: -1;
     height: 1px;
-    background: linear-gradient(90deg, rgba(226, 232, 240, 0.4), rgba(226, 232, 240, 0.08), transparent);
+    background: linear-gradient(90deg, rgba(236, 194, 119, 0.56), rgba(236, 194, 119, 0.12), transparent);
 }
 
 .hero-copy {
@@ -328,7 +330,9 @@ export default {
     width: 62px;
     height: 62px;
     object-fit: contain;
-    filter: contrast(1.06) saturate(0.96) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.36));
+    background: rgba(5, 7, 10, 0.72);
+    border-radius: 4px;
+    filter: contrast(1.06) saturate(1.02) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.36));
 }
 
 .hero-heading-text {
