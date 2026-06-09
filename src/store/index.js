@@ -23,6 +23,7 @@ import {
   openThorondorPersistence,
   putMany,
   putOne,
+  setThorondorCloudPersistenceAccess,
   setMeta,
   setThorondorPersistenceMode as saveThorondorPersistenceMode,
   sweepThorondorPersistence,
@@ -442,6 +443,26 @@ function normalizeResponseDetails(response) {
   }
 }
 
+function configureThorondorCloudAccess(session) {
+  const authenticated = Boolean(session?.authenticated)
+  const authorized = Boolean(session?.user?.canUseCloudPersistence || session?.user?.usuarioAutorizado)
+
+  if (!authenticated) {
+    setThorondorCloudPersistenceAccess(false, 'Inicia sesion para usar persistencia cloud.')
+    return
+  }
+
+  if (!authorized) {
+    setThorondorCloudPersistenceAccess(
+      false,
+      'Un usuario admin debe autorizar esta cuenta para usar BBDD por API.',
+    )
+    return
+  }
+
+  setThorondorCloudPersistenceAccess(true, '')
+}
+
 export default createStore({
   state: {
     thorondor: createThorondorState(),
@@ -836,11 +857,14 @@ export default createStore({
 
       commit('setThorondorBootstrapping', true)
       try {
+        let session
         try {
-          commit('setThorondorSession', await fetchThorondorSession())
+          session = await fetchThorondorSession()
         } catch {
-          commit('setThorondorSession', getStoredThorondorSession())
+          session = getStoredThorondorSession()
         }
+        configureThorondorCloudAccess(session)
+        commit('setThorondorSession', session)
 
         const persistenceStatus = await openThorondorPersistence()
         commit('setThorondorPersistenceStatus', persistenceStatus)
@@ -877,7 +901,9 @@ export default createStore({
 
     async refreshThorondorSession({ commit }) {
       const session = await fetchThorondorSession()
+      configureThorondorCloudAccess(session)
       commit('setThorondorSession', session)
+      commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
       return session
     },
 

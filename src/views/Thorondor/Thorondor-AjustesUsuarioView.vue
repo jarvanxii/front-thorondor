@@ -13,7 +13,7 @@
         <img :src="thorondorLogo" alt="" />
         <div>
           <span>Usuario activo</span>
-          <strong>Adm 3</strong>
+          <strong>{{ currentDisplayName }}</strong>
           <small>{{ accountSummary }}</small>
         </div>
       </div>
@@ -194,12 +194,101 @@
         </div>
       </article>
     </section>
+
+    <section v-if="isSessionAdmin" id="panel-admin" class="section-box settings-panel admin-panel">
+      <div class="section-topline">
+        <div class="module-header">
+          <span class="section-kicker">Panel admin</span>
+          <h2 class="module-title">Usuarios de la plataforma</h2>
+          <p class="module-copy">
+            Gestion de acceso a persistencia cloud y revision de cuentas registradas.
+          </p>
+        </div>
+        <button class="btn btn-main" type="button" :disabled="adminLoading" @click="loadAdminUsers()">
+          {{ adminLoading ? "Consultando..." : "Actualizar usuarios" }}
+        </button>
+      </div>
+
+      <div class="admin-stat-grid">
+        <div class="mini-stat">
+          <label>Total</label>
+          <span>{{ adminTotals.total || 0 }}</span>
+        </div>
+        <div class="mini-stat">
+          <label>Admin</label>
+          <span>{{ adminTotals.admins || 0 }}</span>
+        </div>
+        <div class="mini-stat">
+          <label>Autorizados</label>
+          <span>{{ adminTotals.authorized || 0 }}</span>
+        </div>
+        <div class="mini-stat">
+          <label>Solo IDB</label>
+          <span>{{ adminTotals.localOnly || 0 }}</span>
+        </div>
+      </div>
+
+      <p v-if="adminFeedback" class="settings-feedback" :class="`settings-feedback--${adminFeedback.type}`">
+        {{ adminFeedback.message }}
+      </p>
+
+      <div class="admin-users-table-wrap">
+        <table class="admin-users-table">
+          <thead>
+            <tr>
+              <th>Usuario</th>
+              <th>Proveedor</th>
+              <th>Permisos</th>
+              <th>Ultimo acceso</th>
+              <th>Accion</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="user in adminUsers" :key="user.id">
+              <td>
+                <strong>{{ user.displayName || "Usuario" }}</strong>
+                <small>{{ user.email || user.id }}</small>
+              </td>
+              <td>{{ user.preferredProvider || "-" }}</td>
+              <td>
+                <div class="permission-pills">
+                  <span :class="['permission-pill', user.usuarioAdmin ? 'is-admin' : '']">
+                    {{ user.usuarioAdmin ? "Admin" : "No admin" }}
+                  </span>
+                  <span :class="['permission-pill', user.usuarioAutorizado ? 'is-authorized' : '']">
+                    {{ user.usuarioAutorizado ? "BBDD API" : "Solo IDB" }}
+                  </span>
+                </div>
+              </td>
+              <td>{{ formatAdminDate(user.lastLoginAt) }}</td>
+              <td>
+                <button
+                  class="btn btn-main btn-compact"
+                  type="button"
+                  :disabled="adminSavingUserId === user.id"
+                  @click="toggleUserAuthorization(user)"
+                >
+                  {{ user.usuarioAutorizado ? "Quitar BBDD" : "Autorizar BBDD" }}
+                </button>
+              </td>
+            </tr>
+            <tr v-if="!adminUsers.length && !adminLoading">
+              <td colspan="5" class="admin-empty-row">Sin usuarios cargados.</td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
   </ThorondorPageShell>
 </template>
 
 <script>
 import ThorondorPageShell from "@/components/Thorondor/ThorondorPageShell.vue";
 import thorondorBaseMixin from "@/features/thorondor/mixins/thorondorBaseMixin";
+import {
+  fetchThorondorAdminUsers,
+  updateThorondorAdminUserAuthorization
+} from "@/features/thorondor/services/thorondorAuth";
 import thorondorLogo from "@/assets/images/Thorondor-logo.png";
 
 export default {
@@ -222,12 +311,6 @@ export default {
         digestCadence: "Tiempo real",
         density: "Equilibrada"
       },
-      settingsSections: [
-        { id: "cuenta-seguridad", label: "Cuenta y seguridad", copy: "Perfil, rol y acceso" },
-        { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retención" },
-        { id: "alertas-email", label: "Alertas por email", copy: "Pendiente SMTP" },
-        { id: "persistencia-datos", label: "Persistencia", copy: "Datos y uso" }
-      ],
       securityOptions: [
         {
           id: "confirm-actions",
@@ -273,11 +356,52 @@ export default {
           copy: "Estado agregado de sistemas, alertas y eventos recientes.",
           enabled: false
         }
-      ]
+      ],
+      adminUsers: [],
+      adminTotals: {},
+      adminLoading: false,
+      adminLoaded: false,
+      adminSavingUserId: "",
+      adminFeedback: null
     };
   },
 
   computed: {
+    currentSessionUser() {
+      return this.thorondorState.session?.user || null;
+    },
+
+    currentDisplayName() {
+      return this.currentSessionUser?.displayName || this.settings.displayName;
+    },
+
+    isSessionAdmin() {
+      return Boolean(this.currentSessionUser?.usuarioAdmin || this.currentSessionUser?.usuario_admin);
+    },
+
+    canUseCloudPersistence() {
+      return Boolean(
+        this.currentSessionUser?.canUseCloudPersistence ||
+          this.currentSessionUser?.usuarioAutorizado ||
+          this.currentSessionUser?.usuario_autorizado
+      );
+    },
+
+    settingsSections() {
+      const sections = [
+        { id: "cuenta-seguridad", label: "Cuenta y seguridad", copy: "Perfil, rol y acceso" },
+        { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retencion" },
+        { id: "alertas-email", label: "Alertas por email", copy: "Pendiente SMTP" },
+        { id: "persistencia-datos", label: "Persistencia", copy: "Datos y uso" }
+      ];
+
+      if (this.isSessionAdmin) {
+        sections.push({ id: "panel-admin", label: "Panel admin", copy: "Usuarios y permisos" });
+      }
+
+      return sections;
+    },
+
     retentionDays() {
       return this.thorondorState.retentionDays || 30;
     },
@@ -295,7 +419,15 @@ export default {
     },
 
     accountSummary() {
-      return `${this.storageModeLabel} - Administrador principal`;
+      if (this.isSessionAdmin) {
+        return this.canUseCloudPersistence
+          ? `${this.storageModeLabel} - admin autorizado`
+          : `${this.storageModeLabel} - admin sin BBDD API`;
+      }
+
+      return this.canUseCloudPersistence
+        ? `${this.storageModeLabel} - usuario autorizado`
+        : `${this.storageModeLabel} - solo IDB`;
     },
 
     storageModeCopy() {
@@ -317,11 +449,93 @@ export default {
     },
 
     persistenceCopy() {
+      if (this.persistenceStatus.syncStatus === "cloud-blocked") {
+        return this.persistenceStatus.cloudAccessReason || "Esta cuenta no esta autorizada para usar BBDD por API.";
+      }
+
       if (this.isCloudPersistence) {
         return `Workspace ${this.persistenceStatus.workspaceId || "default"} sincronizado con la API. IndexedDB queda como caché del navegador.`;
       }
 
       return "El modo local conserva agentes, logs, alertas y reglas en IndexedDB de este navegador.";
+    }
+  },
+
+  watch: {
+    isSessionAdmin: {
+      immediate: true,
+      handler(value) {
+        if (value && !this.adminLoaded && !this.adminLoading) {
+          this.loadAdminUsers({ silent: true });
+        }
+      }
+    }
+  },
+
+  methods: {
+    async loadAdminUsers(options = {}) {
+      if (!this.isSessionAdmin || this.adminLoading) return;
+
+      try {
+        this.adminLoading = true;
+        const payload = await fetchThorondorAdminUsers();
+        this.adminUsers = Array.isArray(payload?.users) ? payload.users : [];
+        this.adminTotals = payload?.totals || {};
+        this.adminLoaded = true;
+        if (!options.silent) {
+          this.adminFeedback = { type: "success", message: "Usuarios actualizados." };
+        }
+      } catch (error) {
+        this.adminFeedback = {
+          type: "error",
+          message: error.message || "No se pudieron consultar los usuarios."
+        };
+      } finally {
+        this.adminLoading = false;
+      }
+    },
+
+    async toggleUserAuthorization(user) {
+      if (!user?.id || this.adminSavingUserId) return;
+
+      const nextValue = !Boolean(user.usuarioAutorizado || user.usuario_autorizado);
+      try {
+        this.adminSavingUserId = user.id;
+        const updated = await updateThorondorAdminUserAuthorization(user.id, nextValue);
+        this.adminUsers = this.adminUsers.map((item) => (item.id === user.id ? updated : item));
+        await this.loadAdminUsers({ silent: true });
+        if (this.currentSessionUser?.id === user.id) {
+          await this.$store.dispatch("refreshThorondorSession");
+        }
+        this.adminFeedback = {
+          type: "success",
+          message: nextValue
+            ? "Usuario autorizado para BBDD por API."
+            : "Usuario limitado a persistencia IndexedDB."
+        };
+      } catch (error) {
+        this.adminFeedback = {
+          type: "error",
+          message: error.message || "No se pudo actualizar el permiso."
+        };
+      } finally {
+        this.adminSavingUserId = "";
+      }
+    },
+
+    formatAdminDate(value) {
+      if (!value) return "-";
+
+      const date = new Date(value);
+      if (Number.isNaN(date.getTime())) return value;
+
+      return new Intl.DateTimeFormat("es-ES", {
+        day: "2-digit",
+        month: "2-digit",
+        year: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit"
+      }).format(date);
     }
   }
 };
@@ -373,7 +587,7 @@ export default {
 
 .settings-tabs {
   display: grid;
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
   gap: 12px;
   margin-bottom: 24px;
 }
@@ -538,11 +752,128 @@ export default {
   color: #fbbf24 !important;
 }
 
+.admin-panel {
+  margin-top: 24px;
+}
+
+.admin-stat-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.settings-feedback {
+  margin: 0;
+  padding: 12px 14px;
+  border: 1px solid rgba(176, 184, 194, 0.18);
+  border-radius: 4px;
+  color: #dce3eb;
+  background: rgba(16, 20, 26, 0.58);
+}
+
+.settings-feedback--success {
+  border-color: rgba(74, 222, 128, 0.36);
+  color: #bbf7d0;
+}
+
+.settings-feedback--error {
+  border-color: rgba(248, 113, 113, 0.38);
+  color: #fecaca;
+}
+
+.admin-users-table-wrap {
+  overflow-x: auto;
+  border: 1px solid rgba(176, 184, 194, 0.16);
+  border-radius: 4px;
+  background: rgba(16, 20, 26, 0.52);
+}
+
+.admin-users-table {
+  width: 100%;
+  min-width: 820px;
+  border-collapse: collapse;
+}
+
+.admin-users-table th,
+.admin-users-table td {
+  padding: 14px 16px;
+  border-bottom: 1px solid rgba(176, 184, 194, 0.12);
+  text-align: left;
+  vertical-align: middle;
+}
+
+.admin-users-table th {
+  color: #9fb0c3;
+  font-size: 0.75rem;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.admin-users-table td {
+  color: #dce3eb;
+}
+
+.admin-users-table td strong,
+.admin-users-table td small {
+  display: block;
+}
+
+.admin-users-table td strong {
+  color: #f8fafc;
+}
+
+.admin-users-table td small {
+  color: #9fb0c3;
+  margin-top: 3px;
+}
+
+.permission-pills {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.permission-pill {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(176, 184, 194, 0.16);
+  border-radius: 4px;
+  color: #9fb0c3;
+  background: rgba(20, 24, 30, 0.78);
+  font-size: 0.78rem;
+  font-weight: 800;
+}
+
+.permission-pill.is-admin {
+  border-color: rgba(96, 165, 250, 0.36);
+  color: #bfdbfe;
+}
+
+.permission-pill.is-authorized {
+  border-color: rgba(74, 222, 128, 0.36);
+  color: #bbf7d0;
+}
+
+.btn-compact {
+  min-height: 36px;
+  padding: 8px 12px;
+  font-size: 0.78rem;
+  white-space: nowrap;
+}
+
+.admin-empty-row {
+  color: #9fb0c3 !important;
+  text-align: center !important;
+}
+
 @media (max-width: 1180px) {
   .settings-hero,
   .settings-grid,
   .settings-tabs,
-  .mail-grid {
+  .mail-grid,
+  .admin-stat-grid {
     grid-template-columns: 1fr;
   }
 

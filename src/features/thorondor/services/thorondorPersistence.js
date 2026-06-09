@@ -30,6 +30,11 @@ export const THORONDOR_PERSISTENCE_MODES = {
 export const THORONDOR_PERSISTENCE_MODE_KEY = 'thorondor.persistence.mode'
 export const THORONDOR_CLOUD_SYNC_META_KEY = 'cloudSyncState'
 
+let cloudPersistenceAccess = {
+  allowed: false,
+  reason: 'Sesion no verificada para persistencia cloud.',
+}
+
 function getEnvValue(key) {
   return import.meta.env[key]?.trim?.() || ''
 }
@@ -60,23 +65,38 @@ export function setThorondorPersistenceMode(mode) {
   }
 }
 
+export function setThorondorCloudPersistenceAccess(allowed, reason = '') {
+  cloudPersistenceAccess = {
+    allowed: Boolean(allowed),
+    reason: String(reason || ''),
+  }
+}
+
 export function getThorondorPersistenceStatus(overrides = {}) {
   const requestedMode = normalizePersistenceMode(
     getStoredMode() || getEnvValue('VITE_THORONDOR_PERSISTENCE_MODE'),
   )
   const cloudConfig = getThorondorCloudPersistenceConfig()
+  const cloudAllowed = Boolean(cloudPersistenceAccess.allowed)
   const effectiveMode =
-    requestedMode === THORONDOR_PERSISTENCE_MODES.cloud && cloudConfig.enabled
+    requestedMode === THORONDOR_PERSISTENCE_MODES.cloud && cloudConfig.enabled && cloudAllowed
       ? THORONDOR_PERSISTENCE_MODES.cloud
       : THORONDOR_PERSISTENCE_MODES.local
+  const syncStatus =
+    requestedMode === THORONDOR_PERSISTENCE_MODES.cloud && cloudConfig.enabled && !cloudAllowed
+      ? 'cloud-blocked'
+      : effectiveMode === THORONDOR_PERSISTENCE_MODES.cloud
+        ? 'cloud-ready'
+        : 'local-only'
 
   return {
     requestedMode,
     effectiveMode,
     cloudConfigured: cloudConfig.enabled,
+    cloudAllowed,
+    cloudAccessReason: cloudPersistenceAccess.reason,
     workspaceId: cloudConfig.workspaceId,
-    syncStatus:
-      effectiveMode === THORONDOR_PERSISTENCE_MODES.cloud ? 'cloud-ready' : 'local-only',
+    syncStatus,
     lastSyncAt: null,
     lastError: null,
     ...overrides,

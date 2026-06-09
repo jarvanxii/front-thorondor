@@ -40,6 +40,7 @@ export const THORONDOR_SOCIAL_AUTH_PROVIDERS = [
 
 const DEFAULT_CALLBACK_PATH = '/#/auth/callback'
 const THORONDOR_SESSION_STORAGE_KEY = 'thorondor.session'
+const AUTH_REQUEST_TIMEOUT_MS = 15000
 
 function getEnvValue(key) {
   return import.meta.env[key]?.trim?.() || ''
@@ -165,21 +166,14 @@ export async function fetchThorondorSession() {
     return localSession
   }
 
-  const response = await fetch(`${apiBaseUrl}/auth/session`, {
+  const response = await requestThorondorAuth('/auth/session', {
     method: 'GET',
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-    },
   })
-
-  if (!response.ok) {
-    throw new Error(`No se pudo leer la sesion (${response.status})`)
+  const session = response || {
+    authenticated: false,
+    user: null,
+    providers: [],
   }
-
-  const session = await response.json()
   saveThorondorSession(session)
   return session
 }
@@ -196,22 +190,66 @@ export async function logoutThorondorSession() {
     return localSession
   }
 
-  const response = await fetch(`${apiBaseUrl}/auth/logout`, {
+  const session = await requestThorondorAuth('/auth/logout', {
     method: 'POST',
-    cache: 'no-store',
-    mode: 'cors',
-    credentials: 'include',
-    headers: {
-      Accept: 'application/json',
-      'Content-Type': 'application/json',
-    },
   })
-
-  if (!response.ok) {
-    throw new Error(`No se pudo cerrar la sesion (${response.status})`)
-  }
-
-  const session = await response.json()
   saveThorondorSession(session)
   return session
+}
+
+export async function fetchThorondorAdminUsers() {
+  return requestThorondorAuth('/auth/admin/users', {
+    method: 'GET',
+  })
+}
+
+export async function updateThorondorAdminUserAuthorization(userId, usuarioAutorizado) {
+  return requestThorondorAuth(
+    `/auth/admin/users/${encodeURIComponent(userId)}/authorization`,
+    {
+      method: 'PATCH',
+      body: JSON.stringify({ usuarioAutorizado: Boolean(usuarioAutorizado) }),
+    },
+  )
+}
+
+async function requestThorondorAuth(path, options = {}) {
+  const { apiBaseUrl } = getThorondorAuthConfig()
+  if (!apiBaseUrl) {
+    throw new Error('API Thorondor no configurada')
+  }
+
+  const controller = new AbortController()
+  const timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
+
+  try {
+    const response = await fetch(`${apiBaseUrl}${path}`, {
+      cache: 'no-store',
+      mode: 'cors',
+      credentials: 'include',
+      ...options,
+      headers: {
+        Accept: 'application/json',
+        'Content-Type': 'application/json',
+        ...options.headers,
+      },
+      signal: controller.signal,
+    })
+
+    const isJson = response.headers.get('content-type')?.includes('application/json')
+    const body = isJson ? await response.json() : null
+
+    if (!response.ok) {
+      throw new Error(body?.message || `Peticion auth fallida (${response.status})`)
+    }
+
+    return body
+  } catch (error) {
+    if (error?.name === 'AbortError') {
+      throw new Error('La API de autenticacion no respondio en 15s')
+    }
+    throw error
+  } finally {
+    window.clearTimeout(timeoutId)
+  }
 }
