@@ -289,6 +289,44 @@ export async function fetchThorondorJwtToken() {
   return saveThorondorJwtToken(token)
 }
 
+export async function loginThorondorCredentials(payload) {
+  const session = await requestThorondorAuth('/auth/local/login', {
+    method: 'POST',
+    skipAuthHeader: true,
+    body: JSON.stringify({
+      email: payload?.email || '',
+      password: payload?.password || '',
+    }),
+  })
+  saveThorondorSession(session)
+  return session
+}
+
+export async function requestThorondorEmailSignup(payload) {
+  return requestThorondorAuth('/auth/local/signup/start', {
+    method: 'POST',
+    skipAuthHeader: true,
+    body: JSON.stringify({
+      displayName: payload?.displayName || '',
+      email: payload?.email || '',
+      password: payload?.password || '',
+    }),
+  })
+}
+
+export async function confirmThorondorEmailSignup(payload) {
+  const session = await requestThorondorAuth('/auth/local/signup/confirm', {
+    method: 'POST',
+    skipAuthHeader: true,
+    body: JSON.stringify({
+      email: payload?.email || '',
+      code: payload?.code || '',
+    }),
+  })
+  saveThorondorSession(session)
+  return session
+}
+
 export async function logoutThorondorSession() {
   const { apiBaseUrl } = getThorondorAuthConfig()
   if (!apiBaseUrl) {

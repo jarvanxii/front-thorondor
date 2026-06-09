@@ -23,7 +23,7 @@ npm run dev
 
 ## Autenticacion
 
-Thorondor ya incluye pantalla de login, acceso local temporal y botones de acceso con Google, Microsoft, GitHub y Apple.
+Thorondor ya incluye pantalla de login, registro local con codigo por email y botones de acceso con Google, Microsoft, GitHub y Apple.
 
 Configura la API en `.env` a partir de `.env.example`:
 
@@ -50,6 +50,9 @@ Despliegue previsto:
 
 El frontend redirige a estos endpoints de la API:
 
+- `/auth/local/signup/start`
+- `/auth/local/signup/confirm`
+- `/auth/local/login`
 - `/auth/oauth/google`
 - `/auth/oauth/microsoft`
 - `/auth/oauth/github`
@@ -59,7 +62,7 @@ El frontend redirige a estos endpoints de la API:
 - `/auth/token`
 - `/auth/logout`
 
-Cada redireccion envia `flow=web`, `return_to` con la ruta de callback del frontend y `remember_device` cuando el usuario lo marque. La API conserva secretos en servidor, intercambia el codigo con el proveedor, crea la sesion y devuelve al frontend con la cookie `THORONDOR_SESSION` `httpOnly`. Despues el frontend pide `/auth/token` y usa `Authorization: Bearer <jwt>` para persistencia cloud, panel admin y consola central. En produccion con Cloudflare Tunnel usa HTTPS publico, `THORONDOR_AUTH_COOKIE_SECURE=true` y `THORONDOR_AUTH_COOKIE_SAME_SITE=None` si front y API quedan en hostnames distintos.
+El registro local envia un codigo SMTP al email del usuario y crea la cuenta solo al confirmar el codigo. La cuenta nace con `usuario_admin=false` y `usuario_autorizado=false`. Cada redireccion OAuth envia `flow=web`, `return_to` con la ruta de callback del frontend y `remember_device` cuando el usuario lo marque. La API conserva secretos en servidor, intercambia el codigo con el proveedor, crea la sesion y devuelve al frontend con la cookie `THORONDOR_SESSION` `httpOnly`. Despues el frontend pide `/auth/token` y usa `Authorization: Bearer <jwt>` para persistencia cloud, panel admin y consola central. En produccion con Cloudflare Tunnel usa HTTPS publico, `THORONDOR_AUTH_COOKIE_SECURE=true` y `THORONDOR_AUTH_COOKIE_SAME_SITE=None` si front y API quedan en hostnames distintos.
 
 Los usuarios OAuth nacen con `usuario_admin=false` y `usuario_autorizado=false`. Solo los usuarios admin ven el panel admin en ajustes. Desde ese panel se puede autorizar a otros usuarios para persistencia en BBDD por API; los no autorizados quedan forzados a IndexedDB aunque `VITE_THORONDOR_PERSISTENCE_MODE=cloud`. La monitorizacion y las acciones sobre hosts requieren JWT validado por la API; una cuenta sin token puede entrar a ver la aplicacion, pero no puede consultar hosts ni encolar comandos. Los agentes se registran en la API central con `X-Thorondor-Agent-Enroll-Token` y luego sincronizan con `X-Thorondor-Agent-Token`; el back guarda solo el hash del token por agente.
 

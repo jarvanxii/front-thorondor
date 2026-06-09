@@ -9,10 +9,26 @@
         <header class="login-card-header">
           <span class="section-kicker">Acceso</span>
           <h1 id="login-title">Inicio de sesión</h1>
-          <p>Acceso validado para operadores, administradores y revisores.</p>
         </header>
 
-        <section class="social-login-panel" aria-label="Acceso con proveedores externos">
+        <section class="auth-mode-switch" aria-label="Tipo de acceso">
+          <button
+            type="button"
+            :class="{ 'is-active': authMode === 'login' }"
+            @click="setAuthMode('login')"
+          >
+            Acceso
+          </button>
+          <button
+            type="button"
+            :class="{ 'is-active': authMode === 'signup' }"
+            @click="setAuthMode('signup')"
+          >
+            Sign up
+          </button>
+        </section>
+
+        <section v-if="authMode === 'login'" class="social-login-panel" aria-label="Acceso con proveedores externos">
           <button
             v-for="provider in socialProviders"
             :key="provider.id"
@@ -34,11 +50,11 @@
           </button>
         </section>
 
-        <div class="login-divider" aria-hidden="true">
+        <div v-if="authMode === 'login'" class="login-divider" aria-hidden="true">
           <span>o usa credenciales</span>
         </div>
 
-        <form class="login-form" @submit.prevent="submitLogin">
+        <form v-if="authMode === 'login'" class="login-form" @submit.prevent="submitLogin">
           <label class="login-field" for="login-email">
             <span>Email</span>
             <input
@@ -74,11 +90,90 @@
             </div>
           </label>
 
-          <button class="login-submit" type="submit">
+          <button class="login-submit" type="submit" :disabled="localAuthBusy">
             <span>Iniciar sesión</span>
           </button>
 
           <RouterLink :to="{ name: 'thorondor-login' }" class="recover-link">Recuperar acceso</RouterLink>
+
+          <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
+        </form>
+
+        <form v-else class="login-form" @submit.prevent="submitSignup">
+          <template v-if="signupStep === 'request'">
+            <label class="login-field" for="signup-display-name">
+              <span>Nombre</span>
+              <input
+                id="signup-display-name"
+                v-model.trim="signupForm.displayName"
+                autocomplete="name"
+                placeholder="Nombre visible"
+                type="text"
+              />
+            </label>
+
+            <label class="login-field" for="signup-email">
+              <span>Email</span>
+              <input
+                id="signup-email"
+                v-model.trim="signupForm.email"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="tu@email.com"
+                type="email"
+              />
+            </label>
+
+            <label class="login-field" for="signup-password">
+              <span>ContraseÃ±a</span>
+              <div class="password-control">
+                <input
+                  id="signup-password"
+                  v-model="signupForm.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  placeholder="Minimo 8 caracteres"
+                />
+                <button
+                  type="button"
+                  :aria-label="showPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'"
+                  @click="showPassword = !showPassword"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                  </svg>
+                </button>
+              </div>
+            </label>
+
+            <button class="login-submit" type="submit" :disabled="localAuthBusy">
+              <span>Enviar codigo</span>
+            </button>
+          </template>
+
+          <template v-else>
+            <label class="login-field" for="signup-code">
+              <span>Codigo</span>
+              <input
+                id="signup-code"
+                v-model.trim="signupForm.code"
+                autocomplete="one-time-code"
+                inputmode="numeric"
+                maxlength="6"
+                placeholder="000000"
+                type="text"
+              />
+            </label>
+
+            <button class="login-submit" type="submit" :disabled="localAuthBusy">
+              <span>Confirmar cuenta</span>
+            </button>
+
+            <button class="recover-link as-button" type="button" @click="signupStep = 'request'">
+              Cambiar email
+            </button>
+          </template>
 
           <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
         </form>
@@ -99,8 +194,11 @@
 import loginBanner from '@/assets/images/brand/banner_login.png'
 import {
   THORONDOR_SOCIAL_AUTH_PROVIDERS,
+  confirmThorondorEmailSignup,
   fetchThorondorSession,
   getThorondorAuthConfig,
+  loginThorondorCredentials,
+  requestThorondorEmailSignup,
   startThorondorSocialAuth,
 } from '@/features/thorondor/services/thorondorAuth'
 
@@ -110,15 +208,24 @@ export default {
   data() {
     return {
       loginBanner,
+      authMode: 'login',
       providerAvailability: {},
       providersLoaded: false,
       socialAuthBusyProvider: '',
+      localAuthBusy: false,
       showPassword: false,
       feedbackMessage: '',
+      signupStep: 'request',
       form: {
         email: '',
         password: '',
         rememberDevice: true,
+      },
+      signupForm: {
+        displayName: '',
+        email: '',
+        password: '',
+        code: '',
       },
     }
   },
@@ -138,6 +245,11 @@ export default {
   },
 
   methods: {
+    setAuthMode(mode) {
+      this.authMode = mode
+      this.feedbackMessage = ''
+    },
+
     async loadProviderConfiguration() {
       if (!getThorondorAuthConfig().apiBaseUrl) {
         return
@@ -177,9 +289,50 @@ export default {
       this.feedbackMessage = `Redirigiendo a ${provider.label}...`
     },
 
-    submitLogin() {
+    legacySubmitLogin() {
       this.feedbackMessage =
         'El acceso por email queda preparado para la API propia de Thorondor. Puedes acceder sin logarte para explorar la aplicación.'
+    },
+    async submitLogin() {
+      if (this.localAuthBusy) return
+      this.localAuthBusy = true
+      this.feedbackMessage = ''
+
+      try {
+        await loginThorondorCredentials(this.form)
+        await this.completeLocalAuth()
+      } catch (error) {
+        this.feedbackMessage = error.message || 'No se pudo iniciar sesion.'
+      } finally {
+        this.localAuthBusy = false
+      }
+    },
+
+    async submitSignup() {
+      if (this.localAuthBusy) return
+      this.localAuthBusy = true
+      this.feedbackMessage = ''
+
+      try {
+        if (this.signupStep === 'request') {
+          await requestThorondorEmailSignup(this.signupForm)
+          this.signupStep = 'confirm'
+          this.feedbackMessage = 'Te hemos enviado un codigo de verificacion al email.'
+          return
+        }
+
+        await confirmThorondorEmailSignup(this.signupForm)
+        await this.completeLocalAuth()
+      } catch (error) {
+        this.feedbackMessage = error.message || 'No se pudo completar el registro.'
+      } finally {
+        this.localAuthBusy = false
+      }
+    },
+
+    async completeLocalAuth() {
+      await this.$store.dispatch('refreshThorondorSession')
+      await this.$router.replace({ name: 'thorondor-information' })
     },
   },
 }
@@ -282,6 +435,7 @@ export default {
 }
 
 .login-card-header,
+.auth-mode-switch,
 .social-login-panel,
 .login-divider,
 .login-form,
@@ -292,6 +446,31 @@ export default {
 .login-card-header {
   gap: 7px;
   text-align: center;
+}
+
+.auth-mode-switch {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px;
+  padding: 4px;
+  border: 1px solid rgba(176, 184, 194, 0.18);
+  border-radius: 4px;
+  background: var(--thorondor-soft-background);
+}
+
+.auth-mode-switch button {
+  min-height: 34px;
+  border: 0;
+  border-radius: 3px;
+  background: transparent;
+  color: #9fb0c3;
+  font-size: 0.8rem;
+  font-weight: 900;
+}
+
+.auth-mode-switch button.is-active {
+  background: linear-gradient(180deg, rgba(244, 208, 143, 0.92), rgba(200, 137, 53, 0.92));
+  color: #10100d;
 }
 
 .section-kicker {
@@ -510,6 +689,11 @@ export default {
     transform 160ms ease;
 }
 
+.login-submit:disabled {
+  cursor: progress;
+  opacity: 0.72;
+}
+
 .login-submit:hover {
   border-color: rgba(255, 221, 158, 0.86);
   background: linear-gradient(180deg, #ffdc9f, #d59a45);
@@ -526,6 +710,12 @@ export default {
 
 .recover-link:hover {
   color: #f3cf8c;
+}
+
+.recover-link.as-button {
+  border: 0;
+  background: transparent;
+  cursor: pointer;
 }
 
 .login-feedback {
