@@ -679,7 +679,7 @@ export default {
   inset: 0 0 auto;
   z-index: 2600;
   display: grid;
-  grid-template-columns: minmax(220px, 280px) minmax(0, 1fr) minmax(92px, auto);
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(92px, auto);
   width: 100%;
   height: var(--main-header-height);
   align-items: center;
@@ -697,7 +697,7 @@ export default {
 
 .thorondor-brand {
   display: inline-flex;
-  width: min(100%, 280px);
+  width: min(100%, 240px);
   min-width: 0;
   align-items: center;
   padding: 0;
@@ -717,8 +717,8 @@ export default {
 
 .brand-logo {
   display: block;
-  width: min(100%, 260px);
-  height: 50px;
+  width: min(100%, 226px);
+  height: 44px;
   object-fit: contain;
   object-position: left center;
   filter: contrast(1.08) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.34));
@@ -1467,14 +1467,14 @@ export default {
 
 @media (max-width: 1040px) {
   .thorondor-primary-header {
-    grid-template-columns: 42px minmax(168px, 220px) minmax(0, 1fr) auto;
+    grid-template-columns: 42px minmax(146px, 190px) minmax(0, 1fr) auto;
     gap: 10px;
     padding: 0 14px;
   }
 
   .brand-logo {
-    width: min(100%, 214px);
-    height: 46px;
+    width: min(100%, 184px);
+    height: 40px;
   }
 
   .settings-dropdown {
@@ -1500,7 +1500,7 @@ export default {
 
 @media (max-width: 900px) {
   .thorondor-primary-header {
-    grid-template-columns: 38px minmax(132px, 168px) minmax(0, 1fr) auto;
+    grid-template-columns: 38px minmax(118px, 146px) minmax(0, 1fr) auto;
     align-items: center;
     gap: 8px;
     height: var(--main-header-height);
@@ -1524,8 +1524,8 @@ export default {
   }
 
   .brand-logo {
-    width: min(100%, 160px);
-    height: 40px;
+    width: min(100%, 140px);
+    height: 36px;
   }
 
   .top-nav-link {
@@ -1568,29 +1568,29 @@ export default {
 
 @media (max-width: 720px) {
   .thorondor-brand {
-    width: 132px;
+    width: 118px;
   }
 
   .brand-logo {
-    width: 132px;
-    height: 38px;
+    width: 118px;
+    height: 34px;
   }
 }
 
 @media (max-width: 520px) {
   .thorondor-primary-header {
-    grid-template-columns: 36px minmax(104px, 116px) minmax(0, 1fr) auto;
+    grid-template-columns: 36px minmax(94px, 104px) minmax(0, 1fr) auto;
     gap: 6px;
     padding: 0 8px;
   }
 
   .thorondor-brand {
-    width: 112px;
+    width: 102px;
   }
 
   .brand-logo {
-    width: 112px;
-    height: 36px;
+    width: 102px;
+    height: 32px;
   }
 
   .settings-square,
