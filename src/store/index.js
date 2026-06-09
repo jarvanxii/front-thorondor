@@ -33,8 +33,6 @@ import {
   buildThorondorAgentEndpoints,
   buildThorondorRequestRules,
   fetchThorondorBlockedIps,
-  fetchThorondorHealth,
-  fetchThorondorTelemetry,
   unblockThorondorIp as postThorondorIpUnblock,
 } from '@/features/thorondor/services/thorondorApi'
 import {
@@ -43,12 +41,15 @@ import {
   isThorondorCentralConfigured,
 } from '@/features/thorondor/services/thorondorCentralApi'
 import {
+  clearThorondorJwtToken,
+  fetchThorondorJwtToken,
   fetchThorondorSession,
+  getStoredThorondorJwtToken,
   getStoredThorondorSession,
+  isThorondorJwtTokenValid,
 } from '@/features/thorondor/services/thorondorAuth'
 import {
   deriveThorondorAgentStatus,
-  evaluateThorondorRules,
 } from '@/features/thorondor/services/thorondorRules'
 
 const VIRTUAL_FSTYPES = new Set([
@@ -103,6 +104,7 @@ function createThorondorState() {
     generatorDraft: buildThorondorAgentDraft(),
     errors: [],
     session: getStoredThorondorSession(),
+    token: getStoredThorondorJwtToken(),
     lastPollAt: null,
     central: {
       enabled: isThorondorCentralConfigured(),
@@ -443,12 +445,35 @@ function normalizeResponseDetails(response) {
   }
 }
 
-function configureThorondorCloudAccess(session) {
+function hasThorondorApiToken(token) {
+  return isThorondorJwtTokenValid(token)
+}
+
+async function refreshThorondorTokenForSession(session) {
+  if (!session?.authenticated) {
+    clearThorondorJwtToken()
+    return null
+  }
+
+  try {
+    return await fetchThorondorJwtToken()
+  } catch {
+    clearThorondorJwtToken()
+    return null
+  }
+}
+
+function configureThorondorCloudAccess(session, token) {
   const authenticated = Boolean(session?.authenticated)
   const authorized = Boolean(session?.user?.canUseCloudPersistence || session?.user?.usuarioAutorizado)
 
   if (!authenticated) {
     setThorondorCloudPersistenceAccess(false, 'Inicia sesion para usar persistencia cloud.')
+    return
+  }
+
+  if (!hasThorondorApiToken(token)) {
+    setThorondorCloudPersistenceAccess(false, 'Token JWT requerido para usar BBDD por API.')
     return
   }
 
@@ -461,6 +486,14 @@ function configureThorondorCloudAccess(session) {
   }
 
   setThorondorCloudPersistenceAccess(true, '')
+}
+
+function requireThorondorApiToken(state) {
+  if (hasThorondorApiToken(state.thorondor.token)) {
+    return true
+  }
+
+  throw new Error('Token JWT requerido para usar servicios de monitorizacion.')
 }
 
 export default createStore({
@@ -545,6 +578,10 @@ export default createStore({
         providers: [],
         ...(value || {}),
       }
+    },
+
+    setThorondorToken(state, value) {
+      state.thorondor.token = value || null
     },
 
     hydrateThorondorState(state, payload) {
@@ -863,8 +900,10 @@ export default createStore({
         } catch {
           session = getStoredThorondorSession()
         }
-        configureThorondorCloudAccess(session)
+        const token = await refreshThorondorTokenForSession(session)
+        configureThorondorCloudAccess(session, token)
         commit('setThorondorSession', session)
+        commit('setThorondorToken', token)
 
         const persistenceStatus = await openThorondorPersistence()
         commit('setThorondorPersistenceStatus', persistenceStatus)
@@ -901,8 +940,10 @@ export default createStore({
 
     async refreshThorondorSession({ commit }) {
       const session = await fetchThorondorSession()
-      configureThorondorCloudAccess(session)
+      const token = await refreshThorondorTokenForSession(session)
+      configureThorondorCloudAccess(session, token)
       commit('setThorondorSession', session)
+      commit('setThorondorToken', token)
       commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
       return session
     },
@@ -912,6 +953,14 @@ export default createStore({
         commit('setThorondorCentralStatus', {
           status: 'disabled',
           lastError: '',
+        })
+        return false
+      }
+
+      if (!hasThorondorApiToken(state.thorondor.token)) {
+        commit('setThorondorCentralStatus', {
+          status: 'auth-required',
+          lastError: 'Token JWT requerido para consultar la consola central.',
         })
         return false
       }
@@ -1028,58 +1077,24 @@ export default createStore({
       }
 
       thorondorPollPromise = (async () => {
+        if (!hasThorondorApiToken(state.thorondor.token)) {
+          commit('setThorondorCentralStatus', {
+            status: 'auth-required',
+            lastError: 'Token JWT requerido para monitorizar hosts.',
+          })
+          return false
+        }
+
         if (isThorondorCentralConfigured()) {
-          try {
-            await dispatch('syncThorondorCentralConsole')
-            return
-          } catch {
-            // If the central API is temporarily unavailable, keep the local/direct mode usable.
-          }
+          await dispatch('syncThorondorCentralConsole')
+          return true
         }
 
-        const agents = state.thorondor.agents.filter(
-          (agent) => buildThorondorAgentEndpoints(agent).baseUrl,
-        )
-
-        for (const agent of agents) {
-          const timestamp = new Date().toISOString()
-          const endpoint = buildThorondorAgentEndpoints(agent).baseUrl
-
-          try {
-            await fetchThorondorHealth(agent)
-            const telemetry = await fetchThorondorTelemetry(agent)
-            commit('ingestThorondorTelemetry', { agentId: agent.id, telemetry })
-            commit('recordThorondorConnection', {
-              agentId: agent.id,
-              timestamp,
-              kind: 'success',
-              endpoint,
-            })
-
-            const snapshots = state.thorondor.snapshotsByAgent[agent.id] || []
-            const events = state.thorondor.securityEventsByAgent[agent.id] || []
-            const alerts = evaluateThorondorRules({
-              agent: state.thorondor.agents.find((item) => item.id === agent.id) || agent,
-              rules: state.thorondor.rules,
-              snapshots,
-              securityEvents: events,
-            })
-            commit('upsertThorondorAlerts', alerts)
-            await dispatch('persistThorondorAgentData', agent.id)
-          } catch (error) {
-            commit('recordThorondorConnection', {
-              agentId: agent.id,
-              timestamp,
-              kind: 'error',
-              endpoint,
-              error: error.message,
-            })
-            await dispatch('persistThorondorAgentData', agent.id)
-          }
-        }
-
-        await dispatch('persistThorondorAlerts')
-        await dispatch('sweepThorondorData')
+        commit('setThorondorCentralStatus', {
+          status: 'disabled',
+          lastError: 'API central requerida para validar el JWT antes de monitorizar hosts.',
+        })
+        return false
       })().finally(() => {
         thorondorPollPromise = null
       })
@@ -1092,6 +1107,12 @@ export default createStore({
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+
+      requireThorondorApiToken(state)
+
+      if (!isThorondorCentralConfigured()) {
+        throw new Error('API central requerida para consultar bloqueos con validacion JWT.')
       }
 
       if (isThorondorCentralConfigured()) {
@@ -1169,6 +1190,12 @@ export default createStore({
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+
+      requireThorondorApiToken(state)
+
+      if (!isThorondorCentralConfigured()) {
+        throw new Error('API central requerida para bloquear IPs con validacion JWT.')
       }
 
       if (isThorondorCentralConfigured()) {
@@ -1334,6 +1361,12 @@ export default createStore({
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+
+      requireThorondorApiToken(state)
+
+      if (!isThorondorCentralConfigured()) {
+        throw new Error('API central requerida para desbloquear IPs con validacion JWT.')
       }
 
       if (isThorondorCentralConfigured()) {

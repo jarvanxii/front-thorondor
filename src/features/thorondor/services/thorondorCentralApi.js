@@ -1,4 +1,7 @@
-import { getThorondorAuthConfig } from '@/features/thorondor/services/thorondorAuth'
+import {
+  getThorondorAuthConfig,
+  getThorondorAuthorizationHeader,
+} from '@/features/thorondor/services/thorondorAuth'
 
 const CENTRAL_TIMEOUT_MS = 15000
 
@@ -40,6 +43,7 @@ async function requestCentral(path, options = {}) {
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
+        ...getThorondorAuthorizationHeader(),
         ...options.headers,
       },
       signal: controller.signal,

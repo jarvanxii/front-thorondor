@@ -40,7 +40,9 @@ export const THORONDOR_SOCIAL_AUTH_PROVIDERS = [
 
 const DEFAULT_CALLBACK_PATH = '/#/auth/callback'
 const THORONDOR_SESSION_STORAGE_KEY = 'thorondor.session'
+const THORONDOR_JWT_STORAGE_KEY = 'thorondor.jwt'
 const AUTH_REQUEST_TIMEOUT_MS = 15000
+const TOKEN_EXPIRY_SKEW_MS = 30000
 
 function getEnvValue(key) {
   return import.meta.env[key]?.trim?.() || ''
@@ -154,6 +156,84 @@ export function saveThorondorSession(session) {
   }
 }
 
+function normalizeThorondorJwtToken(payload) {
+  const accessToken = String(payload?.accessToken || payload?.access_token || '').trim()
+  if (!accessToken) return null
+
+  return {
+    tokenType: String(payload?.tokenType || payload?.token_type || 'Bearer').trim() || 'Bearer',
+    accessToken,
+    expiresAt: String(payload?.expiresAt || payload?.expires_at || '').trim(),
+    expiresInSeconds: Number(payload?.expiresInSeconds || payload?.expires_in || 0) || 0,
+    user: payload?.user || null,
+  }
+}
+
+export function isThorondorJwtTokenValid(token) {
+  const normalized = normalizeThorondorJwtToken(token)
+  if (!normalized) return false
+
+  if (!normalized.expiresAt) {
+    return true
+  }
+
+  const expiry = new Date(normalized.expiresAt).getTime()
+  return Number.isFinite(expiry) && expiry > Date.now() + TOKEN_EXPIRY_SKEW_MS
+}
+
+export function getStoredThorondorJwtToken() {
+  if (typeof window === 'undefined') return null
+
+  try {
+    const raw = window.localStorage.getItem(THORONDOR_JWT_STORAGE_KEY)
+    const token = normalizeThorondorJwtToken(raw ? JSON.parse(raw) : null)
+    if (!isThorondorJwtTokenValid(token)) {
+      clearThorondorJwtToken()
+      return null
+    }
+    return token
+  } catch {
+    clearThorondorJwtToken()
+    return null
+  }
+}
+
+export function saveThorondorJwtToken(payload) {
+  if (typeof window === 'undefined') return null
+
+  const token = normalizeThorondorJwtToken(payload)
+  if (!token) {
+    clearThorondorJwtToken()
+    return null
+  }
+
+  try {
+    window.localStorage.setItem(THORONDOR_JWT_STORAGE_KEY, JSON.stringify(token))
+  } catch {
+    // El JWT tambien vive en memoria de Vuex; localStorage solo evita pedirlo en cada render.
+  }
+  return token
+}
+
+export function clearThorondorJwtToken() {
+  if (typeof window === 'undefined') return
+
+  try {
+    window.localStorage.removeItem(THORONDOR_JWT_STORAGE_KEY)
+  } catch {
+    // Nada que limpiar si el navegador bloquea localStorage.
+  }
+}
+
+export function getThorondorAuthorizationHeader() {
+  const token = getStoredThorondorJwtToken()
+  if (!token?.accessToken) return {}
+
+  return {
+    Authorization: `${token.tokenType || 'Bearer'} ${token.accessToken}`,
+  }
+}
+
 export async function fetchThorondorSession() {
   const { apiBaseUrl } = getThorondorAuthConfig()
   if (!apiBaseUrl) {
@@ -178,6 +258,20 @@ export async function fetchThorondorSession() {
   return session
 }
 
+export async function fetchThorondorJwtToken() {
+  const { apiBaseUrl } = getThorondorAuthConfig()
+  if (!apiBaseUrl) {
+    clearThorondorJwtToken()
+    return null
+  }
+
+  const token = await requestThorondorAuth('/auth/token', {
+    method: 'GET',
+    skipAuthHeader: true,
+  })
+  return saveThorondorJwtToken(token)
+}
+
 export async function logoutThorondorSession() {
   const { apiBaseUrl } = getThorondorAuthConfig()
   if (!apiBaseUrl) {
@@ -187,14 +281,19 @@ export async function logoutThorondorSession() {
       providers: [],
     }
     saveThorondorSession(localSession)
+    clearThorondorJwtToken()
     return localSession
   }
 
-  const session = await requestThorondorAuth('/auth/logout', {
-    method: 'POST',
-  })
-  saveThorondorSession(session)
-  return session
+  try {
+    const session = await requestThorondorAuth('/auth/logout', {
+      method: 'POST',
+    })
+    saveThorondorSession(session)
+    return session
+  } finally {
+    clearThorondorJwtToken()
+  }
 }
 
 export async function fetchThorondorAdminUsers() {
@@ -219,6 +318,7 @@ async function requestThorondorAuth(path, options = {}) {
     throw new Error('API Thorondor no configurada')
   }
 
+  const { skipAuthHeader = false, headers = {}, ...fetchOptions } = options
   const controller = new AbortController()
   const timeoutId = window.setTimeout(() => controller.abort(), AUTH_REQUEST_TIMEOUT_MS)
 
@@ -227,11 +327,12 @@ async function requestThorondorAuth(path, options = {}) {
       cache: 'no-store',
       mode: 'cors',
       credentials: 'include',
-      ...options,
+      ...fetchOptions,
       headers: {
         Accept: 'application/json',
         'Content-Type': 'application/json',
-        ...options.headers,
+        ...(!skipAuthHeader ? getThorondorAuthorizationHeader() : {}),
+        ...headers,
       },
       signal: controller.signal,
     })

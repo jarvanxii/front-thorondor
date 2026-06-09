@@ -1,4 +1,7 @@
-import { getThorondorAuthConfig } from '@/features/thorondor/services/thorondorAuth'
+import {
+  getThorondorAuthConfig,
+  getThorondorAuthorizationHeader,
+} from '@/features/thorondor/services/thorondorAuth'
 
 export const THORONDOR_WORKSPACE_ID_KEY = 'thorondor.workspace.id'
 
@@ -49,6 +52,7 @@ function buildCloudHeaders() {
   return {
     Accept: 'application/json',
     'Content-Type': 'application/json',
+    ...getThorondorAuthorizationHeader(),
   }
 }
 
