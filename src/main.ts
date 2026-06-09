@@ -14,4 +14,6 @@ app.use(createPinia())
 app.use(store)
 app.use(router)
 
-app.mount('#app')
+router.isReady().then(() => {
+  app.mount('#app')
+})

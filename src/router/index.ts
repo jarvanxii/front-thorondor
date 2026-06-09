@@ -1,4 +1,5 @@
 import { createRouter, createWebHistory } from 'vue-router'
+import { fetchThorondorSession } from '@/features/thorondor/services/thorondorAuth'
 
 const routes = [
   {
@@ -84,7 +85,7 @@ const routes = [
   },
   {
     path: '/:pathMatch(.*)*',
-    redirect: { name: 'thorondor-information' },
+    redirect: { name: 'thorondor-login' },
   },
 ]
 
@@ -101,6 +102,28 @@ const router = createRouter({
       behavior: 'smooth',
     }
   },
+})
+
+router.beforeEach(async (to) => {
+  const isPublicRoute = to.matched.some((record) => record.meta.authLayout === true)
+
+  if (isPublicRoute) {
+    return true
+  }
+
+  try {
+    const session = await fetchThorondorSession()
+    if (session?.authenticated) {
+      return true
+    }
+  } catch {
+    // Si la API no puede validar la sesion, no se monta ninguna vista privada.
+  }
+
+  return {
+    name: 'thorondor-login',
+    query: to.fullPath && to.fullPath !== '/' ? { next: to.fullPath } : undefined,
+  }
 })
 
 export default router

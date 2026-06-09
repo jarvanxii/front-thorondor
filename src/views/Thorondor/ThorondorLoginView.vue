@@ -178,13 +178,6 @@
           <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
         </form>
 
-        <RouterLink :to="{ name: 'thorondor-information' }" class="guest-access-button">
-          <span>Acceder sin logarse</span>
-          <svg viewBox="0 0 24 24" aria-hidden="true">
-            <path d="M5 12h14" />
-            <path d="m13 6 6 6-6 6" />
-          </svg>
-        </RouterLink>
       </section>
     </section>
   </main>
@@ -438,8 +431,7 @@ export default {
 .auth-mode-switch,
 .social-login-panel,
 .login-divider,
-.login-form,
-.guest-access-button {
+.login-form {
   width: min(100%, 380px);
 }
 
@@ -498,7 +490,6 @@ export default {
   line-height: 1.58;
 }
 
-.guest-access-button,
 .login-submit,
 .social-login-button {
   min-height: 42px;
@@ -506,24 +497,6 @@ export default {
   font-weight: 900;
 }
 
-.guest-access-button {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 10px;
-  min-height: 42px;
-  border: 1px solid rgba(236, 194, 119, 0.26);
-  background: var(--thorondor-soft-background);
-  color: #f0c77e;
-  text-decoration: none;
-  transition:
-    border-color 160ms ease,
-    background 160ms ease,
-    color 160ms ease,
-    transform 160ms ease;
-}
-
-.guest-access-button svg,
 .password-control svg {
   width: 18px;
   height: 18px;
@@ -574,15 +547,8 @@ export default {
 }
 
 .social-login-button:hover:not(:disabled),
-.guest-access-button:hover,
 .login-submit:hover {
   transform: translateY(-1px);
-}
-
-.guest-access-button:hover {
-  border-color: rgba(236, 194, 119, 0.46);
-  background: var(--thorondor-nested-background);
-  color: #ffd998;
 }
 
 .social-login-button:hover:not(:disabled) {
