@@ -38,7 +38,7 @@ export const THORONDOR_SOCIAL_AUTH_PROVIDERS = [
   },
 ]
 
-const DEFAULT_CALLBACK_PATH = '/auth/callback'
+const DEFAULT_CALLBACK_PATH = '/login/callback'
 const THORONDOR_SESSION_STORAGE_KEY = 'thorondor.session'
 const THORONDOR_JWT_STORAGE_KEY = 'thorondor.jwt.session'
 const THORONDOR_LEGACY_JWT_STORAGE_KEY = 'thorondor.jwt'
