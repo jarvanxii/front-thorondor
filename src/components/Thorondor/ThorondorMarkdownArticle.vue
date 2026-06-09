@@ -56,7 +56,7 @@ export default {
 }
 
 .markdown-article :deep(code) {
-    background: rgba(18, 22, 28, 0.82);
+    background: var(--thorondor-nested-background);
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
     color: #e4e9ef;
@@ -65,7 +65,7 @@ export default {
 }
 
 .markdown-article :deep(pre) {
-    background: #0c1015;
+    background: var(--thorondor-soft-background);
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
     padding: 14px;

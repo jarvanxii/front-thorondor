@@ -253,9 +253,7 @@ export default {
     overflow: hidden;
     border: 1px solid rgba(236, 194, 119, 0.18);
     border-radius: 4px;
-    background:
-        linear-gradient(115deg, rgba(21, 26, 32, 0.98), rgba(13, 16, 21, 0.98) 58%, rgba(8, 10, 13, 0.99)),
-        #10151b;
+    background: var(--thorondor-panel-background);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
         0 18px 42px rgba(0, 0, 0, 0.28);
@@ -266,9 +264,7 @@ export default {
     position: absolute;
     inset: 0;
     z-index: -1;
-    background:
-        linear-gradient(90deg, rgba(236, 194, 119, 0.06), transparent 30%),
-        linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%);
+    background: linear-gradient(180deg, rgba(255, 255, 255, 0.026), transparent 45%);
 }
 
 .home-overview::after {
@@ -346,7 +342,7 @@ export default {
     width: min(100%, 270px);
     justify-self: end;
     border: 1px solid rgba(196, 204, 214, 0.16);
-    background: rgba(255, 255, 255, 0.035);
+    background: var(--thorondor-nested-background);
 }
 
 .hero-status-bar div {

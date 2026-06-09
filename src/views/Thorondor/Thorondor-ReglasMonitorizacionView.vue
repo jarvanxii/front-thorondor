@@ -451,7 +451,7 @@ export default {
 .rule-helper-card,
 .rule-preview-card,
 .rule-editor-card {
-  background: linear-gradient(180deg, rgba(28, 33, 40, 0.98), rgba(16, 20, 26, 0.98));
+  background: var(--thorondor-nested-background);
   border: 1px solid rgba(176, 184, 194, 0.18);
 }
 
@@ -464,7 +464,7 @@ export default {
 
 .preset-pill {
   border: 1px solid rgba(176, 184, 194, 0.28);
-  background: rgba(42, 47, 55, 0.54);
+  background: var(--thorondor-soft-background);
   color: #dce6ef;
   border-radius: 4px;
   padding: 0.55rem 0.9rem;
@@ -473,7 +473,7 @@ export default {
 }
 
 .preset-pill:hover {
-  background: rgba(55, 61, 70, 0.88);
+  background: var(--thorondor-nested-background);
   border-color: rgba(169, 186, 203, 0.48);
 }
 

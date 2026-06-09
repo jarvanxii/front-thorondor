@@ -657,7 +657,7 @@ export default {
 .status-line {
   border: 1px solid rgba(176, 184, 194, 0.24);
   border-radius: 4px;
-  background: rgba(22, 27, 34, 0.78);
+  background: var(--thorondor-nested-background);
   color: #dbe5ef;
   padding: 0.75rem 0.9rem;
   line-height: 1.55;
@@ -689,7 +689,7 @@ export default {
   padding: 0.85rem;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.44);
+  background: var(--thorondor-soft-background);
   color: rgba(226, 235, 244, 0.9);
 }
 
@@ -721,7 +721,7 @@ export default {
   padding: 0.85rem;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.48);
+  background: var(--thorondor-soft-background);
 }
 
 .diagnostic-grid label {

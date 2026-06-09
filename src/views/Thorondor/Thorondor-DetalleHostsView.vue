@@ -995,7 +995,7 @@ export default {
 .small-code {
     font-size: 0.78rem;
     color: #9aa6b3;
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--thorondor-soft-background);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
 }
@@ -1009,7 +1009,7 @@ export default {
 .disk-bar-track {
     flex: 1;
     height: 5px;
-    background: rgba(255, 255, 255, 0.08);
+    background: var(--thorondor-soft-background);
     border-radius: 4px;
     overflow: hidden;
     min-width: 60px;
@@ -1061,7 +1061,7 @@ export default {
 .disk-toggle-btn.disk-toggle-active {
     border-color: var(--tcol, rgba(176, 184, 194, 0.58));
     color: var(--tcol, rgba(207, 214, 222, 1));
-    background: rgba(255, 255, 255, 0.04);
+    background: var(--thorondor-soft-background);
 }
 
 .disk-toggle-btn:hover {
@@ -1076,7 +1076,7 @@ export default {
 }
 
 .temp-card {
-    background: rgba(16, 20, 26, 0.58);
+    background: var(--thorondor-nested-background);
     border: 1px solid rgba(176, 184, 194, 0.16);
     border-radius: 4px;
     padding: 0.7rem 0.85rem;

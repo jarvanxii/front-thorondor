@@ -686,9 +686,7 @@ export default {
   gap: 16px;
   padding: 0 24px;
   border-bottom: 1px solid rgba(236, 194, 119, 0.2);
-  background:
-    linear-gradient(180deg, rgba(20, 22, 26, 0.988), rgba(10, 13, 18, 0.978)),
-    #12161c;
+  background: var(--thorondor-panel-background);
   box-shadow:
     0 18px 38px rgba(0, 0, 0, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -736,8 +734,7 @@ export default {
   padding: 5px;
   border: 1px solid rgba(236, 194, 119, 0.16);
   border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(34, 35, 34, 0.9), rgba(16, 19, 24, 0.94)), rgba(20, 24, 30, 0.82);
+  background: var(--thorondor-nested-background);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
     0 10px 22px rgba(0, 0, 0, 0.22);
@@ -794,7 +791,7 @@ export default {
   height: 44px;
   border: 1px solid rgba(168, 177, 188, 0.22);
   border-radius: 4px;
-  background: linear-gradient(180deg, rgba(35, 39, 46, 0.96), rgba(18, 21, 26, 0.98));
+  background: var(--thorondor-nested-background);
   color: #e5eef8;
   flex: 0 0 auto;
   cursor: var(--cursor-pointer), pointer;
@@ -849,7 +846,7 @@ export default {
 .settings-square:hover,
 .settings-square[aria-expanded='true'] {
   border-color: rgba(213, 219, 226, 0.36);
-  background: linear-gradient(180deg, rgba(45, 50, 58, 0.98), rgba(24, 28, 34, 0.98));
+  background: var(--thorondor-soft-background);
   color: #f8fafc;
 }
 
@@ -875,8 +872,7 @@ export default {
   border: 1px solid rgba(176, 184, 194, 0.24);
   border-top: 0;
   border-radius: 0 0 4px 4px;
-  background:
-    linear-gradient(180deg, rgba(29, 33, 40, 0.99), rgba(14, 17, 22, 0.995)), #11151b;
+  background: var(--thorondor-panel-background);
   box-shadow:
     0 28px 54px rgba(0, 0, 0, 0.46),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
@@ -896,7 +892,7 @@ export default {
 
 .settings-dropdown-header {
   border-bottom: 1px solid rgba(176, 184, 194, 0.16);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-dropdown-header span,
@@ -962,12 +958,12 @@ export default {
 
 .settings-menu-item:hover,
 .settings-menu-item:focus-visible {
-  background: rgba(199, 207, 217, 0.075);
+  background: var(--thorondor-soft-background);
   outline: none;
 }
 
 .settings-menu-footer {
-  background: rgba(10, 13, 17, 0.86);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-menu-footer--action {
@@ -1043,9 +1039,7 @@ export default {
   overflow: hidden;
   border: 1px solid rgba(176, 184, 194, 0.22);
   border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(28, 33, 40, 0.99), rgba(13, 17, 22, 0.995)),
-    #11161d;
+  background: var(--thorondor-panel-background);
   box-shadow:
     0 30px 70px rgba(0, 0, 0, 0.58),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
@@ -1062,7 +1056,7 @@ export default {
 
 .settings-modal-header {
   border-bottom: 1px solid rgba(176, 184, 194, 0.16);
-  background: rgba(255, 255, 255, 0.035);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-modal-header div {
@@ -1103,7 +1097,7 @@ export default {
   justify-content: center;
   border: 1px solid rgba(176, 184, 194, 0.24);
   border-radius: 4px;
-  background: rgba(13, 17, 23, 0.72);
+  background: var(--thorondor-soft-background);
   color: #e5eef8;
   cursor: var(--cursor-pointer), pointer;
   font-weight: 900;
@@ -1111,7 +1105,7 @@ export default {
 
 .settings-modal-close:hover {
   border-color: rgba(229, 236, 246, 0.45);
-  background: rgba(32, 38, 47, 0.96);
+  background: var(--thorondor-nested-background);
 }
 
 .settings-modal-body {
@@ -1136,9 +1130,7 @@ export default {
   padding: 16px;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(25, 30, 37, 0.78), rgba(12, 16, 21, 0.84)),
-    rgba(13, 17, 23, 0.76);
+  background: var(--thorondor-nested-background);
 }
 
 .modal-panel-heading {
@@ -1181,7 +1173,7 @@ export default {
   min-height: 40px;
   border: 1px solid rgba(176, 184, 194, 0.2);
   border-radius: 3px;
-  background: rgba(7, 10, 14, 0.7);
+  background: var(--thorondor-soft-background);
   color: #f8fafc;
   font: inherit;
   outline: none;
@@ -1207,7 +1199,7 @@ export default {
   padding: 12px;
   border: 1px solid rgba(176, 184, 194, 0.14);
   border-radius: 4px;
-  background: rgba(7, 10, 14, 0.42);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-switch-row input {
@@ -1222,7 +1214,7 @@ export default {
   height: 21px;
   border: 1px solid rgba(176, 184, 194, 0.28);
   border-radius: 999px;
-  background: rgba(7, 10, 14, 0.82);
+  background: var(--thorondor-nested-background);
   transition: background 0.16s ease, border-color 0.16s ease;
 }
 
@@ -1298,13 +1290,13 @@ export default {
   padding: 12px;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background: rgba(7, 10, 14, 0.42);
+  background: var(--thorondor-soft-background);
   cursor: var(--cursor-pointer), pointer;
 }
 
 .settings-persistence-card.is-active {
   border-color: rgba(229, 236, 246, 0.52);
-  background: rgba(36, 42, 51, 0.78);
+  background: var(--thorondor-nested-background);
 }
 
 .settings-persistence-card.is-disabled {
@@ -1359,7 +1351,7 @@ export default {
   padding: 12px;
   border: 1px solid rgba(176, 184, 194, 0.14);
   border-radius: 4px;
-  background: rgba(7, 10, 14, 0.42);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-metric-grid span {
@@ -1380,7 +1372,7 @@ export default {
 
 .settings-modal-footer {
   border-top: 1px solid rgba(176, 184, 194, 0.16);
-  background: rgba(8, 11, 15, 0.9);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-modal-footer div {
@@ -1400,7 +1392,7 @@ export default {
 
 .settings-modal-secondary {
   border: 1px solid rgba(176, 184, 194, 0.2);
-  background: transparent;
+  background: var(--thorondor-soft-background);
   color: #dce6f2;
 }
 
@@ -1453,7 +1445,7 @@ export default {
   place-items: center;
   border: 1px solid rgba(168, 177, 188, 0.22);
   border-radius: 4px;
-  background: rgba(18, 21, 26, 0.78);
+  background: var(--thorondor-nested-background);
 }
 
 .sidebar-toggle span {
@@ -1514,7 +1506,7 @@ export default {
     min-height: 36px;
     padding: 3px;
     border-color: rgba(176, 184, 194, 0.13);
-    background: rgba(12, 16, 22, 0.86);
+    background: var(--thorondor-nested-background);
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
   }
 

@@ -319,7 +319,7 @@ export default {
 }
 
 .os-badge--win {
-  background: rgba(176, 184, 194, 0.14);
+  background: var(--thorondor-soft-background);
   border: 1px solid rgba(169, 186, 203, 0.34);
   color: #dbe5ef;
 }

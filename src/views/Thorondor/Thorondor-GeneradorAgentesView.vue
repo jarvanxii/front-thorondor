@@ -1575,7 +1575,7 @@ export default {
     padding: 0.28rem 0.55rem;
     border: 1px solid rgba(176, 184, 194, 0.24);
     border-radius: 3px;
-    background: rgba(226, 232, 240, 0.08);
+    background: var(--thorondor-soft-background);
     color: #dce6f2;
     font-size: 0.68rem;
     font-weight: 850;
@@ -1708,7 +1708,7 @@ export default {
     padding: 0.9rem 1rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: linear-gradient(180deg, rgba(28, 33, 40, 0.86), rgba(14, 17, 22, 0.92));
+    background: var(--thorondor-nested-background);
 }
 
 .msi-packaging-note strong {
@@ -1815,7 +1815,7 @@ export default {
     padding: 1.1rem;
     border: 1px solid rgba(176, 184, 194, 0.24);
     border-radius: 4px;
-    background: linear-gradient(180deg, rgba(28, 33, 40, 0.74), rgba(16, 20, 26, 0.86));
+    background: var(--thorondor-nested-background);
 }
 
 .deployment-selector-copy {
@@ -1883,7 +1883,7 @@ export default {
     padding: 0.7rem 0.75rem;
     border: 1px solid rgba(176, 184, 194, 0.18);
     border-radius: 4px;
-    background: rgba(14, 17, 22, 0.48);
+    background: var(--thorondor-soft-background);
 }
 
 .diagnostic-log-toolbar p {
@@ -1919,7 +1919,7 @@ export default {
     padding: 0.72rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: rgba(16, 20, 26, 0.42);
+    background: var(--thorondor-soft-background);
     color: #dce3eb;
     cursor: var(--cursor-pointer), pointer;
     transition: border-color 0.18s ease, background 0.18s ease, box-shadow 0.18s ease;
@@ -1931,7 +1931,7 @@ export default {
 .diagnostic-log-option.is-help-open {
     z-index: 5000;
     border-color: rgba(203, 213, 225, 0.42);
-    background: rgba(30, 35, 43, 0.72);
+    background: var(--thorondor-nested-background);
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
 }
 
@@ -1990,7 +1990,7 @@ export default {
     padding: 0.62rem 0.72rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: rgba(16, 20, 26, 0.42);
+    background: var(--thorondor-soft-background);
     line-height: 1.35;
 }
 
@@ -2021,7 +2021,7 @@ export default {
     height: 1.08rem;
     border-radius: 4px;
     border: 1px solid rgba(176, 184, 194, 0.32);
-    background: linear-gradient(180deg, rgba(35, 40, 48, 0.96), rgba(18, 22, 28, 0.98));
+    background: var(--thorondor-nested-background);
     box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
     color: #dbe5ef;
     font-size: 0.58rem;
@@ -2034,7 +2034,7 @@ export default {
 .help-trigger.is-pinned {
     z-index: 3001;
     border-color: rgba(203, 213, 225, 0.62);
-    background: linear-gradient(180deg, rgba(48, 54, 64, 0.98), rgba(24, 28, 34, 0.98));
+    background: var(--thorondor-soft-background);
     color: #ffffff;
     box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
 }
@@ -2047,7 +2047,7 @@ export default {
     padding: 0.95rem 1rem;
     border-radius: 4px;
     border: 1px solid rgba(176, 184, 194, 0.36);
-    background: linear-gradient(180deg, rgba(29, 33, 40, 0.99), rgba(16, 20, 26, 0.99));
+    background: var(--thorondor-panel-background);
     box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42);
     color: rgba(225, 234, 244, 0.95);
     font-size: 0.84rem;
@@ -2069,7 +2069,7 @@ export default {
     height: 14px;
     border-top: 1px solid rgba(176, 184, 194, 0.36);
     border-left: 1px solid rgba(176, 184, 194, 0.36);
-    background: rgba(29, 33, 40, 0.99);
+    background: var(--thorondor-panel-background);
     transform: rotate(45deg);
 }
 
@@ -2096,7 +2096,7 @@ export default {
     padding: 0.45rem 0.55rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: rgba(14, 17, 22, 0.84);
+    background: var(--thorondor-nested-background);
     color: #dce8f7;
     font-size: 0.76rem;
     line-height: 1.4;
@@ -2132,7 +2132,7 @@ export default {
     padding: 1rem;
     border: 1px solid rgba(176, 184, 194, 0.2);
     border-radius: 4px;
-    background: linear-gradient(180deg, rgba(21, 26, 33, 0.96), rgba(12, 16, 21, 0.98));
+    background: var(--thorondor-nested-background);
 }
 
 .action-group-primary {
@@ -2199,7 +2199,7 @@ export default {
     padding: 0.85rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: rgba(13, 17, 23, 0.82);
+    background: var(--thorondor-soft-background);
     color: #e7edf5;
     cursor: var(--cursor-pointer), pointer;
     transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
@@ -2207,13 +2207,13 @@ export default {
 
 .persistence-mode-card:hover {
     border-color: rgba(229, 236, 246, 0.42);
-    background: rgba(24, 29, 37, 0.9);
+    background: var(--thorondor-nested-background);
     transform: translateY(-1px);
 }
 
 .persistence-mode-card.is-active {
     border-color: rgba(234, 242, 252, 0.62);
-    background: linear-gradient(180deg, rgba(34, 40, 49, 0.95), rgba(18, 23, 30, 0.96));
+    background: var(--thorondor-nested-background);
 }
 
 .persistence-mode-card.is-disabled {
@@ -2250,7 +2250,7 @@ export default {
     padding: 0.28rem 0.48rem;
     border: 1px solid rgba(176, 184, 194, 0.24);
     border-radius: 3px;
-    background: rgba(229, 236, 246, 0.08);
+    background: var(--thorondor-soft-background);
     color: #e7edf5;
     font-size: 0.67rem;
     font-weight: 800;
@@ -2280,7 +2280,7 @@ export default {
     padding: 1rem;
     border-radius: 4px;
     border: 1px solid rgba(176, 184, 194, 0.24);
-    background: linear-gradient(180deg, rgba(28, 33, 40, 0.96), rgba(16, 20, 26, 0.98));
+    background: var(--thorondor-nested-background);
 }
 
 .action-guide-icon {
@@ -2292,7 +2292,7 @@ export default {
     border-radius: 4px;
     flex-shrink: 0;
     border: 1px solid rgba(176, 184, 194, 0.36);
-    background: rgba(35, 40, 48, 0.9);
+    background: var(--thorondor-soft-background);
     color: #dbe5ef;
     font-size: 0.88rem;
     font-weight: 700;
@@ -2418,7 +2418,7 @@ export default {
     padding: 1rem;
     border: 1px solid rgba(176, 184, 194, 0.2);
     border-radius: 4px;
-    background: linear-gradient(180deg, rgba(22, 27, 34, 0.7), rgba(13, 16, 21, 0.78));
+    background: var(--thorondor-soft-background);
 }
 
 .os-selector-copy {

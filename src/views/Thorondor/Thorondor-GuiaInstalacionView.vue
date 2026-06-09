@@ -872,7 +872,7 @@ export default {
 }
 
 .command-card {
-    background: linear-gradient(180deg, rgba(31, 36, 44, 0.98), rgba(17, 21, 27, 0.98));
+    background: var(--thorondor-nested-background);
 }
 
 .beginner-section {
@@ -893,7 +893,7 @@ export default {
     padding: 1rem;
     border: 1px solid rgba(176, 184, 194, 0.16);
     border-radius: 4px;
-    background: rgba(16, 20, 26, 0.48);
+    background: var(--thorondor-soft-background);
 }
 
 .beginner-card label {
@@ -973,7 +973,7 @@ export default {
 
 .connection-selector-section {
     border-color: rgba(213, 219, 226, 0.32);
-    background: linear-gradient(180deg, rgba(32, 37, 45, 0.98), rgba(18, 22, 28, 0.98));
+    background: var(--thorondor-panel-background);
 }
 
 .deployment-selector-control {
@@ -988,7 +988,7 @@ export default {
     margin: 2.35rem 0 1.1rem;
     padding: 1.15rem 1.25rem;
     border-left: 3px solid rgba(176, 184, 194, 0.72);
-    background: linear-gradient(90deg, rgba(30, 35, 43, 0.92), rgba(30, 35, 43, 0.2));
+    background: var(--thorondor-soft-background);
 }
 
 .guide-section-title--danger {
@@ -1051,7 +1051,7 @@ export default {
     padding: 0.32rem 0.78rem;
     border-radius: 4px;
     border: 1px solid rgba(176, 184, 194, 0.34);
-    background: rgba(28, 33, 40, 0.94);
+    background: var(--thorondor-nested-background);
     color: #dbe5ef;
     font-size: 0.76rem;
     font-weight: 700;
@@ -1062,7 +1062,7 @@ export default {
 
 .copy-btn:hover {
     border-color: rgba(183, 197, 211, 0.58);
-    background: rgba(48, 54, 64, 0.98);
+    background: var(--thorondor-soft-background);
     color: #f8fbff;
 }
 
@@ -1080,7 +1080,7 @@ export default {
     padding: 1rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: linear-gradient(180deg, rgba(21, 25, 31, 0.74), rgba(13, 16, 21, 0.82));
+    background: var(--thorondor-nested-background);
 }
 
 .os-simple-note {

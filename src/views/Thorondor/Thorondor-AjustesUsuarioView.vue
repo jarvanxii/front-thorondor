@@ -559,9 +559,7 @@ export default {
   padding: 14px;
   border: 1px solid var(--thorondor-gold-line);
   border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(31, 27, 21, 0.58), rgba(16, 20, 26, 0.64)),
-    rgba(16, 20, 26, 0.54);
+  background: var(--thorondor-nested-background);
 }
 
 .settings-user-summary img {
@@ -569,7 +567,7 @@ export default {
   height: 58px;
   border-radius: 4px;
   object-fit: contain;
-  background: rgba(5, 7, 10, 0.82);
+  background: var(--thorondor-soft-background);
   box-shadow: inset 0 0 0 1px rgba(236, 194, 119, 0.16);
 }
 
@@ -604,8 +602,7 @@ export default {
   padding: 14px 16px;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(28, 33, 40, 0.94), rgba(16, 20, 26, 0.97));
+  background: var(--thorondor-nested-background);
   color: #dce3eb;
   text-decoration: none;
   box-shadow:
@@ -615,8 +612,7 @@ export default {
 
 .settings-tabs a:hover {
   border-color: rgba(213, 219, 226, 0.28);
-  background:
-    linear-gradient(180deg, rgba(35, 40, 48, 0.98), rgba(20, 24, 30, 0.98));
+  background: var(--thorondor-soft-background);
   transform: translateY(-1px);
 }
 
@@ -664,7 +660,7 @@ export default {
   padding: 16px;
   border: 1px solid rgba(176, 184, 194, 0.15);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.52);
+  background: var(--thorondor-soft-background);
 }
 
 .mail-rule--disabled {
@@ -715,7 +711,7 @@ export default {
   padding: 16px;
   border: 1px solid rgba(176, 184, 194, 0.15);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.52);
+  background: var(--thorondor-soft-background);
 }
 
 .billing-line div {
@@ -739,7 +735,7 @@ export default {
   padding: 16px;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.52);
+  background: var(--thorondor-soft-background);
 }
 
 .persistence-line span,
@@ -772,7 +768,7 @@ export default {
   border: 1px solid rgba(176, 184, 194, 0.18);
   border-radius: 4px;
   color: #dce3eb;
-  background: rgba(16, 20, 26, 0.58);
+  background: var(--thorondor-soft-background);
 }
 
 .settings-feedback--success {
@@ -789,7 +785,7 @@ export default {
   overflow-x: auto;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.52);
+  background: var(--thorondor-soft-background);
 }
 
 .admin-users-table {
@@ -845,7 +841,7 @@ export default {
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
   color: #9fb0c3;
-  background: rgba(20, 24, 30, 0.78);
+  background: var(--thorondor-soft-background);
   font-size: 0.78rem;
   font-weight: 800;
 }

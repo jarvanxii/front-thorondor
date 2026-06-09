@@ -158,10 +158,7 @@ export default {
   gap: 12px;
   padding: 16px 12px 14px;
   overflow-y: auto;
-  background:
-    linear-gradient(180deg, rgba(26, 29, 34, 0.98), rgba(12, 15, 19, 0.99)),
-    repeating-linear-gradient(180deg, rgba(236, 194, 119, 0.022) 0 1px, transparent 1px 24px),
-    #11151a;
+  background: var(--thorondor-panel-background);
   border-right: 1px solid rgba(236, 194, 119, 0.17);
   box-shadow: 20px 0 44px rgba(0, 0, 0, 0.26);
 }
@@ -172,9 +169,7 @@ export default {
   padding: 12px;
   border: 1px solid rgba(236, 194, 119, 0.16);
   border-radius: 4px;
-  background:
-    linear-gradient(180deg, rgba(34, 38, 44, 0.82), rgba(18, 21, 26, 0.9)),
-    rgba(12, 15, 19, 0.82);
+  background: var(--thorondor-nested-background);
 }
 
 .identity-status {
@@ -215,7 +210,7 @@ export default {
   padding: 12px;
   border: 1px solid rgba(189, 196, 205, 0.15);
   border-radius: 4px;
-  background: rgba(15, 18, 23, 0.74);
+  background: var(--thorondor-nested-background);
 }
 
 .sidebar-system select {
@@ -223,7 +218,7 @@ export default {
   min-height: 36px;
   border: 1px solid rgba(189, 196, 205, 0.24);
   border-radius: 4px;
-  background: #11151a;
+  background: var(--thorondor-soft-background);
   color: #f4f6f8;
   font-size: 0.8rem;
   outline: none;
@@ -290,7 +285,7 @@ export default {
 
 .sidebar-nav-item:hover {
   border-color: rgba(189, 196, 205, 0.13);
-  background: rgba(255, 255, 255, 0.045);
+  background: var(--thorondor-soft-background);
   color: #f7f9fb;
   transform: translateX(1px);
 }
@@ -330,7 +325,7 @@ export default {
   padding: 3px 6px;
   border-radius: 3px;
   border: 1px solid rgba(189, 196, 205, 0.16);
-  background: rgba(190, 198, 209, 0.1);
+  background: var(--thorondor-soft-background);
   color: #dce3ea;
   font-size: 0.58rem;
   font-weight: 800;
@@ -341,9 +336,7 @@ export default {
     width: min(330px, 88vw);
     gap: 10px;
     padding: 14px 12px;
-    background:
-      linear-gradient(180deg, rgba(24, 28, 34, 0.995), rgba(9, 12, 17, 0.998)),
-      #0d1117;
+    background: var(--thorondor-panel-background);
     box-shadow: 24px 0 54px rgba(0, 0, 0, 0.46);
     transform: translateX(-104%);
     transition: transform 180ms ease;

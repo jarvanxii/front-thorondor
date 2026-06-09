@@ -146,7 +146,8 @@ export default {
   height: 100svh;
   min-height: 100vh;
   min-height: 100svh;
-  background: #05070a;
+  background: var(--thorondor-grid-background);
+  background-size: var(--thorondor-grid-background-size);
   color: #eef3f8;
 }
 
@@ -170,9 +171,7 @@ export default {
   min-height: 100svh;
   overflow: hidden;
   padding: 0;
-  background:
-    radial-gradient(circle at 52% 44%, rgba(218, 166, 92, 0.16), transparent 36%),
-    linear-gradient(135deg, #030507 0%, #0b1016 48%, #030507 100%);
+  background: var(--thorondor-panel-background);
 }
 
 .login-visual::after {
@@ -221,18 +220,8 @@ export default {
   padding-right: clamp(24px, 3vw, 56px);
   border-left: 1px solid rgba(236, 194, 119, 0.24);
   border-radius: 0;
-  background:
-    radial-gradient(circle at 52% 18%, rgba(218, 166, 92, 0.14), transparent 34%),
-    linear-gradient(90deg, rgba(255, 255, 255, 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(255, 255, 255, 0.03) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(19, 23, 31, 0.98), rgba(6, 9, 14, 0.995)),
-    #070a0f;
-  background-size:
-    auto,
-    64px 64px,
-    64px 64px,
-    auto,
-    auto;
+  background: var(--thorondor-grid-background);
+  background-size: var(--thorondor-grid-background-size);
   box-shadow:
     -32px 0 86px rgba(0, 0, 0, 0.46),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
@@ -299,7 +288,7 @@ export default {
   gap: 10px;
   min-height: 42px;
   border: 1px solid rgba(236, 194, 119, 0.26);
-  background: rgba(218, 166, 92, 0.08);
+  background: var(--thorondor-soft-background);
   color: #f0c77e;
   text-decoration: none;
   transition:
@@ -367,7 +356,7 @@ export default {
 
 .guest-access-button:hover {
   border-color: rgba(236, 194, 119, 0.46);
-  background: rgba(218, 166, 92, 0.13);
+  background: var(--thorondor-nested-background);
   color: #ffd998;
 }
 
@@ -417,7 +406,7 @@ export default {
   padding: 0 14px;
   border: 1px solid rgba(176, 184, 194, 0.28);
   border-radius: 4px;
-  background: rgba(4, 7, 11, 0.72);
+  background: var(--thorondor-soft-background);
   color: #f8fafc;
   outline: none;
 }
@@ -449,7 +438,7 @@ export default {
   place-items: center;
   border: 1px solid rgba(176, 184, 194, 0.22);
   border-radius: 4px;
-  background: rgba(18, 22, 29, 0.9);
+  background: var(--thorondor-nested-background);
   color: #cfd6de;
   transform: translateY(-50%);
 }

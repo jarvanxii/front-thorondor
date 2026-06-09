@@ -224,7 +224,7 @@ export default {
   padding: 16px;
   border: 1px solid rgba(176, 184, 194, 0.16);
   border-radius: 4px;
-  background: rgba(16, 20, 26, 0.56);
+  background: var(--thorondor-soft-background);
 }
 
 .alert-severity {

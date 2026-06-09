@@ -57,18 +57,8 @@ export default {
 <style scoped>
 .thorondor-app-shell {
   min-height: 100vh;
-  background:
-    linear-gradient(90deg, rgba(236, 194, 119, 0.04) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(236, 194, 119, 0.032) 1px, transparent 1px),
-    linear-gradient(135deg, rgba(226, 232, 240, 0.025) 1px, transparent 1px),
-    radial-gradient(circle at 18% 8%, rgba(218, 166, 92, 0.09), transparent 28%),
-    linear-gradient(180deg, #111720 0%, #0d1219 46%, #080c11 100%);
-  background-size:
-    40px 40px,
-    40px 40px,
-    140px 140px,
-    auto,
-    auto;
+  background: var(--thorondor-grid-background);
+  background-size: var(--thorondor-grid-background-size);
   color: #e0e6ed;
 }
 
@@ -104,10 +94,8 @@ export default {
 
 @media (max-width: 900px) {
   .thorondor-app-shell {
-    background:
-      radial-gradient(circle at 50% -12%, rgba(218, 166, 92, 0.1), transparent 30%),
-      linear-gradient(180deg, #111720 0%, #0b1016 54%, #080c11 100%);
-    background-size: auto;
+    background: var(--thorondor-grid-background);
+    background-size: var(--thorondor-grid-background-size);
   }
 
   .sidebar-backdrop {

@@ -137,16 +137,8 @@ export default {
   display: grid;
   place-items: center;
   padding: clamp(22px, 4vw, 48px);
-  background:
-    linear-gradient(90deg, rgba(236, 194, 119, 0.07) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(236, 194, 119, 0.055) 1px, transparent 1px),
-    radial-gradient(circle at 50% 4%, rgba(218, 166, 92, 0.12), transparent 30%),
-    linear-gradient(180deg, #0b0f14 0%, #12161c 52%, #07090d 100%);
-  background-size:
-    40px 40px,
-    40px 40px,
-    120px 120px,
-    auto;
+  background: var(--thorondor-grid-background);
+  background-size: var(--thorondor-grid-background-size);
   color: #e5eef8;
 }
 
@@ -157,7 +149,7 @@ export default {
   padding: clamp(24px, 4vw, 34px);
   border: 1px solid rgba(236, 194, 119, 0.24);
   border-radius: 4px;
-  background: linear-gradient(180deg, rgba(28, 33, 40, 0.98), rgba(13, 16, 21, 0.99));
+  background: var(--thorondor-panel-background);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.045),
     0 28px 60px rgba(0, 0, 0, 0.34);
@@ -190,7 +182,7 @@ export default {
   width: 48px;
   height: 48px;
   object-fit: contain;
-  background: rgba(5, 7, 10, 0.74);
+  background: var(--thorondor-soft-background);
   filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.42));
 }
 
@@ -202,7 +194,7 @@ export default {
   padding: 8px 12px;
   border: 1px solid rgba(213, 219, 226, 0.28);
   border-radius: 4px;
-  background: rgba(190, 198, 208, 0.1);
+  background: var(--thorondor-nested-background);
   color: #e2e8f0;
 }
 
