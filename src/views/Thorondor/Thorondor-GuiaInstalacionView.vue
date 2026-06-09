@@ -872,7 +872,7 @@ export default {
 }
 
 .beginner-section {
-    border-color: rgba(176, 184, 194, 0.24);
+    border-color: var(--thorondor-line);
 }
 
 .beginner-grid {
@@ -887,7 +887,7 @@ export default {
     gap: 0.45rem;
     align-content: start;
     padding: 1rem;
-    border: 1px solid rgba(176, 184, 194, 0.16);
+    border: 1px solid rgba(236, 194, 119, 0.14);
     border-radius: 4px;
     background: var(--thorondor-soft-background);
 }
@@ -938,7 +938,7 @@ export default {
     gap: 0.75rem;
     margin-top: 1rem;
     padding-top: 0.95rem;
-    border-top: 1px solid rgba(176, 184, 194, 0.18);
+    border-top: 1px solid rgba(236, 194, 119, 0.16);
 }
 
 .step-detail-grid label {
@@ -968,7 +968,7 @@ export default {
 }
 
 .connection-selector-section {
-    border-color: rgba(213, 219, 226, 0.32);
+    border-color: var(--thorondor-line);
     background: var(--thorondor-panel-background);
 }
 
@@ -983,7 +983,7 @@ export default {
     gap: 0.45rem;
     margin: 2.35rem 0 1.1rem;
     padding: 1.15rem 1.25rem;
-    border-left: 3px solid rgba(176, 184, 194, 0.72);
+    border-left: 3px solid rgba(236, 194, 119, 0.42);
     background: var(--thorondor-soft-background);
 }
 
@@ -1046,7 +1046,7 @@ export default {
     align-items: center;
     padding: 0.32rem 0.78rem;
     border-radius: 4px;
-    border: 1px solid rgba(176, 184, 194, 0.34);
+    border: 1px solid rgba(236, 194, 119, 0.24);
     background: var(--thorondor-nested-background);
     color: #dbe5ef;
     font-size: 0.76rem;
@@ -1057,7 +1057,7 @@ export default {
 }
 
 .copy-btn:hover {
-    border-color: rgba(183, 197, 211, 0.58);
+    border-color: rgba(236, 194, 119, 0.44);
     background: var(--thorondor-soft-background);
     color: #f8fbff;
 }
@@ -1074,7 +1074,7 @@ export default {
     align-items: center;
     margin-top: 1rem;
     padding: 1rem;
-    border: 1px solid rgba(176, 184, 194, 0.22);
+    border: 1px solid rgba(236, 194, 119, 0.16);
     border-radius: 4px;
     background: var(--thorondor-nested-background);
 }
@@ -1083,7 +1083,7 @@ export default {
     display: grid;
     gap: 0.35rem;
     padding-left: 1rem;
-    border-left: 1px solid rgba(176, 184, 194, 0.2);
+    border-left: 1px solid rgba(236, 194, 119, 0.16);
 }
 
 .os-simple-note strong {
@@ -1123,7 +1123,7 @@ export default {
         padding-left: 0;
         padding-top: 0.85rem;
         border-left: 0;
-        border-top: 1px solid rgba(176, 184, 194, 0.2);
+        border-top: 1px solid rgba(236, 194, 119, 0.16);
     }
 }
 </style>
