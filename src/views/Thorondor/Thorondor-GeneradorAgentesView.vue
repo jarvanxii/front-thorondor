@@ -1,39 +1,39 @@
 <template>
     <ThorondorPageShell>
-        <section class="section-box intro-box">
-            <div class="section-topline">
-                <div class="module-header">
+        <section class="section-box intro-box generator-hero">
+            <div class="section-topline generator-hero-top">
+                <header class="module-header">
                     <span class="section-kicker">Generador dinámico</span>
                     <h1 class="section-name">Generador de agentes</h1>
                     <p class="section-copy">
-                        Esta vista crea un instalador autocontenido a partir del formulario. Dentro lleva el agente Python
-                        y, si lo activas, también la configuración de autoarranque. También deja preparadas las reglas JavaScript que el frontend
-                        utilizará para consultar ese host desde tu navegador, tanto en local como por LAN, VPN o URL pública.
+                        Crea un instalador autocontenido para Windows o Linux con el agente, los logs seleccionados,
+                        el autoarranque opcional y las reglas que usará el panel para consultar el host.
                     </p>
-                </div>
-                <div class="phase-badge-block">
-                    <span class="phase-badge">Build</span>
-                    <small>Instalador único + reglas de petición.</small>
-                </div>
+                </header>
+                <aside class="generator-hero-summary" aria-label="Resumen del generador">
+                    <span>Build</span>
+                    <strong>Instalador único</strong>
+                    <small>Genera el paquete, registra el host después y prueba el polling cuando el agente esté listo.</small>
+                </aside>
             </div>
 
-            <div class="guide-grid">
-                <div class="guide-card" v-for="item in generatorHighlights" :key="item.label">
-                    <label>{{ item.label }}</label>
+            <ul class="generator-flow-list" aria-label="Capacidades del generador">
+                <li v-for="item in generatorHighlights" :key="item.label">
+                    <strong>{{ item.label }}</strong>
                     <span>{{ item.copy }}</span>
-                </div>
-            </div>
+                </li>
+            </ul>
         </section>
 
         <section class="section-box">
             <div class="deployment-selector-panel">
                 <div class="deployment-selector-copy">
-                    <span class="section-kicker">Tipo de monitorizacion</span>
-                    <h2 class="module-title">Selecciona la conexion del agente</h2>
+                    <span class="section-kicker">Tipo de monitorización</span>
+                    <h2 class="module-title">Selecciona la conexión del agente</h2>
                     <p class="module-copy">{{ selectedNetworkScopeCopy }}</p>
                 </div>
                 <div class="deployment-selector-control">
-                    <label class="field-label" for="network-scope-select">Conexion</label>
+                    <label class="field-label" for="network-scope-select">Conexión</label>
                     <select id="network-scope-select" v-model="agentDraft.networkScope" class="form-select input-dark" @change="handleNetworkScopeChange">
                         <option v-for="scope in networkScopeOptions" :key="scope.value" :value="scope.value">
                             {{ scope.shortLabel }}
@@ -270,7 +270,12 @@
                         </div>
                     </div>
                     <div class="diagnostic-log-grid">
-                        <label class="diagnostic-log-option" v-for="logOption in diagnosticLogOptions" :key="logOption.path">
+                        <label
+                            class="diagnostic-log-option"
+                            :class="{ 'is-help-open': pinnedHelpKey === `log:${logOption.path}` }"
+                            v-for="logOption in diagnosticLogOptions"
+                            :key="logOption.path"
+                        >
                             <input type="checkbox" v-model="selectedDiagnosticLogPaths" :value="logOption.path" />
                             <span class="diagnostic-log-copy">
                                 <strong>{{ logOption.label }}</strong>
@@ -308,20 +313,104 @@
                             </button>
                         </div>
                     </div>
-                    <div class="checkbox-grid">
-                        <label class="toggle-line" v-for="moduleItem in moduleOptions" :key="moduleItem.key">
+                    <div class="diagnostic-log-toolbar module-toolbar">
+                        <p>
+                            El agente activará solo los módulos marcados. Cada opción indica qué bloque de telemetría o
+                            seguridad se recogerá en el host.
+                        </p>
+                        <div class="log-preset-actions">
+                            <button type="button" class="btn btn-quiet" @click="selectAllModules">Seleccionar todos</button>
+                            <button type="button" class="btn btn-quiet" @click="clearModules">Limpiar selección</button>
+                        </div>
+                    </div>
+                    <div class="diagnostic-log-grid module-grid">
+                        <label
+                            class="diagnostic-log-option module-option"
+                            :class="{ 'is-help-open': pinnedHelpKey === `module:${moduleItem.key}` }"
+                            v-for="moduleItem in moduleOptions"
+                            :key="moduleItem.key"
+                        >
                             <input type="checkbox" v-model="agentDraft.modules[moduleItem.key]" />
-                            <span>{{ moduleItem.label }}</span>
+                            <span class="diagnostic-log-copy module-copy">
+                                <strong>{{ moduleItem.label }}</strong>
+                                <code>{{ moduleItem.key }}</code>
+                            </span>
+                            <span class="context-help diagnostic-log-help">
+                                <button
+                                    type="button"
+                                    class="help-trigger"
+                                    :class="{ 'is-pinned': pinnedHelpKey === `module:${moduleItem.key}` }"
+                                    :aria-label="`Ver qué recoge ${moduleItem.label}`"
+                                    @click.stop.prevent="togglePinnedHelp(`module:${moduleItem.key}`)"
+                                >
+                                    ?
+                                    <span class="help-popover log-help-popover" @click.stop>
+                                        <strong>{{ moduleItem.label }}</strong>
+                                        <span>{{ moduleItem.description }}</span>
+                                        <code>{{ moduleItem.key }}</code>
+                                    </span>
+                                </button>
+                            </span>
                         </label>
                     </div>
                 </div>
             </div>
 
-            <div class="inline-actions">
-                <button class="btn btn-main" :disabled="!isGenerateReady" :title="generateButtonTitle" @click="generateAndDownload">Generar y descargar</button>
-                <button class="btn btn-subtle" @click="registerCurrentDraft">Registrar host</button>
-                <button class="btn btn-subtle" @click="pollNow">Probar polling ahora</button>
-                <button class="btn btn-subtle" @click="clearFormData">Borrar datos del formulario</button>
+            <div class="generator-action-panel">
+                <article class="generator-action-group action-group-primary">
+                    <div class="action-group-copy">
+                        <span>Instalador</span>
+                        <strong>Crear instalador</strong>
+                        <p>Solo crea el instalador con la configuración del formulario. No registra el host ni lanza polling.</p>
+                    </div>
+                    <div class="action-button-row">
+                        <button class="btn btn-main" :disabled="!isGenerateReady" :title="generateButtonTitle" @click="generateAndDownload">Generar instalador</button>
+                        <button class="btn btn-quiet" :disabled="!generatedBundle" @click="downloadGeneratedInstaller">Descargar último</button>
+                    </div>
+                </article>
+
+                <article class="generator-action-group">
+                    <div class="action-group-copy">
+                        <span>Operación</span>
+                        <strong>Registro y polling</strong>
+                        <p>Registra el host en el panel cuando ya vayas a consultarlo. El polling solo prueba hosts registrados.</p>
+                    </div>
+                    <div class="action-button-row">
+                        <button class="btn btn-subtle" :disabled="!isGenerateReady" @click="registerCurrentDraft">Registrar host</button>
+                        <button class="btn btn-subtle" :disabled="!hasRegisteredHosts" :title="pollButtonTitle" @click="pollNow">Probar polling</button>
+                        <button class="btn btn-quiet" @click="clearFormData">Borrar formulario</button>
+                    </div>
+                </article>
+
+                <article class="generator-action-group persistence-action-group">
+                    <div class="action-group-copy">
+                        <span>Persistencia</span>
+                        <strong>{{ persistenceModeTitle }}</strong>
+                        <p>{{ persistenceModeDescription }}</p>
+                    </div>
+                    <div class="persistence-mode-grid" role="radiogroup" aria-label="Modo de persistencia de Thorondor">
+                        <label
+                            v-for="option in persistenceOptions"
+                            :key="option.value"
+                            class="persistence-mode-card"
+                            :class="{ 'is-active': selectedPersistenceMode === option.value, 'is-disabled': option.disabled }"
+                        >
+                            <input
+                                type="radio"
+                                name="thorondor-persistence-mode"
+                                :value="option.value"
+                                :checked="selectedPersistenceMode === option.value"
+                                :disabled="option.disabled"
+                                @change="setPersistenceMode(option.value)"
+                            />
+                            <span class="mode-card-main">
+                                <strong>{{ option.label }}</strong>
+                                <small>{{ option.copy }}</small>
+                            </span>
+                            <span class="mode-card-status">{{ option.status }}</span>
+                        </label>
+                    </div>
+                </article>
             </div>
             <p v-if="!isGenerateReady" class="form-status-hint">
                 Completa los campos obligatorios para habilitar la generación: {{ missingRequiredFieldLabels.join(" / ") }}.
@@ -358,8 +447,9 @@
                 <div class="verdict-body">
                     <strong>Paquete generado y listo para desplegar</strong>
                     <p>
-                        El host se ha registrado en tu navegador y ya puedes usar el instalador único para crear el
-                        agente, activar el arranque si lo has pedido y empezar a recibir telemetría.
+                        El instalador se ha generado sin registrar el host automáticamente. Regístralo después cuando
+                        quieras empezar a consultarlo desde el panel. En Windows se crea e instala un MSI real; en Linux
+                        se ejecuta un único .sh con entorno Python aislado.
                     </p>
                 </div>
             </div>
@@ -429,12 +519,12 @@
             <div class="single-installer-grid mt-1">
                 <div class="tool-card installer-primary-card">
                     <div class="card-head">
-                        <h5>{{ generatedSnapshot?.targetOs === 'windows' ? 'Instalador Windows' : 'Instalador Linux único' }}</h5>
+                        <h5>{{ generatedSnapshot?.targetOs === 'windows' ? 'Instalador MSI de Windows' : 'Instalador Linux único' }}</h5>
                         <div class="card-actions">
-                            <span class="mini-badge">{{ generatedSnapshot?.targetOs === 'windows' ? '.ps1 + MSI' : '.sh' }}</span>
-                            <button class="btn btn-main" @click="downloadTextFile(generatedBundle.installFileName, generatedBundle.installScript)">Descargar instalador</button>
-                            <button v-if="generatedBundle.wixSource" class="btn btn-quiet" @click="downloadTextFile(generatedBundle.wixFileName, generatedBundle.wixSource)">WiX</button>
-                            <button v-if="generatedBundle.msiBuildScript" class="btn btn-quiet" @click="downloadTextFile(generatedBundle.msiBuildFileName, generatedBundle.msiBuildScript)">Build MSI</button>
+                            <span class="mini-badge">{{ generatedSnapshot?.targetOs === 'windows' ? 'MSI' : '.sh' }}</span>
+                            <button class="btn btn-main" @click="downloadTextFile(generatedBundle.installFileName, generatedBundle.installScript)">
+                                {{ generatedSnapshot?.targetOs === 'windows' ? 'Descargar instalador MSI' : 'Descargar instalador Linux' }}
+                            </button>
                             <button class="btn btn-quiet" @click="copyText(generatedBundle.installScript)">Copiar</button>
                         </div>
                     </div>
@@ -442,6 +532,10 @@
                         <div class="summary-line">
                             <label>Archivo a llevar al host</label>
                             <span>{{ generatedBundle.installFileName }}</span>
+                        </div>
+                        <div v-if="generatedSnapshot?.targetOs === 'windows'" class="summary-line">
+                            <label>MSI resultante</label>
+                            <span>{{ generatedBundle.msiFileName }} en el Escritorio</span>
                         </div>
                         <div class="summary-line">
                             <label>Agente embebido</label>
@@ -451,20 +545,15 @@
                             <label>Autoarranque</label>
                             <span>{{ generatedSnapshot.autoStart ? (generatedSnapshot.targetOs === 'windows' ? 'Task Scheduler' : generatedBundle.serviceFileName) : 'Manual' }}</span>
                         </div>
-                        <div v-if="generatedBundle.msiFileName" class="summary-line">
-                            <label>Paquete MSI</label>
-                            <span>{{ generatedBundle.msiFileName }} mediante WiX</span>
-                        </div>
                     </div>
                     <div class="output-box fixed-output">
                         <pre class="result-pre">{{ generatedBundle.installScript }}</pre>
                     </div>
-                    <article v-if="generatedBundle.wixSource" class="msi-packaging-note">
-                        <strong>MSI real, no cambio de extensión</strong>
+                    <article v-if="generatedSnapshot?.targetOs === 'windows'" class="msi-packaging-note">
+                        <strong>Flujo Windows simplificado</strong>
                         <p>
-                            El navegador descarga el instalador PowerShell y los artefactos WiX. Para obtener
-                            {{ generatedBundle.msiFileName }}, guarda los tres archivos juntos en Windows y ejecuta
-                            {{ generatedBundle.msiBuildFileName }}.
+                            Descarga un único archivo, ejecútalo como administrador y el propio asistente genera
+                            {{ generatedBundle.msiFileName }}, lo guarda en el Escritorio y lo instala con msiexec.
                         </p>
                     </article>
                 </div>
@@ -485,18 +574,18 @@
                         </div>
                         <div class="embedded-artifact-row" v-else-if="generatedSnapshot?.targetOs === 'windows'">
                             <label>Windows</label>
-                            <span>Crea la tarea programada ThorondorAgent solo si activaste el arranque automático.</span>
+                            <span>Compila un MSI real y crea la tarea programada ThorondorAgent solo si activaste el arranque automático.</span>
                         </div>
                         <div class="embedded-artifact-row" v-if="generatedBundle.wixSource">
                             <label>MSI</label>
-                            <span>Incluye manifiesto WiX y script de build para compilar un Windows Installer real a partir del instalador generado.</span>
+                            <span>El manifiesto WiX y el instalador PowerShell van embebidos dentro del asistente descargado.</span>
                         </div>
                         <div class="embedded-artifact-row">
                             <label>Dependencias</label>
                             <span>Instala Python/psutil cuando falta y prepara permisos básicos de lectura de logs.</span>
                         </div>
                         <div class="embedded-artifact-row">
-                            <label>Validacion</label>
+                            <label>Validación</label>
                             <span>Usa las instrucciones generadas para comprobar /health y /telemetry tras ejecutar el instalador.</span>
                         </div>
                     </div>
@@ -716,7 +805,7 @@ const FIELD_GUIDES = {
     hostIp: {
         title: "Dirección operativa del host",
         placeholder: "Ej. 192.168.1.50, 203.0.113.20 o thorondor.midominio.com",
-        copy: "Sirve como referencia del sistema y como respaldo para reconstruir la URL si no escribes la dirección completa. Puede ser IP privada, pública o FQDN."
+        copy: "Es opcional si la URL ya incluye la IP o el dominio. Rellénalo solo cuando quieras dejar una referencia clara del host monitorizado."
     },
     port: {
         title: "Puerto HTTP del agente",
@@ -757,7 +846,7 @@ const ACTION_HELP_CARDS = [
         copy: "Registrar el host guarda en el navegador su ficha, sus endpoints y sus reglas de petición. Sin ese paso, el panel no sabe qué agente existe ni a dónde consultar sus datos."
     },
     {
-        title: "Qué hace Probar polling ahora",
+        title: "Qué hace Probar polling",
         copy: "Lanza al instante un health check y una recogida de telemetría contra los hosts ya registrados. Sirve para validar conectividad, refrescar heartbeat y poblar alertas sin esperar al siguiente ciclo automático."
     }
 ];
@@ -854,18 +943,18 @@ export default {
 
         selectedOsHint() {
             return this.isWindows
-                ? "Descarga un PowerShell autocontenido. Si necesitas despliegue formal, también puedes generar WiX y compilar un MSI real."
-                : "Descarga un shell autocontenido. El script detecta apt, dnf o pacman y prepara systemd si activas autoarranque.";
+                ? "Descarga un único asistente: genera ThorondorAgent.msi, lo deja en el Escritorio y lo instala con msiexec."
+                : "Descarga un shell autocontenido. Detecta apt, dnf o pacman, crea un entorno Python aislado y prepara systemd si activas autoarranque.";
         },
 
         simpleInstallTitle() {
-            return this.isWindows ? "Windows: PowerShell o MSI opcional" : "Linux: un solo .sh con sudo";
+            return this.isWindows ? "Windows: MSI generado e instalado" : "Linux: un solo .sh con sudo";
         },
 
         simpleInstallCopy() {
             return this.isWindows
-                ? "Ejecuta el .ps1 como administrador. El MSI queda como salida opcional para GPO, inventario o despliegues más formales."
-                : "Ejecuta el .sh con sudo. Puedes ajustar distro, dependencias, usuario, rutas de logs y servicio directamente en el formulario.";
+                ? "Ejecuta el asistente como administrador. No tendrás que tocar WiX ni mover archivos sueltos: el MSI se crea e instala en el propio Windows."
+                : "Ejecuta el .sh con sudo. Puedes ajustar distro, usuario, rutas de logs, módulos y servicio sin montar piezas sueltas.";
         },
 
         moduleOptions() {
@@ -911,8 +1000,8 @@ export default {
         },
 
         hostAddressLabel() {
-            if (this.isLanScope) return this.isWindows ? "IP privada o VPN del host Windows" : "IP privada o VPN del host Linux";
-            return this.isWindows ? "IP pública o DNS del host Windows" : "IP pública o DNS del host Linux";
+            if (this.isLanScope) return this.isWindows ? "IP privada o VPN del host Windows (opcional)" : "IP privada o VPN del host Linux (opcional)";
+            return this.isWindows ? "IP pública o DNS del host Windows (opcional)" : "IP pública o DNS del host Linux (opcional)";
         },
 
         fieldGuides() {
@@ -924,12 +1013,7 @@ export default {
         },
 
         requiredFields() {
-            const fields = [...(this.isWindows ? REQUIRED_GENERATION_FIELDS_WINDOWS : REQUIRED_GENERATION_FIELDS_LINUX)];
-            if (!this.isLocalScope) {
-                fields.push({ key: "hostIp", label: this.hostAddressLabel, id: "host-ip" });
-            }
-
-            return fields;
+            return [...(this.isWindows ? REQUIRED_GENERATION_FIELDS_WINDOWS : REQUIRED_GENERATION_FIELDS_LINUX)];
         },
 
         missingRequiredFieldLabels() {
@@ -942,31 +1026,97 @@ export default {
 
         generateButtonTitle() {
             return this.isGenerateReady
-                ? "Genera el agente, registra el host y descarga el instalador único."
+                ? "Genera el paquete y descarga el instalador único sin registrar todavía el host."
                 : `Completa primero: ${this.missingRequiredFieldLabels.join(", ")}`;
+        },
+
+        hasRegisteredHosts() {
+            return this.dashboardCards.length > 0;
+        },
+
+        pollButtonTitle() {
+            return this.hasRegisteredHosts
+                ? "Ejecuta ahora el polling contra los hosts registrados."
+                : "Registra al menos un host antes de lanzar polling.";
+        },
+
+        persistenceStatus() {
+            return this.thorondorState.persistence || {};
+        },
+
+        selectedPersistenceMode() {
+            return this.persistenceStatus.requestedMode || this.persistenceStatus.effectiveMode || "local";
+        },
+
+        persistenceEffectiveMode() {
+            return this.persistenceStatus.effectiveMode || "local";
+        },
+
+        persistenceModeTitle() {
+            if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
+                return "API no configurada";
+            }
+
+            return this.persistenceEffectiveMode === "cloud"
+                ? "API del back activa"
+                : "IndexedDB local activo";
+        },
+
+        persistenceModeDescription() {
+            if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
+                return "Falta configurar la URL de la API. Mientras tanto Thorondor mantiene los datos en IndexedDB para no perder trabajo.";
+            }
+
+            if (this.persistenceEffectiveMode === "cloud") {
+                return "Los cambios se guardan en IndexedDB como caché y se sincronizan con la API del back para tener persistencia centralizada.";
+            }
+
+            return "Los hosts, reglas, eventos y borradores se guardan solo en el navegador mediante IndexedDB.";
+        },
+
+        persistenceOptions() {
+            const cloudConfigured = Boolean(this.persistenceStatus.cloudConfigured);
+            const effectiveMode = this.persistenceEffectiveMode;
+
+            return [
+                {
+                    value: "local",
+                    label: "IndexedDB local",
+                    copy: "Datos guardados en este navegador. Ideal para pruebas rápidas y laboratorio.",
+                    status: effectiveMode === "local" ? "Activo" : "Disponible",
+                    disabled: false
+                },
+                {
+                    value: "cloud",
+                    label: "API del back",
+                    copy: cloudConfigured
+                        ? "Persistencia centralizada en la API, con IndexedDB como caché local."
+                        : "Configura VITE_THORONDOR_API_BASE_URL para activar la persistencia con API.",
+                    status: cloudConfigured
+                        ? (effectiveMode === "cloud" ? "Activo" : "Disponible")
+                        : "Sin API",
+                    disabled: !cloudConfigured
+                }
+            ];
         },
 
         generatorHighlights() {
             return [
                 {
-                    label: "Autocontenido",
-                    copy: "El instalador .sh o .ps1 incluye agente Python, host, puerto, logs, módulos y arranque. Solo eliges Linux o Windows."
+                    label: "Sin piezas sueltas",
+                    copy: "Windows genera MSI y Linux descarga un .sh listo para ejecutar."
                 },
                 {
-                    label: "Con CORS",
-                    copy: "El agente permite peticiones CORS para que el navegador pueda consultar endpoints locales, LAN o remotos."
+                    label: "Conexión clara",
+                    copy: "URL, puerto y alcance definen desde dónde consultará el panel."
                 },
                 {
-                    label: "Acceso directo",
-                    copy: "La conexión queda definida por URL, puerto, alcance de red y reglas de firewall del host."
+                    label: "Autoarranque",
+                    copy: "Puedes dejar servicio/tarea al iniciar o usar ejecución manual."
                 },
                 {
-                    label: "Autoarranque opcional",
-                    copy: "Puedes decidir si quieres dejar el agente arrancando con el sistema o instalado para ejecución manual."
-                },
-                {
-                    label: "Registro listo para operar",
-                    copy: "El mismo formulario deja preparado el alta del host en el frontend para que dashboard, detalle, reglas y polling puedan usarlo enseguida."
+                    label: "Flujo separado",
+                    copy: "Generar, registrar y probar polling son pasos independientes."
                 }
             ];
         },
@@ -982,7 +1132,7 @@ export default {
                     label: "Hosts registrados",
                     value: String(this.dashboardCards.length),
                     tone: "tone-blue",
-                    note: "Agentes persistidos segun el modo de datos activo."
+                    note: "Agentes persistidos según el modo de datos activo."
                 },
                 {
                     label: "Último polling",
@@ -997,10 +1147,10 @@ export default {
                     note: "Visibles después de registrar el agente y empezar el polling."
                 },
                 {
-                    label: "Retención",
-                    value: `${this.thorondorState.retentionDays} días`,
-                    tone: "tone-neutral",
-                    note: "La telemetría se poda en local y en cloud cuando aplique."
+                    label: "Persistencia",
+                    value: this.persistenceEffectiveMode === "cloud" ? "API" : "IndexedDB",
+                    tone: this.persistenceEffectiveMode === "cloud" ? "tone-success" : "tone-neutral",
+                    note: this.persistenceModeDescription
                 }
             ];
         }
@@ -1080,6 +1230,18 @@ export default {
             this.agentDraft.additionalLogPaths = "";
         },
 
+        selectAllModules() {
+            THORONDOR_MODULE_KEYS.forEach((item) => {
+                this.agentDraft.modules[item.key] = true;
+            });
+        },
+
+        clearModules() {
+            THORONDOR_MODULE_KEYS.forEach((item) => {
+                this.agentDraft.modules[item.key] = false;
+            });
+        },
+
         prettyJson(value) {
             return JSON.stringify(value, null, 2);
         },
@@ -1087,12 +1249,7 @@ export default {
         getMissingRequiredFields(source = this.agentDraft) {
             const draft = this.normalizeDraftShape(source);
             const baseFields = draft.targetOs === "windows" ? REQUIRED_GENERATION_FIELDS_WINDOWS : REQUIRED_GENERATION_FIELDS_LINUX;
-            const scope = normalizeThorondorNetworkScope(draft.networkScope);
             const fields = [...baseFields];
-
-            if (scope !== "local") {
-                fields.push({ key: "hostIp", label: scope === "lan" ? "IP privada o VPN del host" : "IP pública o DNS del host", id: "host-ip" });
-            }
 
             return fields.filter(({ key }) => {
                 if (key === "receiverUrl") return !hasValidHttpUrl(draft.receiverUrl);
@@ -1193,8 +1350,17 @@ export default {
             const systemName = normalizedSource.systemName.trim() || "thorondor-host";
             const port = Number(normalizedSource.port) || 8765;
             const networkScope = normalizeThorondorNetworkScope(normalizedSource.networkScope);
-            const hostIp = networkScope === "local" ? "127.0.0.1" : (normalizedSource.hostIp.trim() || "127.0.0.1");
-            const receiverUrl = normalizedSource.receiverUrl.trim() || `http://${hostIp}:${port}`;
+            const configuredReceiverUrl = normalizedSource.receiverUrl.trim();
+            let receiverUrlHost = "";
+
+            try {
+                receiverUrlHost = configuredReceiverUrl ? new URL(configuredReceiverUrl).hostname : "";
+            } catch {
+                receiverUrlHost = "";
+            }
+
+            const hostIp = networkScope === "local" ? "127.0.0.1" : (normalizedSource.hostIp.trim() || receiverUrlHost || "127.0.0.1");
+            const receiverUrl = configuredReceiverUrl || `http://${hostIp}:${port}`;
             return {
                 id: `${systemName}-${hostIp}-${port}`.toLowerCase().replace(/[^a-z0-9-]+/g, "-"),
                 displayName: normalizedSource.displayName.trim() || systemName,
@@ -1230,6 +1396,11 @@ export default {
             this.$store.commit("setThorondorSelectedAgent", record.id);
         },
 
+        async setPersistenceMode(mode) {
+            if (mode === this.selectedPersistenceMode) return;
+            await this.$store.dispatch("setThorondorPersistenceMode", mode);
+        },
+
         async generateAndDownload() {
             if (!this.isGenerateReady) {
                 this.focusFirstMissingField();
@@ -1238,14 +1409,15 @@ export default {
 
             const draftSnapshot = cloneDraft(this.agentDraft);
             const normalizedDraft = this.normalizeDraftForOutput(draftSnapshot);
-            const record = this.buildAgentRecordFromDraft(normalizedDraft);
 
             this.generatedSnapshot = normalizedDraft;
             this.generatedBundle = buildThorondorAgentFiles(normalizedDraft);
 
-            await this.$store.dispatch("registerThorondorAgent", record);
-            this.$store.commit("setThorondorSelectedAgent", record.id);
+            this.downloadTextFile(this.generatedBundle.installFileName, this.generatedBundle.installScript);
+        },
 
+        downloadGeneratedInstaller() {
+            if (!this.generatedBundle) return;
             this.downloadTextFile(this.generatedBundle.installFileName, this.generatedBundle.installScript);
         },
 
@@ -1257,30 +1429,29 @@ export default {
         handleNetworkScopeChange() {
             const scope = this.normalizedNetworkScope;
             const port = Number(this.agentDraft.port) || 8765;
+            const currentReceiverUrl = String(this.agentDraft.receiverUrl || "");
+            const currentHostIp = String(this.agentDraft.hostIp || "");
+            const wasLocal = /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:\d+)?/i.test(currentReceiverUrl)
+                || currentHostIp === "127.0.0.1"
+                || currentHostIp.toLowerCase() === "localhost";
 
             if (scope === "local") {
                 this.agentDraft.hostIp = "127.0.0.1";
-                if (!this.agentDraft.receiverUrl || /^https?:\/\/(192\.168\.|10\.|172\.|203\.|thorondor\.)/i.test(this.agentDraft.receiverUrl)) {
-                    this.agentDraft.receiverUrl = `http://127.0.0.1:${port}`;
-                }
+                this.agentDraft.receiverUrl = `http://127.0.0.1:${port}`;
                 return;
             }
 
             if (scope === "lan") {
-                if (!this.agentDraft.receiverUrl || this.agentDraft.receiverUrl.includes("127.0.0.1")) {
-                    this.agentDraft.receiverUrl = `http://192.168.1.50:${port}`;
-                }
-                if (!this.agentDraft.hostIp || this.agentDraft.hostIp === "127.0.0.1") {
-                    this.agentDraft.hostIp = "192.168.1.50";
+                if (wasLocal) {
+                    this.agentDraft.receiverUrl = "";
+                    this.agentDraft.hostIp = "";
                 }
                 return;
             }
 
-            if (!this.agentDraft.receiverUrl || this.agentDraft.receiverUrl.includes("127.0.0.1") || this.agentDraft.receiverUrl.includes("192.168.")) {
-                this.agentDraft.receiverUrl = `https://thorondor.midominio.com`;
-            }
-            if (!this.agentDraft.hostIp || this.agentDraft.hostIp === "127.0.0.1" || this.agentDraft.hostIp.startsWith("192.168.")) {
-                this.agentDraft.hostIp = "thorondor.midominio.com";
+            if (wasLocal) {
+                this.agentDraft.receiverUrl = "";
+                this.agentDraft.hostIp = "";
             }
         },
 
@@ -1313,6 +1484,137 @@ export default {
 </script>
 
 <style scoped>
+.generator-hero {
+    gap: 1.15rem;
+    padding-bottom: 1.35rem;
+}
+
+.generator-hero-top {
+    grid-template-columns: minmax(0, 1fr) minmax(230px, 300px);
+    align-items: center;
+}
+
+.generator-hero .section-copy {
+    max-width: 74ch;
+    line-height: 1.62;
+}
+
+.generator-hero-summary {
+    display: grid;
+    gap: 0.35rem;
+    padding: 0.2rem 0 0.2rem 1.2rem;
+    border-left: 1px solid rgba(176, 184, 194, 0.18);
+}
+
+.generator-hero-summary span {
+    width: fit-content;
+    padding: 0.28rem 0.55rem;
+    border: 1px solid rgba(176, 184, 194, 0.24);
+    border-radius: 3px;
+    background: rgba(226, 232, 240, 0.08);
+    color: #dce6f2;
+    font-size: 0.68rem;
+    font-weight: 850;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.generator-hero-summary strong {
+    color: #f8fafc;
+    font-size: 1rem;
+}
+
+.generator-hero-summary small {
+    color: rgba(203, 213, 225, 0.78);
+    line-height: 1.5;
+}
+
+.generator-flow-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0;
+    padding: 0.95rem 0 0;
+    margin: 0;
+    border-top: 1px solid rgba(176, 184, 194, 0.14);
+    list-style: none;
+}
+
+.generator-flow-list li {
+    display: grid;
+    gap: 0.4rem;
+    min-width: 0;
+    padding: 0 1rem;
+    border-right: 1px solid rgba(176, 184, 194, 0.12);
+}
+
+.generator-flow-list li:first-child {
+    padding-left: 0;
+}
+
+.generator-flow-list li:last-child {
+    padding-right: 0;
+    border-right: 0;
+}
+
+.generator-flow-list strong {
+    color: #f3f7fb;
+    font-size: 0.76rem;
+    font-weight: 850;
+    letter-spacing: 0.06em;
+    line-height: 1.25;
+    text-transform: uppercase;
+}
+
+.generator-flow-list span {
+    color: rgba(203, 213, 225, 0.78);
+    font-size: 0.86rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 980px) {
+    .generator-hero-top {
+        grid-template-columns: 1fr;
+    }
+
+    .generator-hero-summary {
+        padding: 0.85rem 0 0;
+        border-top: 1px solid rgba(176, 184, 194, 0.14);
+        border-left: 0;
+    }
+
+    .generator-flow-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        row-gap: 0.9rem;
+    }
+
+    .generator-flow-list li:nth-child(2n) {
+        padding-right: 0;
+        border-right: 0;
+    }
+
+    .generator-flow-list li:nth-child(2n + 1) {
+        padding-left: 0;
+    }
+}
+
+@media (max-width: 540px) {
+    .generator-flow-list {
+        grid-template-columns: 1fr;
+        padding-top: 0.65rem;
+    }
+
+    .generator-flow-list li {
+        padding: 0.72rem 0;
+        border-right: 0;
+        border-bottom: 1px solid rgba(176, 184, 194, 0.11);
+    }
+
+    .generator-flow-list li:last-child {
+        padding-bottom: 0;
+        border-bottom: 0;
+    }
+}
+
 .deployment-summary {
     display: grid;
     gap: 0.85rem;
@@ -1561,8 +1863,9 @@ export default {
 }
 
 .diagnostic-log-option:hover,
-.diagnostic-log-option:focus-within {
-    z-index: 120;
+.diagnostic-log-option:focus-within,
+.diagnostic-log-option.is-help-open {
+    z-index: 5000;
     border-color: rgba(203, 213, 225, 0.42);
     background: rgba(30, 35, 43, 0.72);
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
@@ -1599,6 +1902,7 @@ export default {
 .context-help.diagnostic-log-help {
     align-self: flex-start;
     position: static;
+    z-index: 20;
 }
 
 .context-help.diagnostic-log-help .help-trigger {
@@ -1607,12 +1911,13 @@ export default {
 
 .context-help.diagnostic-log-help .help-popover {
     top: calc(100% + 0.45rem);
-    right: auto;
-    left: 0;
+    right: 0.72rem;
+    left: 0.72rem;
+    width: auto;
 }
 
 .context-help.diagnostic-log-help .help-popover::before {
-    right: 16px;
+    right: 0.9rem;
     left: auto;
 }
 
@@ -1749,10 +2054,144 @@ export default {
     margin-top: 1rem;
 }
 
-.inline-actions {
-    align-items: center;
+.generator-action-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 0.9rem;
+    margin-top: 1.15rem;
+}
+
+.generator-action-group {
+    display: grid;
+    gap: 0.9rem;
+    align-content: space-between;
+    padding: 1rem;
+    border: 1px solid rgba(176, 184, 194, 0.2);
+    border-radius: 4px;
+    background: linear-gradient(180deg, rgba(21, 26, 33, 0.96), rgba(12, 16, 21, 0.98));
+}
+
+.action-group-primary {
+    border-color: rgba(229, 236, 246, 0.32);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
+}
+
+.persistence-action-group {
+    grid-column: 1 / -1;
+}
+
+.action-group-copy {
+    display: grid;
+    gap: 0.32rem;
+}
+
+.action-group-copy span {
+    color: rgba(194, 211, 232, 0.78);
+    font-size: 0.69rem;
+    font-weight: 800;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.action-group-copy strong {
+    color: #f7fbff;
+    font-size: 1rem;
+}
+
+.action-group-copy p {
+    margin: 0;
+    color: rgba(212, 224, 236, 0.8);
+    font-size: 0.84rem;
+    line-height: 1.55;
+}
+
+.action-button-row {
+    display: flex;
     flex-wrap: wrap;
-    row-gap: 0.8rem;
+    gap: 0.7rem;
+}
+
+.generator-action-group .btn:disabled {
+    opacity: 0.5;
+    cursor: var(--cursor-not-allowed), not-allowed;
+    box-shadow: none;
+    transform: none;
+    filter: saturate(0.7);
+}
+
+.persistence-mode-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+}
+
+.persistence-mode-card {
+    position: relative;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+    gap: 0.7rem;
+    align-items: center;
+    min-height: 5rem;
+    padding: 0.85rem;
+    border: 1px solid rgba(176, 184, 194, 0.22);
+    border-radius: 4px;
+    background: rgba(13, 17, 23, 0.82);
+    color: #e7edf5;
+    cursor: var(--cursor-pointer), pointer;
+    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
+}
+
+.persistence-mode-card:hover {
+    border-color: rgba(229, 236, 246, 0.42);
+    background: rgba(24, 29, 37, 0.9);
+    transform: translateY(-1px);
+}
+
+.persistence-mode-card.is-active {
+    border-color: rgba(234, 242, 252, 0.62);
+    background: linear-gradient(180deg, rgba(34, 40, 49, 0.95), rgba(18, 23, 30, 0.96));
+}
+
+.persistence-mode-card.is-disabled {
+    opacity: 0.56;
+    cursor: var(--cursor-not-allowed), not-allowed;
+    transform: none;
+}
+
+.persistence-mode-card input {
+    width: 1rem;
+    height: 1rem;
+    accent-color: #d8e3ef;
+}
+
+.mode-card-main {
+    display: grid;
+    gap: 0.22rem;
+    min-width: 0;
+}
+
+.mode-card-main strong {
+    color: #f7fbff;
+    font-size: 0.9rem;
+}
+
+.mode-card-main small {
+    color: rgba(203, 213, 225, 0.76);
+    font-size: 0.78rem;
+    line-height: 1.45;
+}
+
+.mode-card-status {
+    justify-self: end;
+    padding: 0.28rem 0.48rem;
+    border: 1px solid rgba(176, 184, 194, 0.24);
+    border-radius: 3px;
+    background: rgba(229, 236, 246, 0.08);
+    color: #e7edf5;
+    font-size: 0.67rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
 }
 
 .btn-main:disabled {
@@ -1842,6 +2281,34 @@ export default {
         grid-template-columns: 1fr;
     }
 
+    .generator-action-panel,
+    .persistence-mode-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .generator-action-group {
+        padding: 0.85rem;
+    }
+
+    .action-button-row {
+        align-items: stretch;
+        flex-direction: column;
+    }
+
+    .action-button-row .btn {
+        width: 100%;
+        justify-content: center;
+    }
+
+    .persistence-mode-card {
+        grid-template-columns: auto minmax(0, 1fr);
+    }
+
+    .mode-card-status {
+        grid-column: 2;
+        justify-self: start;
+    }
+
     .single-installer-grid {
         grid-template-columns: 1fr;
     }
@@ -1868,13 +2335,13 @@ export default {
     }
 
     .diagnostic-log-help .help-popover {
-        left: 0;
-        right: auto;
+        left: 0.72rem;
+        right: 0.72rem;
     }
 
     .diagnostic-log-help .help-popover::before {
         left: auto;
-        right: 14px;
+        right: 0.9rem;
     }
 }
 

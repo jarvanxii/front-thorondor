@@ -9,6 +9,18 @@
   --cursor-not-allowed: not-allowed;
 }
 
+@media (max-width: 900px) {
+  :root {
+    --main-header-height: 60px;
+  }
+}
+
+@media (max-width: 520px) {
+  :root {
+    --main-header-height: 56px;
+  }
+}
+
 *,
 *::before,
 *::after {
@@ -25,10 +37,12 @@ body,
 
 body {
   margin: 0;
-  overflow-x: clip;
+  overflow-x: hidden;
   background: #0a0d12;
   color: #dce3eb;
   font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  text-rendering: geometricPrecision;
+  -webkit-font-smoothing: antialiased;
 }
 
 img,

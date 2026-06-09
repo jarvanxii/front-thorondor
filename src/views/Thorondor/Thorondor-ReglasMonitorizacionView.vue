@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Motor de reglas"
       :title="selectedAgent ? `Reglas de ${selectedAgent.displayName}` : 'Reglas del host'"
-      copy="Configura las condiciones que convierten telemetria y eventos en alertas para el ordenador monitorizado seleccionado. Cada host mantiene su propio conjunto de reglas."
+      copy="Configura las condiciones que convierten telemetría y eventos en alertas para el ordenador monitorizado seleccionado. Cada host mantiene su propio conjunto de reglas."
       badge="Rules"
       :badge-note="`${selectedRules.length} reglas configuradas para este host.`"
     />
@@ -100,7 +100,7 @@
             <section class="rule-preview-grid">
               <article class="preview-line">
                 <label>Nombre</label>
-                <span>{{ ruleDraft.name || 'Sin nombre todavia' }}</span>
+                <span>{{ ruleDraft.name || 'Sin nombre todavía' }}</span>
               </article>
               <article class="preview-line">
                 <label>Tipo</label>
@@ -274,7 +274,7 @@ export default {
           type: 'disk',
           threshold: 90,
           durationMinutes: 10,
-          description: 'Advierte de particiones cerca del limite.',
+          description: 'Advierte de particiones cerca del límite.',
         },
         {
           label: 'Heartbeat perdido',
@@ -290,7 +290,7 @@ export default {
           type: 'failedLogins',
           threshold: 5,
           durationMinutes: 10,
-          description: 'Detecta rafagas de autenticacion fallida.',
+          description: 'Detecta ráfagas de autenticación fallida.',
         },
       ]
     },
@@ -299,7 +299,7 @@ export default {
       return [
         {
           title: 'Empieza por reglas simples',
-          copy: 'CPU, RAM, disco y heartbeat suelen darte la mejor base para validar que la monitorizacion funciona bien.',
+          copy: 'CPU, RAM, disco y heartbeat suelen darte la mejor base para validar que la monitorización funciona bien.',
         },
         {
           title: 'Evita umbrales demasiado bajos',
@@ -307,7 +307,7 @@ export default {
         },
         {
           title: 'Ajusta por host cuando haga falta',
-          copy: 'Los servidores mas cargados o los equipos de laboratorio no deberian compartir siempre los mismos umbrales.',
+          copy: 'Los servidores más cargados o los equipos de laboratorio no deberían compartir siempre los mismos umbrales.',
         },
       ]
     },
@@ -334,7 +334,7 @@ export default {
         disk: 'Disco alto',
         failedLogins: 'Fallos de login',
         unknownLoginIp: 'Login desde IP desconocida',
-        criticalFileChange: 'Cambio en archivo critico',
+        criticalFileChange: 'Cambio en archivo crítico',
         heartbeat: 'Heartbeat ausente',
         sudoUnauthorized: 'Sudo no autorizado',
         newUser: 'Nuevo usuario o grupo',
@@ -385,7 +385,7 @@ export default {
         disk: 'Disco alto',
         failedLogins: 'Exceso de logins fallidos',
         unknownLoginIp: 'Login desde IP desconocida',
-        criticalFileChange: 'Cambio en archivo critico',
+        criticalFileChange: 'Cambio en archivo crítico',
         heartbeat: 'Agente sin heartbeat',
         sudoUnauthorized: 'Sudo no autorizado',
         newUser: 'Nuevo usuario',
@@ -397,7 +397,7 @@ export default {
         id: this.ruleDraft.id || `${this.selectedAgentId}-rule-${Date.now()}`,
         name: this.ruleDraft.name || fallbackNames[this.ruleDraft.type],
         scope: this.selectedAgentId,
-        description: this.ruleDraft.description || 'Regla creada desde el panel de monitorizacion.',
+        description: this.ruleDraft.description || 'Regla creada desde el panel de monitorización.',
       }
       await this.$store.dispatch('saveThorondorRule', rule)
       this.resetRuleDraft()

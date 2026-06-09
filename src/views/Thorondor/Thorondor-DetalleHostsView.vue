@@ -3,11 +3,11 @@
         <section class="section-box intro-box">
             <div class="section-topline">
                 <div class="module-header">
-                    <span class="section-kicker">Analisis por host</span>
+                    <span class="section-kicker">Análisis por host</span>
                     <h1 class="section-name">Detalle por host</h1>
                     <p class="section-copy">
-                        Selecciona un agente para inspeccionar sus metricas, procesos, timeline de seguridad, logs,
-                        alertas e historico. Esta vista concentra la investigacion operativa de cada sistema.
+                        Selecciona un agente para inspeccionar sus métricas, procesos, timeline de seguridad, logs,
+                        alertas e histórico. Esta vista concentra la investigación operativa de cada sistema.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -28,11 +28,11 @@
                     </select>
                 </div>
                 <div class="control-field">
-                    <label class="field-label" for="history-range">Rango historico</label>
+                    <label class="field-label" for="history-range">Rango histórico</label>
                     <select id="history-range" v-model.number="historyRangeDays" class="form-select input-dark">
                         <option :value="1">Ultimas 24 horas</option>
-                        <option :value="7">Ultimos 7 dias</option>
-                        <option :value="30">Ultimos 30 dias</option>
+                        <option :value="7">Últimos 7 días</option>
+                        <option :value="30">Últimos 30 días</option>
                     </select>
                 </div>
             </div>
@@ -58,7 +58,7 @@
             <div class="tool-card mb-4" v-if="selectedLatestSnapshot?.disks?.length">
                 <div class="card-head">
                     <h5>Particiones de disco</h5>
-                    <span class="mini-badge">{{ selectedLatestSnapshot.disks.length }} particion{{ selectedLatestSnapshot.disks.length !== 1 ? 'es' : '' }}</span>
+                    <span class="mini-badge">{{ selectedLatestSnapshot.disks.length }} partición{{ selectedLatestSnapshot.disks.length !== 1 ? 'es' : '' }}</span>
                 </div>
                 <div class="table-wrap">
                     <table class="table table-dark table-sm align-middle mb-0">
@@ -149,8 +149,8 @@
                     </div>
                     <div class="tool-card" v-else-if="snapshotBattery">
                         <div class="card-head">
-                            <h5>Bateria / UPS</h5>
-                            <span class="mini-badge" :class="snapshotBattery.powerPlugged ? 'badge-ok' : 'badge-warn'">{{ snapshotBattery.powerPlugged ? 'AC conectado' : 'Bateria' }}</span>
+                            <h5>Batería / UPS</h5>
+                            <span class="mini-badge" :class="snapshotBattery.powerPlugged ? 'badge-ok' : 'badge-warn'">{{ snapshotBattery.powerPlugged ? 'AC conectado' : 'Batería' }}</span>
                         </div>
                         <dl class="kv-list">
                             <div class="kv-row"><dt>Nivel</dt><dd :class="snapshotBattery.percent < 20 ? 'tone-danger' : snapshotBattery.percent < 50 ? 'tone-warning' : 'tone-success'">{{ snapshotBattery.percent }}%</dd></div>
@@ -201,7 +201,7 @@
                 <div class="col-xl-6">
                     <div class="tool-card">
                         <div class="card-head">
-                            <h5>Procesos mas consumidores</h5>
+                            <h5>Procesos más consumidores</h5>
                             <span class="mini-badge">Top 10</span>
                         </div>
                         <div class="table-wrap">
@@ -440,7 +440,7 @@
                 <div class="col-xl-6">
                     <div class="tool-card">
                         <div class="card-head">
-                            <h5>Logs de autenticacion fallidos</h5>
+                            <h5>Logs de autenticación fallidos</h5>
                             <span class="mini-badge">Auth</span>
                         </div>
                         <div class="table-wrap scrollable-wrap">
@@ -459,7 +459,7 @@
                                         <td>{{ formatDateTime(event.timestamp) }}</td>
                                     </tr>
                                     <tr v-if="!failedLoginsForSelected.length">
-                                        <td colspan="3" class="text-muted text-center">Sin intentos de autenticacion fallidos registrados.</td>
+                                        <td colspan="3" class="text-muted text-center">Sin intentos de autenticación fallidos registrados.</td>
                                     </tr>
                                 </tbody>
                             </table>
@@ -499,7 +499,7 @@
 
             <div class="tool-card mb-4">
                 <div class="card-head">
-                    <h5>Sudo y cambios criticos</h5>
+                    <h5>Sudo y cambios críticos</h5>
                     <span class="mini-badge">Privileged</span>
                 </div>
                 <div class="table-wrap scrollable-wrap">
@@ -613,7 +613,7 @@
         <section v-else-if="selectedAgent" class="section-box">
             <div class="tool-card mb-4">
                 <div class="card-head">
-                    <h5>Historico de metricas</h5>
+                    <h5>Histórico de métricas</h5>
                     <span class="mini-badge">{{ historyRangeDays }}d</span>
                 </div>
                 <div v-if="uniqueDiskMountpoints.length > 1" class="disk-toggles">
@@ -627,7 +627,7 @@
                         @click="toggleDiskMountpoint(mp)"
                     >{{ mp }}</button>
                 </div>
-                <ThorondorLineChart chart-id="thorondor-history-only-chart" :labels="selectedHistoryChart.labels" :datasets="selectedHistoryChart.datasets" title="Historico del sistema" />
+                <ThorondorLineChart chart-id="thorondor-history-only-chart" :labels="selectedHistoryChart.labels" :datasets="selectedHistoryChart.datasets" title="Histórico del sistema" />
             </div>
 
             <div class="table-wrap scrollable-wrap">
@@ -704,7 +704,7 @@ export default {
                 { id: "infra", label: "Infraestructura" },
                 { id: "logs", label: "Logs" },
                 { id: "alerts", label: "Alertas" },
-                { id: "history", label: "Historico" }
+                { id: "history", label: "Histórico" }
             ];
         },
 
@@ -721,7 +721,7 @@ export default {
                 { label: "Estado", value: status.label, tone: status.color === "success" ? "tone-success" : (status.color === "warning" ? "tone-warning" : "tone-danger"), note: status.note },
                 { label: "Kernel", value: this.selectedLatestSnapshot.kernel, tone: "tone-blue", note: this.selectedAgent.distro },
                 { label: "Uptime", value: this.formatDurationSeconds(this.selectedLatestSnapshot.uptimeSeconds), tone: "tone-neutral", note: `${this.selectedLatestSnapshot.connectedUsers?.length || 0} usuarios conectados` },
-                { label: "CPU", value: this.formatPercent(this.selectedLatestSnapshot.cpuTotal), tone: "tone-warning", note: `${this.selectedLatestSnapshot.cpuPerCore?.length || 0} nucleos visibles` },
+                { label: "CPU", value: this.formatPercent(this.selectedLatestSnapshot.cpuTotal), tone: "tone-warning", note: `${this.selectedLatestSnapshot.cpuPerCore?.length || 0} núcleos visibles` },
                 { label: "RAM", value: this.formatPercent(this.selectedLatestSnapshot.memoryPercent), tone: "tone-success", note: `${this.formatBytes(this.selectedLatestSnapshot.memoryUsed)} / ${this.formatBytes(this.selectedLatestSnapshot.memoryTotal)}` },
                 { label: "Swap", value: this.formatPercent(this.selectedLatestSnapshot.swapPercent), tone: "tone-neutral", note: "Intercambio actual" },
                 { label: "Disco", value: this.formatPercent(this.selectedLatestSnapshot.diskPercent), tone: "tone-warning", note: `${this.selectedLatestSnapshot.disks?.length || 0} particiones` }

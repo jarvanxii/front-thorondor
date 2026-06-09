@@ -7,7 +7,7 @@
                     <h1 class="section-name">Agentes</h1>
                     <p class="section-copy">
                         Aqui tienes el censo de agentes registrados en tu navegador: alcance de red, endpoint,
-                        heartbeat, modulos activos, historial de conexiones y accesos rapidos para revisar o retirar un host.
+                        heartbeat, módulos activos, historial de conexiones y accesos rápidos para revisar o retirar un host.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -36,7 +36,7 @@
                             <th>Estado</th>
                             <th>Alcance</th>
                             <th>Endpoint</th>
-                            <th>Modulos</th>
+                            <th>Módulos</th>
                             <th>Acciones</th>
                         </tr>
                     </thead>
@@ -66,7 +66,7 @@
             <div class="tool-card">
                 <div class="card-head">
                     <h5>Historial de conexiones del sistema seleccionado</h5>
-                    <span class="mini-badge">{{ selectedAgent ? selectedAgent.displayName : "Sin seleccion" }}</span>
+                    <span class="mini-badge">{{ selectedAgent ? selectedAgent.displayName : "Sin selección" }}</span>
                 </div>
                 <div class="table-wrap scrollable-wrap">
                     <table class="table table-dark table-sm align-middle mb-0">
@@ -111,11 +111,11 @@ export default {
             return [
                 {
                     label: "Inventario local",
-                    copy: "Cada agente queda asociado a esta instancia del navegador y puede apuntar a localhost, LAN, VPN o endpoint publico."
+                    copy: "Cada agente queda asociado a esta instancia del navegador y puede apuntar a localhost, LAN, VPN o endpoint público."
                 },
                 {
                     label: "Estado operativo",
-                    copy: "La tabla resume si cada host esta respondiendo, si acumula retraso de heartbeat o si ya no devuelve datos."
+                    copy: "La tabla resume si cada host está respondiendo, si acumula retraso de heartbeat o si ya no devuelve datos."
                 },
                 {
                     label: "Trazabilidad",

@@ -1,7 +1,7 @@
 <template>
   <ThorondorPageShell>
     <ThorondorSectionHeader
-      kicker="Investigacion"
+      kicker="Investigación"
       :title="selectedAgent ? `Casos de ${selectedAgent.displayName}` : 'Casos del host'"
       copy="Agrupa alertas, comandos y acciones defensivas del ordenador seleccionado para investigar sin mezclar evidencias de otros sistemas."
       badge="Case"
@@ -56,7 +56,7 @@
               id="case-title"
               v-model.trim="caseDraft.title"
               class="form-control input-dark"
-              placeholder="Investigacion de actividad sospechosa"
+              placeholder="Investigación de actividad sospechosa"
             />
           </label>
 
@@ -82,7 +82,7 @@
 
       <article class="tool-card">
         <header class="card-head">
-          <h2>Cola de investigacion</h2>
+          <h2>Cola de investigación</h2>
           <span class="mini-badge">{{ openCases.length }} abiertos</span>
         </header>
 
@@ -111,7 +111,7 @@
         </ul>
 
         <p v-else class="empty-box">
-          Este host no tiene casos todavia. Crea uno desde una alerta o desde una nota manual.
+          Este host no tiene casos todavía. Crea uno desde una alerta o desde una nota manual.
         </p>
       </article>
     </section>
@@ -187,7 +187,7 @@ export default {
           label: 'Alta prioridad',
           value: String(high),
           tone: high ? 'tone-danger' : 'tone-success',
-          note: 'Severidad alta o critica.',
+          note: 'Severidad alta o crítica.',
         },
         {
           label: 'Alertas del host',
@@ -223,7 +223,7 @@ export default {
         id: `action-${action.id}`,
         timestamp: action.timestamp,
         title: action.action === 'block' ? 'IP bloqueada' : 'IP desbloqueada',
-        copy: `${action.ip} - ${action.message || 'Accion registrada desde el panel.'}`,
+        copy: `${action.ip} - ${action.message || 'Acción registrada desde el panel.'}`,
         tone: action.ok === false ? 'timeline-danger' : 'timeline-success',
       }))
 
@@ -265,7 +265,7 @@ export default {
         disk: 'Disco alto',
         failedLogins: 'Fallos de login',
         unknownLoginIp: 'Login desde IP desconocida',
-        criticalFileChange: 'Cambio en archivo critico',
+        criticalFileChange: 'Cambio en archivo crítico',
         heartbeat: 'Heartbeat ausente',
         sudoUnauthorized: 'Sudo no autorizado',
         newUser: 'Nuevo usuario o grupo',
@@ -277,7 +277,7 @@ export default {
     humanizeCaseStatus(status) {
       const map = {
         new: 'Nuevo',
-        triage: 'En analisis',
+        triage: 'En análisis',
         contained: 'Contenido',
         resolved: 'Resuelto',
         false_positive: 'Falso positivo',
@@ -310,7 +310,7 @@ export default {
           this.caseDraft.title ||
           alert?.typeLabel ||
           alert?.description ||
-          'Investigacion del host',
+          'Investigación del host',
         severity: this.caseDraft.severity,
         owner: this.caseDraft.owner || 'Sin asignar',
         note: this.caseDraft.note || alert?.description || '',

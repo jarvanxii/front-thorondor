@@ -3,7 +3,7 @@
     <ThorondorSectionHeader
       kicker="Centro de alertas"
       :title="selectedAgent ? `Alertas de ${selectedAgent.displayName}` : 'Alertas del host'"
-      copy="Vista operativa del ordenador monitorizado seleccionado. Las alertas se revisan por host para que la investigacion no mezcle senales de sistemas distintos."
+      copy="Vista operativa del ordenador monitorizado seleccionado. Las alertas se revisan por host para que la investigación no mezcle señales de sistemas distintos."
       :badge="selectedAgentCard ? selectedAgentCard.status.label : 'Sin host'"
       :badge-note="`${filteredAlerts.length} alertas en la vista actual.`"
     />
@@ -169,7 +169,7 @@ export default {
         disk: 'Disco alto',
         failedLogins: 'Fallos de login',
         unknownLoginIp: 'Login desde IP desconocida',
-        criticalFileChange: 'Cambio en archivo critico',
+        criticalFileChange: 'Cambio en archivo crítico',
         heartbeat: 'Heartbeat ausente',
         sudoUnauthorized: 'Sudo no autorizado',
         newUser: 'Nuevo usuario o grupo',

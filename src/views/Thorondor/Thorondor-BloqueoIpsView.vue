@@ -3,9 +3,9 @@
     <ThorondorSectionHeader
       kicker="Respuesta defensiva"
       title="Bloqueo de IPs"
-      copy="Gestiona bloqueos manuales por sistema monitorizado, revisa las IPs que ya estan cortadas y usa los intentos fallidos recientes como punto de partida para responder desde Thorondor."
+      copy="Gestiona bloqueos manuales por sistema monitorizado, revisa las IPs que ya están cortadas y usa los intentos fallidos recientes como punto de partida para responder desde Thorondor."
       badge="Manual"
-      :badge-note="`${totalBlockedIps} IPs bloqueadas en esta sesion.`"
+      :badge-note="`${totalBlockedIps} IPs bloqueadas en está sesión.`"
     />
 
     <section class="section-box">
@@ -108,7 +108,7 @@
               <span>{{ agentHealthLabel }}</span>
             </article>
             <article class="mini-stat">
-              <label>Operacion IP</label>
+              <label>Operación IP</label>
               <span>{{ ipBlockOperationLabel }}</span>
             </article>
           </section>
@@ -171,7 +171,7 @@
         </header>
         <section class="diagnostic-grid">
           <article>
-            <label>Ultimo polling</label>
+            <label>Último polling</label>
             <strong>{{ latestConnectionLabel }}</strong>
             <span>{{ latestConnectionDetail }}</span>
           </article>
@@ -181,7 +181,7 @@
             <span>{{ operationHttpLabel }}</span>
           </article>
           <article>
-            <label>Ultima accion</label>
+            <label>Última acción</label>
             <strong>{{ latestResponseActionLabel }}</strong>
             <span>{{ latestResponseActionDetail }}</span>
           </article>
@@ -240,7 +240,7 @@
               </tr>
               <tr v-if="!selectedFailedOrigins.length">
                 <td colspan="5" class="text-muted">
-                  Sin origenes fallidos recientes en este sistema.
+                  Sin orígenes fallidos recientes en este sistema.
                 </td>
               </tr>
             </tbody>
@@ -405,9 +405,9 @@ export default {
     latestConnectionDetail() {
       if (!this.latestConnection) return 'Todavia no hay polling para este sistema.'
       if (this.latestConnection.kind === 'success') {
-        return `Ultima respuesta correcta en ${this.formatDateTime(this.latestConnection.timestamp)}.`
+        return `Última respuesta correcta en ${this.formatDateTime(this.latestConnection.timestamp)}.`
       }
-      return this.latestConnection.error || 'El polling fallo sin detalle.'
+      return this.latestConnection.error || 'El polling falló sin detalle.'
     },
 
     operationEndpointLabel() {
@@ -415,9 +415,9 @@ export default {
     },
 
     operationHttpLabel() {
-      if (!this.ipBlockOperation) return 'Sin peticion de bloqueo todavia.'
+      if (!this.ipBlockOperation) return 'Sin petición de bloqueo todavía.'
       const statusCode = Number(this.ipBlockOperation.statusCode) || 0
-      const http = statusCode ? `HTTP ${statusCode}` : this.ipBlockOperation.method || 'Operacion local'
+      const http = statusCode ? `HTTP ${statusCode}` : this.ipBlockOperation.method || 'Operación local'
       return `${http} - ${this.ipBlockOperation.message || 'sin mensaje'}`
     },
 
@@ -427,7 +427,7 @@ export default {
     },
 
     latestResponseActionDetail() {
-      if (!this.latestResponseAction) return 'No se ha enviado ninguna accion manual en este agente.'
+      if (!this.latestResponseAction) return 'No se ha enviado ninguna acción manual en este agente.'
       const result = this.latestResponseAction.ok ? 'OK' : 'Error'
       return `${result} ${this.latestResponseAction.ip}: ${this.latestResponseAction.message || '-'}`
     },
@@ -440,12 +440,12 @@ export default {
 
     visibleFailureDetail() {
       if (this.ipBlockOperation?.status === 'error') {
-        return this.ipBlockOperation.detail || this.ipBlockOperation.message || 'El agente no pudo completar la operacion.'
+        return this.ipBlockOperation.detail || this.ipBlockOperation.message || 'El agente no pudo completar la operación.'
       }
       if (this.selectedAgentCard?.lastStatus === 'error') {
         return this.selectedAgentCard.lastError || 'El agente no responde al polling.'
       }
-      return 'La ultima informacion disponible no muestra errores.'
+      return 'La Última información disponible no muestra errores.'
     },
 
     diagnosticHints() {
@@ -455,7 +455,7 @@ export default {
       ].filter(Boolean)
 
       if (!hints.length && this.selectedAgentCard?.lastStatus === 'error') {
-        hints.push('Comprueba que el agente esta arrancado y que /health responde desde este navegador.')
+        hints.push('Comprueba que el agente está arrancado y que /health responde desde este navegador.')
         hints.push('Revisa URL, puerto, firewall, proxy frontal y si hay bloqueo mixed content HTTP/HTTPS.')
       }
 

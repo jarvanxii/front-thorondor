@@ -1,55 +1,45 @@
 <template>
     <ThorondorPageShell>
-        <section class="home-hero">
+        <section class="home-hero" aria-labelledby="thorondor-home-title">
             <article class="hero-copy">
-                <span class="section-kicker">SIEM personal - Linux / Windows / navegador</span>
-                <h1>Thorondor</h1>
-                <p>
-                    Consola operativa para observar hosts propios, detectar actividad relevante y responder ante
-                    incidencias desde una interfaz sobria, directa y preparada para persistencia con base de datos.
-                </p>
-                <div class="hero-actions">
-                    <RouterLink class="btn btn-main" :to="{ name: 'thorondor-dashboard' }">
-                        Ver dashboard general
-                    </RouterLink>
-                    <RouterLink class="btn btn-subtle" :to="{ name: 'thorondor-agent-generator' }">
-                        Generar agente
-                    </RouterLink>
+                <div class="hero-heading-row">
+                    <img class="hero-logo" src="@/assets/images/Thorondor-logo.png" alt="Sello de Thorondor" />
+                    <div class="hero-heading-text">
+                        <span class="section-kicker">SIEM para infraestructura propia</span>
+                        <h1 id="thorondor-home-title">Thorondor</h1>
+                        <p>
+                            Supervisa hosts Linux y Windows, centraliza eventos relevantes y ejecuta respuesta manual
+                            con trazabilidad.
+                        </p>
+                    </div>
                 </div>
+                <dl class="hero-status-bar" aria-label="Estado de Thorondor">
+                    <div v-for="item in heroStats" :key="item.label">
+                        <dt>{{ item.label }}</dt>
+                        <dd :class="item.tone">{{ item.value }}</dd>
+                    </div>
+                </dl>
             </article>
-
-            <aside class="hero-console" aria-label="Resumen de Thorondor">
-                <div class="hero-logo-frame">
-                    <img src="@/assets/images/Thorondor-logo.png" alt="Sello de Thorondor" />
-                </div>
-                <div class="hero-status-grid">
-                    <article v-for="item in heroStats" :key="item.label">
-                        <label>{{ item.label }}</label>
-                        <strong :class="item.tone">{{ item.value }}</strong>
-                    </article>
-                </div>
-            </aside>
         </section>
 
         <section class="section-box intro-box">
             <header class="intro-layout">
                 <article class="section-heading">
-                    <span class="section-kicker">SIEM personal - Linux / Windows / navegador</span>
-                    <span class="section-kicker">Monitorizacion distribuida</span>
-                    <h1 class="section-name">Thorondor</h1>
+                    <span class="section-kicker">Monitorización distribuida</span>
+                    <h2 class="section-name">Modelo operativo</h2>
                     <p class="section-copy">
-                        Consola ligera para vigilar servidores Linux y Windows desde el navegador. Cada host ejecuta un
-                        agente autocontenido, el panel consulta telemetria por HTTP y las reglas se evaluan localmente
-                        para mantener una arquitectura directa, auditable y sencilla de desplegar.
+                        Cada sistema ejecuta un agente autocontenido. La consola consulta telemetría, registra eventos
+                        y mantiene reglas separadas por host para que la operación sea directa, trazable y sencilla de
+                        desplegar.
                     </p>
                 </article>
 
                 <aside class="intro-summary">
-                    <span>Endpoint</span>
-                    <strong>Control directo por endpoint</strong>
+                    <span>Despliegue</span>
+                    <strong>Directo o centralizado</strong>
                     <p>
-                        Pensado para servidores propios, laboratorios y entornos donde quieres visibilidad sin montar
-                        infraestructura central antes de tiempo.
+                        Puede trabajar en local con IndexedDB o sincronizarse con una API respaldada por base de datos
+                        cuando necesitas persistencia compartida.
                     </p>
                 </aside>
             </header>
@@ -65,54 +55,13 @@
         <section class="section-box">
             <div class="section-topline">
                 <div class="module-header">
-                    <span class="section-kicker">Vision general</span>
-                    <h2 class="module-title">Una consola para operar con calma</h2>
-                    <p class="module-copy">
-                        Registra sistemas, revisa su estado, configura reglas, consulta alertas y actua sobre IPs desde
-                        una interfaz unica. El foco es ayudarte a detectar cambios, fallos y actividad relevante sin
-                        convertir la monitorizacion en ruido.
-                    </p>
-                </div>
-                <div class="phase-badge-block">
-                    <span class="phase-badge">Info</span>
-                    <small>Base funcional de Thorondor.</small>
-                </div>
-            </div>
-
-            <section class="metric-grid mb-4">
-                <article class="metric-card" v-for="item in overviewCards" :key="item.label">
-                    <label>{{ item.label }}</label>
-                    <span :class="item.tone">{{ item.value }}</span>
-                    <small>{{ item.note }}</small>
-                </article>
-            </section>
-
-            <div class="verdict-card verdict-neutral">
-                <div class="verdict-icon">
-                    <span>Uso</span>
-                </div>
-                <div class="verdict-body">
-                    <strong>Datos locales o sincronizacion con base de datos</strong>
-                    <p>
-                        Thorondor puede conservar la telemetria en IndexedDB del navegador o sincronizar agentes,
-                        snapshots, logs, eventos, reglas y alertas con una API respaldada por base de datos. Cada agente
-                        sigue siendo un endpoint HTTP independiente y, si esta en Internet, la URL publica debe quedar
-                        detras de filtrado de red, HTTPS y un proxy controlado.
-                    </p>
-                </div>
-            </div>
-        </section>
-
-        <section class="section-box">
-            <div class="section-topline">
-                <div class="module-header">
                     <span class="section-kicker">Arquitectura</span>
-                    <h2 class="module-title">Flujo tecnico extremo a extremo</h2>
+                    <h2 class="module-title">Flujo técnico extremo a extremo</h2>
                     <p class="module-copy">
-                        El generador produce un agente Python parametrizado (host, puerto, modulos, usuario de servicio)
+                        El generador produce un agente Python parametrizado (host, puerto, módulos, usuario de servicio)
                         que se despliega en el sistema destino. El frontend realiza polling HTTP al agente, decodifica
-                        el JSON de telemetria, lo persiste en el modo activo (IndexedDB local o base de datos) y
-                        aplica las reglas de correlacion registradas. Solo hace falta conectividad directa desde el
+                        el JSON de telemetría, lo persiste en el modo activo (IndexedDB local o base de datos) y
+                        aplica las reglas de correlación registradas. Solo hace falta conectividad directa desde el
                         navegador hasta la URL registrada del agente.
                     </p>
                 </div>
@@ -137,10 +86,10 @@
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Persistencia</span>
-                    <h2 class="module-title">Que guarda el navegador y como se limpia</h2>
+                    <h2 class="module-title">Qué guarda el navegador y cómo se limpia</h2>
                     <p class="module-copy">
                         Thorondor usa Vuex con una capa de persistencia intercambiable: IndexedDB local o API con base de
-                        datos. Lo antiguo se purga automaticamente.
+                        datos. Lo antiguo se purga automáticamente.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -149,7 +98,7 @@
                 </div>
             </div>
 
-            <section class="metric-grid">
+            <section class="metric-grid storage-grid">
                 <article class="signal-card" v-for="item in storageCards" :key="item.label">
                     <label>{{ item.label }}</label>
                     <span :class="item.tone">{{ item.value }}</span>
@@ -165,7 +114,7 @@
                     <h2 class="module-title">Ruta recomendada para empezar sin perderte</h2>
                     <p class="module-copy">
                         Si vas a usar Thorondor por primera vez, sigue este orden. La barra lateral ya enlaza cada paso
-                        a su vista correspondiente para que puedas avanzar sin volver atras.
+                        a su vista correspondiente para que puedas avanzar sin volver atrás.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -182,33 +131,23 @@
             </div>
         </section>
 
-        <section class="section-box">
-            <ThorondorMarkdownArticle :source="thorondorDocumentation" />
-        </section>
     </ThorondorPageShell>
 </template>
 
 <script>
-import ThorondorMarkdownArticle from "@/components/Thorondor/ThorondorMarkdownArticle.vue";
 import ThorondorPageShell from "@/components/Thorondor/ThorondorPageShell.vue";
 import thorondorBaseMixin from "@/features/thorondor/mixins/thorondorBaseMixin";
-import { thorondorDocumentation } from "@/features/thorondor/data/thorondorDocumentation";
 
 export default {
     name: "ThorondorView",
 
     components: {
-        ThorondorMarkdownArticle,
         ThorondorPageShell
     },
 
     mixins: [thorondorBaseMixin],
 
     computed: {
-        thorondorDocumentation() {
-            return thorondorDocumentation;
-        },
-
         heroStats() {
             return [
                 {
@@ -233,15 +172,15 @@ export default {
             return [
                 {
                     label: "Agente autocontenido",
-                    copy: "El instalador genera el agente y su arranque persistente desde un unico archivo. El host no necesita piezas sueltas."
+                    copy: "El instalador genera el agente y su arranque persistente desde un único archivo. El host no necesita piezas sueltas."
                 },
                 {
                     label: "Linux y Windows",
-                    copy: "Linux usa systemd y Windows Task Scheduler cuando activas autoarranque. Windows puede empaquetarse despues como MSI mediante WiX."
+                    copy: "Linux usa systemd con entorno Python aislado y Windows genera un MSI real que deja Task Scheduler configurado si activas autoarranque."
                 },
                 {
                     label: "Datos portables",
-                    copy: "El modo local usa IndexedDB; el modo sincronizado guarda el mismo historico en base de datos para llevarlo a cualquier sesion."
+                    copy: "El modo local usa IndexedDB; el modo sincronizado guarda el mismo histórico en base de datos para llevarlo a cualquier sesión."
                 },
                 {
                     label: "Alertas separadas de reglas",
@@ -250,40 +189,11 @@ export default {
             ];
         },
 
-        overviewCards() {
-            return [
-                {
-                    label: "Agentes registrados",
-                    value: String(this.dashboardCards.length),
-                    tone: "tone-blue",
-                    note: "Hosts dados de alta en esta instancia del navegador."
-                },
-                {
-                    label: "Alertas activas",
-                    value: String(this.activeAlerts.length),
-                    tone: this.activeAlerts.length ? "tone-warning" : "tone-success",
-                    note: "Reglas disparadas por la logica JS del frontend."
-                },
-                {
-                    label: "Eventos 24h",
-                    value: String(this.eventsLast24h.length),
-                    tone: "tone-neutral",
-                    note: "Eventos recientes que el navegador ha persistido."
-                },
-                {
-                    label: "Ultimo polling",
-                    value: this.thorondorLastPollAt ? this.formatRelativeTime(this.thorondorLastPollAt) : "Pendiente",
-                    tone: "tone-success",
-                    note: "El navegador consulta cada host directamente."
-                }
-            ];
-        },
-
         storageCards() {
             return [
                 {
-                    label: "Retencion",
-                    value: `${this.thorondorState.retentionDays} dias`,
+                    label: "Retención",
+                    value: `${this.thorondorState.retentionDays} días`,
                     tone: "tone-success",
                     note: this.persistenceWindowNote
                 },
@@ -291,19 +201,13 @@ export default {
                     label: "Snapshots",
                     value: String(Object.values(this.thorondorSnapshots).flat().length),
                     tone: "tone-blue",
-                    note: "Historico resumido por host monitorizado."
+                    note: "Histórico resumido por host monitorizado."
                 },
                 {
-                    label: "Eventos",
-                    value: String(this.allSecurityEvents.length),
-                    tone: "tone-warning",
-                    note: "Seguridad, sudo, logins y cambios criticos."
-                },
-                {
-                    label: "Ultima limpieza",
+                    label: "Última limpieza",
                     value: this.thorondorState.lastSweepAt ? this.formatRelativeTime(this.thorondorState.lastSweepAt) : "Pendiente",
                     tone: "tone-neutral",
-                    note: "Thorondor borra historico antiguo para no saturar memoria."
+                    note: "Thorondor borra histórico antiguo para no saturar memoria."
                 }
             ];
         },
@@ -314,14 +218,14 @@ export default {
 
         persistenceNote() {
             return this.thorondorState.persistence?.effectiveMode === "cloud"
-                ? "Sincronizacion por workspace."
+                ? "Sincronización por workspace."
                 : "Persistencia local del navegador.";
         },
 
         persistenceWindowNote() {
             return this.thorondorState.persistence?.effectiveMode === "cloud"
-                ? "Ventana operativa sincronizada con cache local."
-                : "Ventana local antes del purgado automatico.";
+                ? "Ventana operativa sincronizada con caché local."
+                : "Ventana local antes del purgado automático.";
         },
 
         architectureCards() {
@@ -329,32 +233,32 @@ export default {
                 {
                     label: "1. Genera el agente",
                     badge: "Frontend",
-                    copy: "El generador pide lo minimo: alcance de red, Linux o Windows, host, URL y puerto. Los ajustes de distro, servicio, modulos y logs quedan como avanzados. Descarga un unico .sh o .ps1; en Windows tambien puede generar WiX para compilar un MSI real."
+                    copy: "El generador pide lo mínimo: alcance de red, Linux o Windows, host, URL y puerto. Linux descarga un único .sh; Windows descarga un asistente que crea e instala ThorondorAgent.msi sin piezas sueltas."
                 },
                 {
                     label: "2. Despliega en el host",
                     badge: "Host",
-                    copy: "Linux: cuenta sin shell, /opt/thorondor-agent/, grupos adm+systemd-journal, psutil via apt/dnf/pacman, unidad systemd. Windows: C:\\ProgramData\\Thorondor-Agent\\, psutil via pip, tarea en Task Scheduler con RunLevel Highest."
+                    copy: "Linux: cuenta sin shell, /opt/thorondor-agent/, venv propio, grupos adm+systemd-journal y unidad systemd. Windows: C:\\ProgramData\\Thorondor-Agent\\, MSI, psutil y tarea en Task Scheduler con RunLevel Highest."
                 },
                 {
                     label: "3. El navegador hace polling",
                     badge: "Polling",
-                    copy: "Peticion HTTP GET al /telemetry del agente cada N segundos. El agente responde JSON con system, metrics (CPU, RAM, disco por particion, temperatura), security (logins, sudo, file integrity) y logs."
+                    copy: "Petición HTTP GET al /telemetry del agente cada N segundos. El agente responde JSON con system, metrics (CPU, RAM, disco por partición, temperatura), security (logins, sudo, file integrity) y logs."
                 },
                 {
                     label: "4. Persistencia de datos",
                     badge: "Storage",
-                    copy: "El store Vuex decodifica el payload y lo distribuye por la fachada de persistencia: IndexedDB local o API con base de datos. IndexedDB queda siempre como cache local."
+                    copy: "El store Vuex decodifica el payload y lo distribuye por la fachada de persistencia: IndexedDB local o API con base de datos. IndexedDB queda siempre como caché local."
                 },
                 {
-                    label: "5. Correlacion y alertas",
+                    label: "5. Correlación y alertas",
                     badge: "Rules",
-                    copy: "El motor de reglas JavaScript evalua thresholds de CPU, RAM, heartbeat, frecuencia de fallos de autenticacion, sudo fuera de whitelist y cambios en el baseline de integridad de archivos."
+                    copy: "El motor de reglas JavaScript evalúa thresholds de CPU, RAM, heartbeat, frecuencia de fallos de autenticación, sudo fuera de whitelist y cambios en el baseline de integridad de archivos."
                 },
                 {
-                    label: "6. Exposicion remota",
+                    label: "6. Exposición remota",
                     badge: "Network",
-                    copy: "Para remoto, registra una URL que el navegador pueda resolver. Si es publica, usa firewall con origen restringido, HTTPS y proxy frontal cuando el frontend se sirva por HTTPS."
+                    copy: "Para remoto, registra una URL que el navegador pueda resolver. Si es pública, usa firewall con origen restringido, HTTPS y proxy frontal cuando el frontend se sirva por HTTPS."
                 }
             ];
         },
@@ -362,20 +266,20 @@ export default {
         startSteps() {
             return [
                 {
-                    label: "Paso 1 — Guia de instalacion",
-                    copy: "Selecciona solo Linux o Windows y sigue el flujo directo: generar instalador unico, ejecutarlo como administrador y validar endpoints."
+                    label: "Paso 1 — Guía de instalación",
+                    copy: "Selecciona solo Linux o Windows y sigue el flujo directo: generar instalador único, ejecutarlo como administrador y validar endpoints."
                 },
                 {
                     label: "Paso 2 — Generador de agentes",
-                    copy: "Rellena hostname, URL accesible, IP o DNS del host, alcance de red y puerto (ej. 8765). Toca los ajustes avanzados solo si necesitas cambiar logs, modulos o servicio."
+                    copy: "Rellena hostname, URL accesible, IP o DNS del host, alcance de red y puerto (ej. 8765). Toca los ajustes avanzados solo si necesitas cambiar logs, módulos o servicio."
                 },
                 {
                     label: "Paso 3 — Despliega y valida",
-                    copy: "Copia el instalador al host, ejecutalo como administrador, valida /health y /telemetry y revisa systemd o Task Scheduler si activaste autoarranque. En Windows puedes compilar MSI si necesitas despliegue formal."
+                    copy: "Copia el instalador al host, ejecútalo como administrador, valida /health y /telemetry y revisa systemd o Task Scheduler si activaste autoarranque. En Windows el asistente genera e instala el MSI."
                 },
                 {
                     label: "Paso 4 — Dashboard y alertas",
-                    copy: "El host aparece en el dashboard con heartbeat, CPU, RAM y disco. Ajusta las reglas de monitorizacion segun el rol del sistema y revisa las alertas desde la vista de reglas."
+                    copy: "El host aparece en el dashboard con heartbeat, CPU, RAM y disco. Ajusta las reglas de monitorización según el rol del sistema y revisa las alertas desde la vista de reglas."
                 }
             ];
         }
@@ -387,171 +291,183 @@ export default {
 .home-hero {
     position: relative;
     isolation: isolate;
-    display: grid;
-    grid-template-columns: minmax(0, 1.2fr) minmax(320px, 0.8fr);
-    gap: clamp(22px, 3vw, 42px);
-    align-items: stretch;
-    min-height: 420px;
-    margin-bottom: 24px;
-    padding: clamp(28px, 4vw, 52px);
+    margin-bottom: 18px;
+    padding: clamp(14px, 1.6vw, 18px) clamp(18px, 2.4vw, 28px);
     overflow: hidden;
     border: 1px solid rgba(196, 204, 214, 0.2);
     border-radius: 4px;
-    background:
-        linear-gradient(120deg, rgba(28, 34, 42, 0.98), rgba(13, 17, 23, 0.98) 58%, rgba(8, 11, 16, 0.99)),
-        #10151c;
+    background: linear-gradient(115deg, #171d25, #0f141b 64%, #0b0f14);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
-        0 28px 70px rgba(0, 0, 0, 0.34);
-}
-
-.home-hero::before {
-    content: "";
-    position: absolute;
-    inset: 0;
-    z-index: -1;
-    background:
-        linear-gradient(90deg, rgba(226, 232, 240, 0.08) 1px, transparent 1px),
-        linear-gradient(180deg, rgba(226, 232, 240, 0.055) 1px, transparent 1px);
-    background-size: 44px 44px;
-    mask-image: linear-gradient(90deg, rgba(0, 0, 0, 0.78), rgba(0, 0, 0, 0.18));
+        0 18px 42px rgba(0, 0, 0, 0.28);
 }
 
 .home-hero::after {
     content: "";
     position: absolute;
-    inset: auto 0 0;
+    inset: auto 22px 0;
     z-index: -1;
     height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(226, 232, 240, 0.5), transparent);
+    background: linear-gradient(90deg, rgba(226, 232, 240, 0.4), rgba(226, 232, 240, 0.08), transparent);
 }
 
 .hero-copy {
     display: grid;
-    align-content: center;
-    gap: 18px;
+    gap: 14px;
     min-width: 0;
 }
 
-.hero-copy h1 {
+.hero-heading-row {
+    display: grid;
+    grid-template-columns: 62px minmax(0, 1fr);
+    gap: 16px;
+    align-items: center;
+}
+
+.hero-logo {
+    width: 62px;
+    height: 62px;
+    object-fit: contain;
+    filter: contrast(1.06) saturate(0.96) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.36));
+}
+
+.hero-heading-text {
+    display: grid;
+    gap: 6px;
+    min-width: 0;
+}
+
+.hero-heading-text h1 {
     margin: 0;
     color: #f8fafc;
     font-family: "Space Grotesk", "Inter", sans-serif;
-    font-size: clamp(3rem, 7vw, 6.4rem);
+    font-size: clamp(1.95rem, 3.4vw, 3.15rem);
     font-weight: 800;
-    line-height: 0.94;
+    line-height: 0.98;
+    letter-spacing: 0;
 }
 
-.hero-copy p {
-    max-width: 68ch;
+.hero-heading-text p {
+    max-width: 70ch;
     margin: 0;
-    color: #c7d0db;
-    font-size: clamp(1rem, 1.3vw, 1.16rem);
-    line-height: 1.75;
+    color: #c9d3df;
+    font-size: clamp(0.94rem, 1.1vw, 1.04rem);
+    line-height: 1.55;
 }
 
-.hero-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 12px;
-    margin-top: 8px;
-}
-
-.hero-actions .btn {
-    min-height: 42px;
-    align-content: center;
-}
-
-.hero-console {
-    display: grid;
-    grid-template-rows: minmax(0, 1fr) auto;
-    gap: 18px;
-    min-width: 0;
-    padding: 18px;
-    border: 1px solid rgba(196, 204, 214, 0.2);
-    border-radius: 4px;
-    background:
-        linear-gradient(180deg, rgba(31, 37, 46, 0.86), rgba(12, 16, 22, 0.94)),
-        rgba(12, 16, 22, 0.92);
-}
-
-.hero-logo-frame {
-    display: grid;
-    place-items: center;
-    min-height: 220px;
-    border: 1px solid rgba(196, 204, 214, 0.16);
-    border-radius: 3px;
-    background:
-        linear-gradient(135deg, rgba(255, 255, 255, 0.045), transparent 44%),
-        rgba(7, 10, 14, 0.42);
-}
-
-.hero-logo-frame img {
-    width: min(220px, 66%);
-    filter: contrast(1.08) saturate(0.92) drop-shadow(0 24px 38px rgba(0, 0, 0, 0.42));
-}
-
-.hero-status-grid {
+.hero-status-bar {
     display: grid;
     grid-template-columns: repeat(3, minmax(0, 1fr));
-    gap: 8px;
-}
-
-.hero-status-grid article {
-    display: grid;
-    gap: 5px;
-    padding: 12px;
-    border: 1px solid rgba(196, 204, 214, 0.15);
-    border-radius: 3px;
+    gap: 0;
+    min-width: 0;
+    margin: 0;
+    padding: 0;
+    max-width: 560px;
+    border: 1px solid rgba(196, 204, 214, 0.16);
     background: rgba(255, 255, 255, 0.035);
 }
 
-.hero-status-grid label {
-    color: #9aa6b3;
-    font-size: 0.68rem;
+.hero-status-bar div {
+    display: grid;
+    gap: 2px;
+    padding: 8px 12px;
+}
+
+.hero-status-bar div + div {
+    border-left: 1px solid rgba(196, 204, 214, 0.16);
+}
+
+.hero-status-bar dt {
+    margin: 0;
+    color: #96a4b4;
+    font-size: 0.62rem;
     font-weight: 800;
+    letter-spacing: 0.08em;
     text-transform: uppercase;
 }
 
-.hero-status-grid strong {
+.hero-status-bar dd {
+    margin: 0;
     color: #f8fafc;
-    font-size: 1.12rem;
+    font-size: 1rem;
     font-weight: 800;
 }
 
-@media (max-width: 1180px) {
-    .home-hero {
-        grid-template-columns: 1fr;
-        min-height: 0;
-    }
-
-    .hero-console {
-        grid-template-columns: minmax(180px, 0.75fr) minmax(0, 1fr);
-        grid-template-rows: auto;
-        align-items: stretch;
-    }
-
-    .hero-logo-frame {
-        min-height: 180px;
-    }
+.storage-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
 @media (max-width: 720px) {
     .home-hero {
-        padding: 22px;
+        margin-bottom: 14px;
+        padding: 14px;
+        border-radius: 3px;
     }
 
-    .hero-copy h1 {
-        font-size: clamp(2.5rem, 17vw, 4rem);
+    .hero-heading-row {
+        grid-template-columns: 44px minmax(0, 1fr);
+        gap: 10px;
+        align-items: start;
     }
 
-    .hero-actions .btn {
+    .hero-logo {
+        width: 44px;
+        height: 44px;
+    }
+
+    .hero-heading-text h1 {
+        font-size: clamp(1.72rem, 8.6vw, 2.28rem);
+    }
+
+    .hero-heading-text p {
+        font-size: 0.9rem;
+        line-height: 1.5;
+    }
+
+    .hero-status-bar {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
         width: 100%;
+        max-width: none;
     }
 
-    .hero-console,
-    .hero-status-grid {
+    .hero-status-bar div + div {
+        border-top: 0;
+        border-left: 1px solid rgba(196, 204, 214, 0.16);
+    }
+
+    .hero-status-bar div {
+        padding: 9px 8px;
+    }
+
+    .hero-status-bar dt {
+        font-size: 0.58rem;
+    }
+
+    .hero-status-bar dd {
+        font-size: 1rem;
+    }
+
+    .storage-grid {
         grid-template-columns: 1fr;
+    }
+}
+
+@media (max-width: 420px) {
+    .hero-heading-row {
+        grid-template-columns: 38px minmax(0, 1fr);
+    }
+
+    .hero-logo {
+        width: 38px;
+        height: 38px;
+    }
+
+    .hero-status-bar dt {
+        font-size: 0.52rem;
+    }
+
+    .hero-status-bar dd {
+        font-size: 0.92rem;
     }
 }
 </style>

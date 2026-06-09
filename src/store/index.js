@@ -24,6 +24,7 @@ import {
   putMany,
   putOne,
   setMeta,
+  setThorondorPersistenceMode as saveThorondorPersistenceMode,
   sweepThorondorPersistence,
 } from '@/features/thorondor/services/thorondorPersistence'
 import {
@@ -35,6 +36,11 @@ import {
   fetchThorondorTelemetry,
   unblockThorondorIp as postThorondorIpUnblock,
 } from '@/features/thorondor/services/thorondorApi'
+import {
+  createThorondorCentralCommand,
+  fetchThorondorCentralSnapshot,
+  isThorondorCentralConfigured,
+} from '@/features/thorondor/services/thorondorCentralApi'
 import {
   deriveThorondorAgentStatus,
   evaluateThorondorRules,
@@ -85,12 +91,19 @@ function createThorondorState() {
     connectionHistoryByAgent: {},
     requestRulesByAgent: {},
     blockedIpsByAgent: {},
+    whitelistIpsByAgent: {},
     ipBlockOperationsByAgent: {},
     casesByAgent: {},
     responseActions: [],
     generatorDraft: buildThorondorAgentDraft(),
     errors: [],
     lastPollAt: null,
+    central: {
+      enabled: isThorondorCentralConfigured(),
+      status: isThorondorCentralConfigured() ? 'ready' : 'disabled',
+      lastSyncAt: null,
+      lastError: '',
+    },
   }
 }
 
@@ -157,15 +170,21 @@ function flattenLogs(agentId, telemetry) {
   const logs = telemetry?.logs || {}
   const entries = []
   const timestamp = telemetry?.heartbeat || new Date().toISOString()
+  const seenMessages = new Set()
 
   const pushLines = (source, lines, level = 'INFO') => {
-    ;(lines || []).forEach((line, index) => {
-      if (!line) return
+    ;(lines || []).forEach((line) => {
+      const normalizedMessage = normalizeLogMessage(line)
+      if (!normalizedMessage) return
+      const duplicateKey = `${String(agentId || '').trim().toLowerCase()}|${normalizedMessage.toLowerCase()}`
+      if (seenMessages.has(duplicateKey)) return
+      seenMessages.add(duplicateKey)
+
       entries.push({
-        id: `${agentId}-${source}-${timestamp}-${index}-${hashCode(line)}`,
+        id: stableLogId(agentId, normalizedMessage),
         agentId,
         source,
-        level: inferLogLevel(line, level),
+        level: inferLogLevel(normalizedMessage, level),
         message: line,
         timestamp,
       })
@@ -175,7 +194,7 @@ function flattenLogs(agentId, telemetry) {
   pushLines('syslog', logs.syslogTail)
   pushLines('journal', logs.journalTail)
   pushLines('kernel', logs.kernelErrors, 'ERROR')
-  ;(logs.customLogs || []).forEach((customLog) => pushLines('custom', customLog.lines))
+  ;(logs.customLogs || []).forEach((customLog) => pushLines(customLog.path || 'custom', customLog.lines))
 
   return limitItems(entries, THORONDOR_LOG_LIMIT)
 }
@@ -183,7 +202,7 @@ function flattenLogs(agentId, telemetry) {
 function flattenSecurityEvents(agentId, telemetry) {
   return limitItems(
     (telemetry?.security?.events || []).map((event, index) => ({
-      id: `${agentId}-event-${event.timestamp || Date.now()}-${index}-${hashCode(JSON.stringify(event))}`,
+      id: stableSecurityEventId(agentId, event, index),
       agentId,
       timestamp: event.timestamp || telemetry?.heartbeat || new Date().toISOString(),
       ...event,
@@ -207,13 +226,71 @@ function hashCode(text) {
   )
 }
 
+function normalizeLogMessage(text) {
+  return String(text || '')
+    .trim()
+    .replace(/\s+/g, ' ')
+}
+
+function stableLogId(agentId, message) {
+  return `${agentId}-${hashCode(
+    `${String(agentId || '').trim().toLowerCase()}|log|${normalizeLogMessage(message).toLowerCase()}`,
+  )}`
+}
+
+function stableSecurityEventId(agentId, event, fallbackIndex = 0) {
+  const source = event || {}
+  const fingerprint = [
+    source.kind,
+    source.user,
+    source.subject,
+    source.sourceIp,
+    source.runAs,
+    source.tty,
+    source.cwd,
+    source.command,
+    source.process,
+    source.file,
+    source.oldHash,
+    source.newHash,
+    source.message,
+  ]
+    .map((value) => normalizeLogMessage(value))
+    .filter(Boolean)
+    .join('|')
+    .toLowerCase()
+
+  return `${agentId}-event-${hashCode(
+    `${String(agentId || '').trim().toLowerCase()}|event|${fingerprint || fallbackIndex}`,
+  )}`
+}
+
 function normalizeAgentRecord(agent) {
   const source = agent || {}
   const hostIp = String(source.hostIp || '').trim()
-  const port = Number(source.port) || 8765
+  const receiverUrlSource = String(source.receiverUrl || source.endpoint || '').trim()
+  const portFromEndpoint = (() => {
+    try {
+      return receiverUrlSource ? Number(new URL(receiverUrlSource).port) : 0
+    } catch {
+      return 0
+    }
+  })()
+  const port = Number(source.port || source.listenPort) || portFromEndpoint || 8765
   const receiverUrl =
-    String(source.receiverUrl || '').trim() || (hostIp ? `http://${hostIp}:${port}` : '')
+    receiverUrlSource || (hostIp ? `http://${hostIp}:${port}` : '')
   const systemName = String(source.systemName || source.displayName || 'thorondor-host').trim()
+  const targetOsText = String(source.targetOs || source.os || '').toLowerCase()
+  const targetOs = targetOsText.includes('win') ? 'windows' : 'linux'
+  const lastHeartbeatAt = source.lastHeartbeatAt || source.heartbeat || null
+  const statusText = String(source.lastStatus || source.status || '').toLowerCase()
+  const lastStatus = ['ok', 'online', 'success'].includes(statusText)
+    ? 'ok'
+    : ['error', 'offline', 'failed', 'danger'].includes(statusText)
+      ? 'error'
+      : lastHeartbeatAt
+        ? 'ok'
+        : ''
   const record = {
     id: String(source.id || `${systemName}-${hostIp || '127.0.0.1'}-${port}`)
       .toLowerCase()
@@ -221,11 +298,13 @@ function normalizeAgentRecord(agent) {
     displayName: String(source.displayName || systemName).trim(),
     systemName,
     hostIp,
+    lastSeenIp: String(source.lastSeenIp || '').trim(),
     port,
     receiverUrl,
-    targetOs: source.targetOs === 'windows' ? 'windows' : 'linux',
+    targetOs,
     distro: String(source.distro || 'Otra').trim(),
     osVersion: String(source.osVersion || '').trim(),
+    agentVersion: String(source.agentVersion || source.version || '').trim(),
     networkScope: normalizeThorondorNetworkScope(source.networkScope),
     corsOrigin: String(source.corsOrigin || '*').trim() || '*',
     autoStart: source.autoStart !== false,
@@ -233,12 +312,15 @@ function normalizeAgentRecord(agent) {
       source.targetOs !== 'windows' && source.generateSystemd !== false && source.autoStart !== false,
     intervalSeconds: Math.max(10, Number(source.intervalSeconds) || 30),
     additionalLogPaths: String(source.additionalLogPaths || ''),
-    modules: { ...(source.modules || {}) },
+    modules: { ...source.modules },
     installUser: String(source.installUser || '').trim(),
     serviceName: String(source.serviceName || '').trim(),
     createdAt: source.createdAt || new Date().toISOString(),
+    lastHeartbeatAt,
+    lastStatus,
+    lastError: source.lastError || null,
     requestTimeoutMs: Math.max(3000, Number(source.requestTimeoutMs) || 10000),
-    updatedAt: new Date().toISOString(),
+    updatedAt: source.updatedAt || new Date().toISOString(),
   }
 
   return {
@@ -287,6 +369,44 @@ function normalizeThorondorCasesByAgent(casesByAgent, agents) {
     acc[agentId] = Array.isArray(cases) ? cases : []
     return acc
   }, {})
+}
+
+function mapCentralIpListByAgent(items, type) {
+  return (items || [])
+    .filter((item) => String(item?.type || '').toUpperCase() === type)
+    .filter((item) => item.active !== false)
+    .reduce((acc, item) => {
+      const agentId = item.agentId || 'global'
+      if (!acc[agentId]) acc[agentId] = []
+      acc[agentId].push({
+        id: String(item.id || `${agentId}-${item.ip}-${type}`),
+        agentId,
+        ip: item.ip,
+        provider: 'thorondor-back',
+        rule: item.reason || type,
+        enabled: true,
+        reason: item.reason || '',
+        actor: item.actor || '',
+        createdAt: item.createdAt || '',
+      })
+      return acc
+    }, {})
+}
+
+function mapCentralAuditToResponseActions(items) {
+  return (items || [])
+    .filter((item) => ['BLOCK_IP', 'UNBLOCK_IP', 'BLOCK_IP_RESULT', 'UNBLOCK_IP_RESULT'].includes(item.actionType))
+    .map((item) => ({
+      id: `central-audit-${item.id}`,
+      agentId: item.agentId,
+      action: String(item.actionType || '').includes('UNBLOCK') ? 'unblock' : 'block',
+      ip: item.ip,
+      ok: !['FAILED', 'DENIED'].includes(String(item.status || '').toUpperCase()),
+      actor: item.actor || 'back',
+      message: item.message || item.status || '',
+      detail: item.reason || '',
+      timestamp: item.createdAt,
+    }))
 }
 
 function normalizeErrorDetails(error) {
@@ -384,6 +504,14 @@ export default createStore({
       }
     },
 
+    setThorondorCentralStatus(state, value) {
+      state.thorondor.central = {
+        ...state.thorondor.central,
+        enabled: isThorondorCentralConfigured(),
+        ...value,
+      }
+    },
+
     hydrateThorondorState(state, payload) {
       state.thorondor.initialized = true
       state.thorondor.persistence = {
@@ -406,15 +534,17 @@ export default createStore({
         acc[agent.id] = buildThorondorRequestRules(agent)
         return acc
       }, {})
-      state.thorondor.blockedIpsByAgent = {}
+      state.thorondor.blockedIpsByAgent = mapCentralIpListByAgent(payload.ipList, 'BLOCK')
+      state.thorondor.whitelistIpsByAgent = mapCentralIpListByAgent(payload.ipList, 'WHITELIST')
       state.thorondor.ipBlockOperationsByAgent = {}
       state.thorondor.casesByAgent = normalizeThorondorCasesByAgent(
         payload.casesByAgent,
         state.thorondor.agents,
       )
-      state.thorondor.responseActions = []
-      state.thorondor.selectedAgentId =
-        state.thorondor.selectedAgentId || state.thorondor.agents[0]?.id || null
+      state.thorondor.responseActions = mapCentralAuditToResponseActions(payload.audit)
+      if (!state.thorondor.agents.some((agent) => agent.id === state.thorondor.selectedAgentId)) {
+        state.thorondor.selectedAgentId = state.thorondor.agents[0]?.id || null
+      }
     },
 
     registerThorondorAgent(state, agent) {
@@ -725,6 +855,80 @@ export default createStore({
       }
     },
 
+    async syncThorondorCentralConsole({ commit, state }) {
+      if (!isThorondorCentralConfigured()) {
+        commit('setThorondorCentralStatus', {
+          status: 'disabled',
+          lastError: '',
+        })
+        return false
+      }
+
+      commit('setThorondorCentralStatus', {
+        status: 'syncing',
+        lastError: '',
+      })
+
+      try {
+        const snapshot = await fetchThorondorCentralSnapshot()
+        commit('hydrateThorondorState', {
+          ...snapshot,
+          generatorDraft: state.thorondor.generatorDraft,
+          casesByAgent: state.thorondor.casesByAgent,
+          persistence: {
+            ...state.thorondor.persistence,
+            effectiveMode: 'cloud',
+            syncStatus: 'central-siem',
+            lastSyncAt: new Date().toISOString(),
+          },
+        })
+        commit('setThorondorCentralStatus', {
+          status: 'synced',
+          lastSyncAt: new Date().toISOString(),
+          lastError: '',
+        })
+        return true
+      } catch (error) {
+        commit('setThorondorCentralStatus', {
+          status: 'error',
+          lastError: error.message,
+        })
+        commit('pushThorondorError', `No se pudo sincronizar con el SIEM central: ${error.message}`)
+        throw error
+      }
+    },
+
+    async setThorondorPersistenceMode({ commit, state }, mode) {
+      const nextMode = mode === 'cloud' ? 'cloud' : 'local'
+      const currentDraft = state.thorondor.generatorDraft || buildThorondorAgentDraft()
+
+      saveThorondorPersistenceMode(nextMode)
+
+      try {
+        const openedStatus = await openThorondorPersistence()
+        commit('setThorondorPersistenceStatus', {
+          ...openedStatus,
+          lastError: null,
+        })
+
+        const persisted = await loadThorondorPersistence()
+        commit('hydrateThorondorState', {
+          ...persisted,
+          generatorDraft: currentDraft,
+        })
+        await setMeta('generatorDraft', currentDraft)
+        return persisted.persistence
+      } catch (error) {
+        const fallbackStatus = getThorondorPersistenceStatus({
+          syncStatus: 'error',
+          lastError: error.message,
+        })
+        commit('setThorondorPersistenceStatus', fallbackStatus)
+        commit('pushThorondorError', `No se pudo cambiar la persistencia: ${error.message}`)
+        throw error
+      }
+    },
+
     async registerThorondorAgent({ commit, dispatch }, agent) {
       const record = normalizeAgentRecord({
         ...agent,
@@ -772,6 +976,15 @@ export default createStore({
       }
 
       thorondorPollPromise = (async () => {
+        if (isThorondorCentralConfigured()) {
+          try {
+            await dispatch('syncThorondorCentralConsole')
+            return
+          } catch {
+            // If the central API is temporarily unavailable, keep the local/direct mode usable.
+          }
+        }
+
         const agents = state.thorondor.agents.filter(
           (agent) => buildThorondorAgentEndpoints(agent).baseUrl,
         )
@@ -822,11 +1035,33 @@ export default createStore({
       return thorondorPollPromise
     },
 
-    async refreshThorondorBlockedIps({ state, commit }, agentId) {
+    async refreshThorondorBlockedIps({ state, commit, dispatch }, agentId) {
       const targetAgentId = agentId || state.thorondor.selectedAgentId
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+
+      if (isThorondorCentralConfigured()) {
+        commit('setThorondorIpBlockOperation', {
+          agentId: agent.id,
+          status: 'loading',
+          action: 'refresh',
+          message: 'Sincronizando bloqueos desde el back central...',
+          endpoint: '/thorondor/api/console/snapshot',
+          method: 'GET',
+        })
+        await dispatch('syncThorondorCentralConsole')
+        const blocked = state.thorondor.blockedIpsByAgent[agent.id] || []
+        commit('setThorondorIpBlockOperation', {
+          agentId: agent.id,
+          status: 'success',
+          action: 'refresh',
+          message: `${blocked.length} bloqueo(s) activos en el back central.`,
+          endpoint: '/thorondor/api/console/snapshot',
+          method: 'GET',
+        })
+        return blocked
       }
 
       const endpoint = buildThorondorAgentEndpoints(agent).blocksUrl
@@ -877,11 +1112,86 @@ export default createStore({
       }
     },
 
-    async blockThorondorIp({ state, commit }, payload) {
+    async blockThorondorIp({ state, commit, dispatch }, payload) {
       const targetAgentId = payload?.agentId || state.thorondor.selectedAgentId
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+
+      if (isThorondorCentralConfigured()) {
+        const endpoint = `/thorondor/api/console/agents/${agent.id}/commands`
+        commit('setThorondorIpBlockOperation', {
+          agentId: agent.id,
+          status: 'loading',
+          action: 'block',
+          ip: payload.ip,
+          message: `Encolando bloqueo de ${payload.ip} en el back central...`,
+          endpoint,
+          method: 'POST',
+        })
+
+        try {
+          const command = await createThorondorCentralCommand(agent.id, {
+            type: 'block-ip',
+            requestedBy: 'frontend',
+            reason: payload.reason || 'manual',
+            payload: {
+              ip: payload.ip,
+              reason: payload.reason || 'manual',
+            },
+          })
+          commit('recordThorondorResponseAction', {
+            agentId: agent.id,
+            agentName: agent.displayName,
+            action: 'block',
+            ip: payload.ip,
+            ok: true,
+            message: 'Comando encolado en el back central.',
+            detail: command.id,
+          })
+          commit('setThorondorIpBlockOperation', {
+            agentId: agent.id,
+            status: 'success',
+            action: 'block',
+            ip: payload.ip,
+            message: 'Comando de bloqueo encolado. El agente lo ejecutará al consultar la cola.',
+            endpoint,
+            method: 'POST',
+            payload: command,
+          })
+          await dispatch('syncThorondorCentralConsole')
+          return {
+            ok: true,
+            queued: true,
+            command,
+            message: 'Comando de bloqueo encolado en el back central.',
+          }
+        } catch (error) {
+          const details = normalizeErrorDetails(error)
+          commit('recordThorondorResponseAction', {
+            agentId: agent.id,
+            agentName: agent.displayName,
+            action: 'block',
+            ip: payload.ip,
+            ok: false,
+            message: details.message,
+            detail: details.detail,
+          })
+          commit('setThorondorIpBlockOperation', {
+            agentId: agent.id,
+            status: 'error',
+            action: 'block',
+            ip: payload.ip,
+            message: details.message,
+            detail: details.detail,
+            statusCode: details.status,
+            endpoint,
+            method: 'POST',
+            payload: details.payload,
+          })
+          throw error
+        }
       }
 
       const endpoint = buildThorondorAgentEndpoints(agent).blockIpUrl
@@ -967,11 +1277,86 @@ export default createStore({
       }
     },
 
-    async unblockThorondorIp({ state, commit }, payload) {
+    async unblockThorondorIp({ state, commit, dispatch }, payload) {
       const targetAgentId = payload?.agentId || state.thorondor.selectedAgentId
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+
+      if (isThorondorCentralConfigured()) {
+        const endpoint = `/thorondor/api/console/agents/${agent.id}/commands`
+        commit('setThorondorIpBlockOperation', {
+          agentId: agent.id,
+          status: 'loading',
+          action: 'unblock',
+          ip: payload.ip,
+          message: `Encolando desbloqueo de ${payload.ip} en el back central...`,
+          endpoint,
+          method: 'POST',
+        })
+
+        try {
+          const command = await createThorondorCentralCommand(agent.id, {
+            type: 'unblock-ip',
+            requestedBy: 'frontend',
+            reason: payload.reason || 'manual',
+            payload: {
+              ip: payload.ip,
+              reason: payload.reason || 'manual',
+            },
+          })
+          commit('recordThorondorResponseAction', {
+            agentId: agent.id,
+            agentName: agent.displayName,
+            action: 'unblock',
+            ip: payload.ip,
+            ok: true,
+            message: 'Comando encolado en el back central.',
+            detail: command.id,
+          })
+          commit('setThorondorIpBlockOperation', {
+            agentId: agent.id,
+            status: 'success',
+            action: 'unblock',
+            ip: payload.ip,
+            message: 'Comando de desbloqueo encolado. El agente lo ejecutará al consultar la cola.',
+            endpoint,
+            method: 'POST',
+            payload: command,
+          })
+          await dispatch('syncThorondorCentralConsole')
+          return {
+            ok: true,
+            queued: true,
+            command,
+            message: 'Comando de desbloqueo encolado en el back central.',
+          }
+        } catch (error) {
+          const details = normalizeErrorDetails(error)
+          commit('recordThorondorResponseAction', {
+            agentId: agent.id,
+            agentName: agent.displayName,
+            action: 'unblock',
+            ip: payload.ip,
+            ok: false,
+            message: details.message,
+            detail: details.detail,
+          })
+          commit('setThorondorIpBlockOperation', {
+            agentId: agent.id,
+            status: 'error',
+            action: 'unblock',
+            ip: payload.ip,
+            message: details.message,
+            detail: details.detail,
+            statusCode: details.status,
+            endpoint,
+            method: 'POST',
+            payload: details.payload,
+          })
+          throw error
+        }
       }
 
       const endpoint = buildThorondorAgentEndpoints(agent).unblockIpUrl

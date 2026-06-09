@@ -2,9 +2,9 @@ export const THORONDOR_TOP_NAV_ITEMS = [
   { label: 'Inicio', routeName: 'thorondor-information' },
   { label: 'Dashboard', routeName: 'thorondor-dashboard' },
   { label: 'Hosts', routeName: 'thorondor-agents' },
-  { label: 'Instalacion', routeName: 'thorondor-installation-guide' },
+  { label: 'Eventos', routeName: 'thorondor-events' },
+  { label: 'Instalación', routeName: 'thorondor-installation-guide' },
   { label: 'Generador', routeName: 'thorondor-agent-generator' },
-  { label: 'Ajustes', routeName: 'thorondor-user-settings' },
 ]
 
 export const THORONDOR_SIDEBAR_GROUPS = [
@@ -33,7 +33,7 @@ export const THORONDOR_SIDEBAR_GROUPS = [
     ],
   },
   {
-    label: 'Respuesta e investigacion',
+    label: 'Respuesta e investigación',
     items: [
       {
         id: 'ip_blocks',

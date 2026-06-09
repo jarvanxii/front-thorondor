@@ -43,30 +43,68 @@
             </div>
         </section>
 
+        <section class="section-box beginner-section">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Para empezar sin experiencia</span>
+                    <h2 class="module-title">Qué opción elegir en cada caso</h2>
+                    <p class="module-copy">
+                        Si es tu primera prueba, empieza por el camino más sencillo. Cuando el agente responda en local,
+                        pasa a LAN/VPN y deja remoto para el final.
+                    </p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">Inicio</span>
+                    <small>De menos a más exposición.</small>
+                </div>
+            </div>
+
+            <div class="beginner-grid">
+                <article v-for="item in beginnerChoices" :key="item.label" class="beginner-card">
+                    <label>{{ item.label }}</label>
+                    <strong>{{ item.when }}</strong>
+                    <p>{{ item.copy }}</p>
+                </article>
+            </div>
+        </section>
+
         <section class="section-box">
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Secuencia</span>
-                    <h2 class="module-title">Orden correcto de despliegue</h2>
+                    <h2 class="module-title">Runbook completo de instalación</h2>
                     <p class="module-copy">
-                        Genera un único instalador desde el formulario, cópialo al host y ejecútalo con permisos de
-                        administrador. El propio instalador escribe el agente Python, instala dependencias y configura
-                        el arranque automático solo si lo activaste.
+                        Sigue este orden para evitar instalaciones a medias: primero decides cómo se va a alcanzar el
+                        host, después generas el instalador, lo ejecutas con permisos elevados, validas el proceso y
+                        solo entonces registras el endpoint como operativo.
                     </p>
                 </div>
                 <div class="phase-badge-block">
                     <span class="phase-badge">Runbook</span>
-                    <small>Generar, ejecutar, validar.</small>
+                    <small>Preparar, instalar, validar y operar.</small>
                 </div>
             </div>
 
-            <div class="card-grid">
-                <article class="tool-card" v-for="step in installSteps" :key="step.title">
+            <div class="card-grid install-step-grid">
+                <article class="tool-card install-step-card" v-for="step in installSteps" :key="step.title">
                     <div class="card-head">
-                        <h5>{{ step.title }}</h5>
+                        <div>
+                            <span class="step-index">{{ step.index }}</span>
+                            <h5>{{ step.title }}</h5>
+                        </div>
                         <span class="mini-badge">{{ step.badge }}</span>
                     </div>
                     <p class="section-copy mb-0">{{ step.copy }}</p>
+                    <div class="step-detail-grid">
+                        <div>
+                            <label>Para qué sirve</label>
+                            <p>{{ step.purpose }}</p>
+                        </div>
+                        <div>
+                            <label>Resultado esperado</label>
+                            <p>{{ step.expected }}</p>
+                        </div>
+                    </div>
                 </article>
             </div>
         </section>
@@ -74,7 +112,7 @@
         <div class="guide-section-title">
             <span>Instalación</span>
             <h2>Instalación del agente</h2>
-            <p>Prepara el host, valida el endpoint y deja el servicio persistente segun el sistema operativo y el tipo de conexión elegido.</p>
+            <p>Prepara el host, valida el endpoint y deja el servicio persistente según el sistema operativo y el tipo de conexión elegido.</p>
         </div>
 
         <section class="section-box guide-phase-header">
@@ -84,8 +122,8 @@
                     <h2 class="module-title">Selecciona sistema objetivo</h2>
                     <p class="module-copy">
                         El formulario descarga un solo instalador directo por sistema: <code>install-thorondor-agent.sh</code>
-                        en Linux o <code>install-thorondor-agent.ps1</code> en Windows. Para Windows tambien puede
-                        descargar artefactos WiX y compilar un MSI real si necesitas un despliegue formal.
+                        en Linux o <code>crear-e-instalar-thorondor-agent-msi.ps1</code> en Windows. En Windows ese
+                        asistente genera <code>ThorondorAgent.msi</code>, lo deja en el Escritorio y lo instala con msiexec.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -105,7 +143,7 @@
                 </label>
                 <div class="os-simple-note">
                     <strong>Sin elegir distro ni versión</strong>
-                    <span>El instalador de Linux detecta apt, dnf o pacman. En Windows basta con PowerShell administrador; el MSI es opcional.</span>
+                    <span>El instalador de Linux detecta apt, dnf o pacman y crea un entorno Python aislado. En Windows el asistente deja un MSI real listo para reutilizar.</span>
                 </div>
             </div>
         </section>
@@ -285,7 +323,7 @@ function localizeSnippetText(value) {
 }
 
 export default {
-    name: "ThorondorGuiaInstalacionView",
+    name: "ThorondorGuíaInstalaciónView",
 
     components: {
         ThorondorPageShell
@@ -359,7 +397,7 @@ export default {
             return [
                 {
                     label: "HTTP pull",
-                    copy: "El agente no inicia conexiones salientes. El navegador abre las peticiones hacia la URL base configurada."
+                    copy: "En modo local/LAN el navegador consulta al agente por HTTP. Si activas API central, el agente también sincroniza heartbeat y telemetría contra el back."
                 },
                 {
                     label: this.deploymentScopeLabel,
@@ -371,7 +409,37 @@ export default {
                 },
                 {
                     label: "Persistencia de datos",
-                    copy: "El modo local guarda historico en IndexedDB. El modo sincronizado conserva snapshots, eventos, logs, reglas y alertas en base de datos."
+                    copy: "El modo local guarda histórico en IndexedDB. El modo sincronizado conserva snapshots, eventos, logs, reglas y alertas en base de datos."
+                }
+            ];
+        },
+
+        beginnerChoices() {
+            return [
+                {
+                    label: "Prueba en el mismo equipo",
+                    when: "Elige Local",
+                    copy: "Instala el agente en el ordenador donde abres Thorondor. No abre firewall y sirve para comprobar que el instalador funciona."
+                },
+                {
+                    label: "Servidor de casa, laboratorio o empresa",
+                    when: "Elige LAN / VPN",
+                    copy: "Usa la IP privada del host y permite el puerto solo desde tu equipo, VPN o red de administración."
+                },
+                {
+                    label: "Servidor fuera de tu red",
+                    when: "Elige Remoto",
+                    copy: "Usa DNS o IP pública, origen restringido y HTTPS/proxy. No lo uses como primera prueba."
+                },
+                {
+                    label: "Windows",
+                    when: "Ejecuta como administrador",
+                    copy: "Descargas un asistente PowerShell que crea un MSI real, lo instala y deja una copia en el Escritorio."
+                },
+                {
+                    label: "Linux",
+                    when: "Ejecuta con sudo",
+                    copy: "Descargas un .sh único. Crea /opt/thorondor-agent, venv, permisos y systemd si activas autoarranque."
                 }
             ];
         },
@@ -379,21 +447,76 @@ export default {
         installSteps() {
             return [
                 {
-                    title: "1. Generar",
+                    index: "01",
+                    title: "Definir alcance de red",
+                    badge: this.deploymentScopeLabel,
+                    copy: `Decide si el agente será local, LAN/VPN o remoto. En este momento está seleccionado ${this.deploymentScopeLabel}.`,
+                    purpose: "Evita registrar una URL incorrecta y determina si habrá que abrir firewall, usar IP privada, VPN, DNS público o HTTPS.",
+                    expected: "Tienes clara la URL base que usará el navegador para consultar /health, /telemetry y logs."
+                },
+                {
+                    index: "02",
+                    title: "Generar instalador",
                     badge: "Build",
-                    copy: `Elige ${this.deploymentScopeLabel}, Linux o Windows, y descarga el instalador. Los ajustes de distro, logs, modulos y servicio quedan con valores por defecto seguros.`
+                    copy: "Entra en el generador, elige Linux o Windows, revisa host, puerto, módulos y fuentes de logs, y descarga el único archivo resultante.",
+                    purpose: "El instalador queda ligado a ese host: contiene agente Python, configuración, módulos, logs seleccionados y política de autoarranque.",
+                    expected: "Descargas install-thorondor-agent.sh en Linux o crear-e-instalar-thorondor-agent-msi.ps1 en Windows."
                 },
                 {
-                    title: "2. Ejecutar",
+                    index: "03",
+                    title: "Copiar al host monitorizado",
+                    badge: "Transfer",
+                    copy: "Lleva el instalador al servidor o equipo que quieres vigilar usando SFTP, SCP, USB, consola cloud o el canal seguro que ya uses.",
+                    purpose: "La instalación debe ejecutarse dentro del host que va a exponer el agente, no en el equipo desde el que administras Thorondor.",
+                    expected: "El archivo está en una ruta temporal del host, por ejemplo /tmp o la carpeta Descargas."
+                },
+                {
+                    index: "04",
+                    title: "Ejecutar con permisos elevados",
                     badge: "Install",
-                    copy: this.isLocalDeployment
-                        ? "Ejecuta el .sh con sudo o el .ps1 como administrador. En local no hay que abrir firewall."
-                        : "Ejecuta el .sh con sudo o el .ps1 como administrador. Si el host no es local, abre el puerto solo al cliente, VPN o rango autorizado."
+                    copy: this.isWindowsHostOs
+                        ? "Ejecuta el asistente PowerShell como Administrador. El propio asistente genera ThorondorAgent.msi y lo instala con msiexec."
+                        : "Ejecuta el .sh con sudo. El script crea rutas, entorno Python aislado, permisos y systemd si activaste autoarranque.",
+                    purpose: "Permite escribir en ProgramData u /opt, instalar dependencias, crear servicio persistente y preparar lectura de logs protegidos.",
+                    expected: "La consola termina con instalación completada y deja el agente listo para responder en el puerto configurado."
                 },
                 {
-                    title: "3. Validar",
+                    index: "05",
+                    title: "Revisar artefactos y servicio",
+                    badge: this.isWindowsHostOs ? "Task" : "systemd",
+                    copy: this.isWindowsHostOs
+                        ? "Comprueba C:\\ProgramData\\Thorondor-Agent y la tarea ThorondorAgent si activaste autoarranque."
+                        : "Comprueba /opt/thorondor-agent y la unidad systemd si activaste autoarranque.",
+                    purpose: "Confirma que no solo se descargó el instalador, sino que el agente quedó escrito y persistente.",
+                    expected: "Existen los ficheros del agente y el servicio aparece Ready/Running en Windows o active en Linux."
+                },
+                {
+                    index: "06",
+                    title: "Abrir red solo si aplica",
+                    badge: "Firewall",
+                    copy: this.isLocalDeployment
+                        ? "En modo local no abras firewall: 127.0.0.1 basta y reduce exposición."
+                        : "Permite el puerto del agente únicamente desde el cliente, VPN, bastión o rango de administración autorizado.",
+                    purpose: "Separa un fallo de instalación de un fallo de red y evita exponer el agente a orígenes innecesarios.",
+                    expected: this.isLocalDeployment
+                        ? "El puerto solo responde desde el propio host."
+                        : "Desde la máquina que abre Thorondor puedes llegar a /health sin abrir el puerto a todo Internet."
+                },
+                {
+                    index: "07",
+                    title: "Validar endpoints",
                     badge: "HTTP",
-                    copy: "Comprueba /health y /telemetry. Si responden, registra el host en el dashboard con la URL que vaya a usar el navegador."
+                    copy: "Primero prueba /health en localhost, después /telemetry y finalmente la URL real que usará el navegador.",
+                    purpose: "Comprueba proceso, JSON, permisos de lectura, CORS, firewall, NAT, DNS y TLS antes de dar el host por bueno.",
+                    expected: "Recibes JSON con status ok, heartbeat, system, metrics, security y logs."
+                },
+                {
+                    index: "08",
+                    title: "Registrar y operar",
+                    badge: "SIEM",
+                    copy: "Registra el host en el dashboard solo cuando la URL final responde. Después revisa reglas, alertas y eventos generados.",
+                    purpose: "Evita hosts fantasma y te asegura que la consola muestra fallos reales, no errores de despliegue.",
+                    expected: "El host aparece online, con última conexión reciente y telemetría visible en las vistas de Thorondor."
                 }
             ];
         },
@@ -412,33 +535,41 @@ export default {
                 {
                     kicker: "Preparacion",
                     title: "Ejecutar el instalador único",
-                    copy: "El .sh generado contiene el agente Python y la unidad systemd. Ejecútalo en el host Linux con sudo para que cree rutas, dependencias y permisos.",
+                    copy: "El .sh generado contiene agente Python, configuración, módulos, fuentes de logs y unidad systemd opcional. Ejecútalo en el host Linux con sudo para que cree rutas, dependencias y permisos.",
                     badge: "Linux",
                     note: this.hostOsLabel,
                     commands: [
                         {
+                            title: "Preflight del host",
+                            badge: "Check",
+                            command: "hostname -I\nip route get 1.1.1.1 2>/dev/null || true\nsudo -v\ncommand -v python3 || true\ncommand -v sudo || true\ncommand -v systemctl || true\ncommand -v journalctl || true\ncommand -v smartctl || true\nss -ltnp 2>/dev/null | grep ':<PUERTO>' || true",
+                            purpose: "Comprueba la IP que usarás en LAN/VPN, permisos sudo, Python 3, systemd/journal, SMART opcional y si el puerto elegido ya está ocupado.",
+                            when: "Hazlo antes de generar o ejecutar si no tienes claro qué IP o puerto usar.",
+                            expected: "Ves la IP del host, sudo valida credenciales, las herramientas clave aparecen o serán instalables y ningún proceso escucha en <PUERTO>."
+                        },
+                        {
                             title: "Copiar instalador al host",
                             badge: "Transfer",
                             command: "scp ./install-thorondor-agent.sh <USUARIO>@<HOST>:/tmp/install-thorondor-agent.sh\nssh <USUARIO>@<HOST>",
-                            purpose: "Lleva al sistema monitorizado el único archivo que ha descargado el generador.",
-                            when: "También puedes copiarlo por SFTP, USB, consola cloud o cualquier canal seguro que ya uses.",
-                            expected: "El host tiene /tmp/install-thorondor-agent.sh listo para ejecutar."
+                            purpose: "Lleva al sistema monitorizado el único archivo que ha descargado el generador, sin copiar piezas sueltas ni editar el agente a mano.",
+                            when: "También puedes copiarlo por SFTP, USB, consola cloud o cualquier canal seguro que ya uses. No lo ejecutes en tu PC si el host a vigilar es otro servidor.",
+                            expected: "El host monitorizado tiene /tmp/install-thorondor-agent.sh listo para ejecutar."
                         },
                         {
                             title: "Ejecutar instalador",
                             badge: "Install",
                             command: "chmod +x /tmp/install-thorondor-agent.sh\nsudo /tmp/install-thorondor-agent.sh",
-                            purpose: "Crea /opt/thorondor-agent, escribe thorondor-agent.py, instala psutil, prepara permisos y configura systemd si activaste autoarranque.",
-                            when: "Si desactivaste autoarranque, el script deja el agente listo pero no registra el servicio.",
-                            expected: "Mensaje de instalación completada y, si hay autoarranque, servicio activo."
+                            purpose: "Crea /opt/thorondor-agent, genera un venv propio, escribe thorondor-agent.py, instala psutil, sensores y smartmontools, prepara grupos de lectura y configura systemd si activaste autoarranque.",
+                            when: "Si desactivaste autoarranque, el script deja el agente listo para arranque manual pero no registra el servicio.",
+                            expected: "Mensaje de instalación completada; con autoarranque, systemd queda recargado, habilitado y arrancado."
                         },
                         {
                             title: "Comprobar ficheros creados",
                             badge: "Files",
-                            command: "sudo ls -la /opt/thorondor-agent\nsudo find /etc/systemd/system -maxdepth 1 \\( -iname '*thorondor*.service' -o -iname '*-agent.service' \\) -print",
-                            purpose: "Verifica que el instalador ha reconstruido el .py y la unidad systemd desde el único .sh.",
-                            when: "La segunda línea puede no devolver unidad si elegiste arranque manual.",
-                            expected: "Aparece /opt/thorondor-agent/thorondor-agent.py y, si procede, el servicio configurado."
+                            command: "sudo ls -la /opt/thorondor-agent\nsudo test -x /opt/thorondor-agent/venv/bin/python && echo 'venv ok'\nid thorondor\nsudo -l -U thorondor | grep -E 'THORONDOR_(FIREWALL|DIAGNOSTICS)' || true\nsudo find /etc/systemd/system -maxdepth 1 \\( -iname '*thorondor*.service' -o -iname '*-agent.service' \\) -print",
+                            purpose: "Verifica que el instalador reconstruyó el agente, creó el entorno Python aislado y dejó la unidad systemd cuando correspondía.",
+                            when: "Si cambiaste el usuario del servicio, sustituye thorondor por el usuario configurado en el generador.",
+                            expected: "Aparece thorondor-agent.py, el mensaje venv ok, el usuario dedicado y sudoers limitado para firewall/diagnóstico."
                         }
                     ]
                 },
@@ -447,7 +578,7 @@ export default {
                     title: this.isLocalDeployment ? "Validación local" : "Validación de servicio y red",
                     copy: this.isLocalDeployment
                         ? "Valida que el agente responde en 127.0.0.1 y que no has abierto exposición de red innecesaria."
-                        : "Valida que el servicio esta activo y abre firewall solo al cliente, VPN o red de administración que corresponda.",
+                        : "Valida que el servicio está activo y abre firewall solo al cliente, VPN o red de administración que corresponda.",
                     badge: "Validate",
                     note: "Después de instalar",
                     commands: [
@@ -455,15 +586,15 @@ export default {
                             title: "Validar health y telemetry",
                             badge: "HTTP",
                             command: "curl -s http://127.0.0.1:<PUERTO>/health\ncurl -s http://127.0.0.1:<PUERTO>/telemetry | python3 -m json.tool | head -40",
-                            purpose: "Comprueba que el proceso responde y que el payload JSON tiene estructura válida.",
-                            when: "Si falla la importación de psutil, reejecuta el instalador y revisa la salida de pip.",
+                            purpose: "Comprueba que el proceso escucha en local y que el payload JSON tiene estructura válida antes de abrir red o registrar el host.",
+                            when: "Si falla la importación de psutil, reejecuta el instalador y revisa la salida de pip dentro del venv.",
                             expected: "JSON con status ok y telemetría con system, metrics, security, logs y heartbeat."
                         },
                         {
                             title: "Revisar servicio",
                             badge: "systemd",
-                            command: "systemctl list-units --type=service --all --no-pager | grep -i thorondor\nsystemctl status <SERVICIO>.service --no-pager\nsystemctl show <SERVICIO>.service -p ActiveState,NRestarts,ExecMainStatus --value\njournalctl -u <SERVICIO>.service -n 40 --no-pager",
-                            purpose: "Comprueba que systemd mantiene vivo el agente generado por el instalador.",
+                            command: "systemctl list-units --type=service --all --no-pager | grep -i thorondor\nsystemctl status <SERVICIO>.service --no-pager\nsystemctl show <SERVICIO>.service -p ActiveState,NRestarts,ExecMainStatus --value\njournalctl -u <SERVICIO>.service -n 80 --no-pager",
+                            purpose: "Comprueba que systemd mantiene vivo el agente, que no está reiniciando en bucle y que no hay errores recientes.",
                             when: "Sustituye <SERVICIO> por el nombre técnico configurado en el formulario, por ejemplo thorondor-agent.",
                             expected: "ActiveState=active, NRestarts=0 y ExecMainStatus=0."
                         },
@@ -487,41 +618,41 @@ export default {
                 {
                     kicker: "Preparacion",
                     title: "Ejecutar el instalador único Windows",
-                    copy: "El .ps1 generado contiene el agente Python y la configuración de Task Scheduler. PowerShell debe ejecutarse como Administrador.",
+                    copy: "El asistente generado crea un MSI real con el agente Python, la configuración elegida, la regla de firewall cuando aplica y la tarea de Task Scheduler si activaste autoarranque.",
                     badge: "Windows",
                     note: "PowerShell administrador",
                     commands: [
                         {
+                            title: "Preflight del host",
+                            badge: "Check",
+                            command: "([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)\nGet-NetTCPConnection -LocalPort <PUERTO> -ErrorAction SilentlyContinue\nGet-Command winget,dotnet,powershell -ErrorAction SilentlyContinue\nGet-Service EventLog\nGet-WinEvent -LogName Security -MaxEvents 1 -ErrorAction SilentlyContinue",
+                            purpose: "Comprueba que la consola está elevada, que el puerto no está ocupado, que hay herramientas para compilar el MSI y que Windows Event Log responde.",
+                            when: "Hazlo antes de ejecutar si el host tiene políticas restrictivas o si dudas del puerto elegido.",
+                            expected: "La primera línea devuelve True, el puerto no aparece ocupado, winget/dotnet están disponibles o pueden instalarse y Event Log responde."
+                        },
+                        {
                             title: "Abrir PowerShell administrador",
                             badge: "Admin",
                             command: "Start-Process PowerShell -Verb RunAs\nSet-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass",
-                            purpose: "Prepara una sesión elevada para que el instalador pueda escribir en ProgramData, instalar psutil y crear la tarea programada.",
-                            when: "La política se aplica solo al proceso actual.",
+                            purpose: "Prepara una sesión elevada para escribir en ProgramData, instalar dependencias, generar el MSI, abrir firewall y crear la tarea programada.",
+                            when: "La política se aplica solo al proceso actual. No cambia la política global del equipo.",
                             expected: "La consola elevada permite ejecutar scripts locales."
                         },
                         {
                             title: "Ejecutar instalador",
                             badge: "Install",
-                            command: "cd <CARPETA_DONDE_DESCARGASTE_EL_PS1>\n.\\install-thorondor-agent.ps1",
-                            purpose: "Crea C:\\ProgramData\\Thorondor-Agent, escribe thorondor-agent.py, instala psutil, prepara firewall si el alcance no es local y registra Task Scheduler si activaste autoarranque.",
-                            when: "Si Python no existe, el instalador intentara instalarlo con winget.",
-                            expected: "Mensaje de instalación completada y health check local funcionando."
-                        },
-                        {
-                            title: "Compilar MSI opcional",
-                            badge: "MSI",
-                            command: "cd <CARPETA_DONDE_DESCARGASTE_LOS_ARCHIVOS>\n.\\build-thorondor-msi.ps1\nmsiexec /i .\\ThorondorAgent.msi",
-                            purpose: "Compila un Windows Installer real con WiX usando el .ps1 generado y el manifiesto thorondor-agent.wxs.",
-                            when: "Usalo si quieres distribuir por GPO, inventario o instalacion formal. Requiere WiX Toolset o .NET SDK para instalarlo como herramienta.",
-                            expected: "Aparece ThorondorAgent.msi en la carpeta y el MSI ejecuta el mismo instalador elevado."
+                            command: "cd <CARPETA_DONDE_DESCARGASTE_EL_INSTALADOR>\n.\\crear-e-instalar-thorondor-agent-msi.ps1",
+                            purpose: "Reconstruye los artefactos internos, compila ThorondorAgent.msi, deja una copia en el Escritorio, lo instala con msiexec y aplica la configuración del formulario.",
+                            when: "Si faltan .NET SDK o WiX, el asistente intenta prepararlos con winget/dotnet. No descargues ni edites artefactos sueltos.",
+                            expected: "Aparece ThorondorAgent.msi en el Escritorio, instalación completada y health check local correcto."
                         },
                         {
                             title: "Comprobar ficheros creados",
                             badge: "Files",
-                            command: "Get-ChildItem 'C:\\ProgramData\\Thorondor-Agent'\nGet-ScheduledTask -TaskName 'ThorondorAgent' -ErrorAction SilentlyContinue",
-                            purpose: "Verifica que el instalador ha reconstruido el .py y, si procede, la tarea programada desde el único .ps1.",
+                            command: "Get-ChildItem 'C:\\ProgramData\\Thorondor-Agent'\nTest-Path \"$env:USERPROFILE\\Desktop\\ThorondorAgent.msi\"\nGet-ScheduledTask -TaskName 'ThorondorAgent' -ErrorAction SilentlyContinue",
+                            purpose: "Verifica que el MSI instaló el agente, que existe una copia reutilizable del paquete y que la tarea programada se creó cuando correspondía.",
                             when: "La tarea no existirá si elegiste arranque manual.",
-                            expected: "C:\\ProgramData\\Thorondor-Agent contiene thorondor-agent.py."
+                            expected: "C:\\ProgramData\\Thorondor-Agent contiene thorondor-agent.py y el MSI aparece en el Escritorio."
                         }
                     ]
                 },
@@ -538,15 +669,15 @@ export default {
                             title: "Health y telemetry local",
                             badge: "HTTP",
                             command: "Invoke-RestMethod http://127.0.0.1:<PUERTO>/health\nInvoke-RestMethod http://127.0.0.1:<PUERTO>/telemetry",
-                            purpose: "Comprueba el endpoint de salud y el payload completo en localhost.",
-                            when: "Si el puerto esta ocupado, cambia el puerto en el generador y regenera el agente.",
+                            purpose: "Comprueba el endpoint de salud y el payload completo en localhost antes de registrar la URL final en Thorondor.",
+                            when: "Si el puerto está ocupado, cambia el puerto en el generador y regenera el agente.",
                             expected: "Objetos JSON con status ok, port, heartbeat, system y metrics."
                         },
                         {
                             title: "Revisar tarea programada",
                             badge: "Schedule",
                             command: "Get-ScheduledTask -TaskName 'ThorondorAgent' | Select-Object TaskName,State\nGet-ScheduledTaskInfo -TaskName 'ThorondorAgent'",
-                            purpose: "Comprueba que Task Scheduler ha quedado registrado y sin errores recientes.",
+                            purpose: "Comprueba que Task Scheduler quedó registrado, que la tarea puede arrancar con privilegios y que no hay errores recientes.",
                             when: "Ejecuta solo si activaste arranque automático.",
                             expected: "Get-ScheduledTask -TaskName ThorondorAgent muestra estado Ready o Running."
                         },
@@ -559,7 +690,7 @@ export default {
                             purpose: "Permite conexiones entrantes al puerto del agente desde el cliente, VPN, bastión o rango de administración.",
                             when: this.isRemoteDeployment
                                 ? "Evita Any como RemoteAddress en Internet. Si expones IP pública, combina origen restringido y preferiblemente reverse proxy TLS."
-                                : "Usa Profile Private si es una LAN confiable y restringe RemoteAddress a cliente, VPN o subred de administración.",
+                                : "El instalador crea una regla LocalSubnet como ayuda inicial; ajusta RemoteAddress si usas VPN o una IP concreta.",
                             expected: "Test-NetConnection -ComputerName <IP_O_DNS_HOST> -Port <PUERTO> funciona desde el cliente."
                         }])
                     ]
@@ -576,7 +707,7 @@ export default {
                     command: this.isWindowsHostOs
                         ? "Invoke-RestMethod http://127.0.0.1:<PUERTO>/health"
                         : "curl -s http://127.0.0.1:<PUERTO>/health",
-                    confirms: "El proceso esta vivo y escucha en el puerto configurado.",
+                    confirms: "El proceso está vivo y escucha en el puerto configurado.",
                     expected: "JSON con status ok, heartbeat y nombre del sistema."
                 },
                 {
@@ -595,10 +726,10 @@ export default {
                 checks.push({
                     title: "Estado de Task Scheduler",
                     badge: "Windows",
-                    copy: "Detecta errores de arranque automático cuando el formulario genero tarea programada.",
+                    copy: "Detecta errores de arranque automático cuando el formulario generó tarea programada.",
                     command: "Get-ScheduledTask -TaskName 'ThorondorAgent' -ErrorAction SilentlyContinue | Select-Object TaskName,State\nGet-ScheduledTaskInfo -TaskName 'ThorondorAgent' -ErrorAction SilentlyContinue",
-                    confirms: "Tarea creada, estado Ready o Running y ultima ejecución sin error.",
-                    expected: "LastTaskResult igual a 0 cuando la tarea ya se ejecuto."
+                    confirms: "Tarea creada, estado Ready o Running y última ejecución sin error.",
+                    expected: "LastTaskResult igual a 0 cuando la tarea ya se ejecutó."
                 });
             } else {
                 checks.push({
@@ -633,7 +764,7 @@ export default {
                 }, {
                     title: "HTTPS y navegador",
                     badge: "TLS",
-                    copy: "Comprueba que el navegador no bloqueara la peticion por mixed content.",
+                    copy: "Comprueba que el navegador no bloqueará la petición por mixed content.",
                     command: "curl -s -o /dev/null -w \"%{http_code}\\n\" <URL_REMOTA_DEL_AGENTE>/health\n# Si la aplicación se sirve por HTTPS, usa https:// también para el agente.",
                     confirms: "El endpoint remoto usa el esquema correcto para poder ser consultado desde la UI.",
                     expected: "200. Si hay error TLS, corrige certificado o proxy antes de registrar."
@@ -659,7 +790,7 @@ export default {
                         badge: "Files",
                         command: "Remove-Item -Recurse -Force 'C:\\ProgramData\\Thorondor-Agent'",
                         purpose: "Borra agente, baseline y ficheros auxiliares.",
-                        when: "Si algun fichero esta bloqueado, confirma que la tarea ya no existe.",
+                        when: "Si algun fichero está bloqueado, confirma que la tarea ya no existe.",
                         expected: "Test-Path 'C:\\ProgramData\\Thorondor-Agent' devuelve False."
                     },
                     ...(this.isLocalDeployment ? [] : [{
@@ -742,6 +873,93 @@ export default {
 
 .command-card {
     background: linear-gradient(180deg, rgba(31, 36, 44, 0.98), rgba(17, 21, 27, 0.98));
+}
+
+.beginner-section {
+    border-color: rgba(176, 184, 194, 0.24);
+}
+
+.beginner-grid {
+    display: grid;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 0.85rem;
+    margin-top: 1rem;
+}
+
+.beginner-card {
+    display: grid;
+    gap: 0.45rem;
+    align-content: start;
+    padding: 1rem;
+    border: 1px solid rgba(176, 184, 194, 0.16);
+    border-radius: 4px;
+    background: rgba(16, 20, 26, 0.48);
+}
+
+.beginner-card label {
+    color: #a9bacb;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+}
+
+.beginner-card strong {
+    color: #f8fafc;
+    font-size: 0.96rem;
+}
+
+.beginner-card p {
+    margin: 0;
+    color: rgba(226, 235, 244, 0.86);
+    font-size: 0.88rem;
+    line-height: 1.55;
+}
+
+.install-step-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.install-step-card {
+    align-content: start;
+}
+
+.install-step-card .card-head {
+    align-items: flex-start;
+}
+
+.step-index {
+    display: inline-flex;
+    margin-bottom: 0.45rem;
+    color: #a9bacb;
+    font-size: 0.68rem;
+    font-weight: 900;
+    letter-spacing: 0.16em;
+}
+
+.step-detail-grid {
+    display: grid;
+    gap: 0.75rem;
+    margin-top: 1rem;
+    padding-top: 0.95rem;
+    border-top: 1px solid rgba(176, 184, 194, 0.18);
+}
+
+.step-detail-grid label {
+    display: block;
+    margin-bottom: 0.25rem;
+    color: #a9bacb;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.step-detail-grid p {
+    margin: 0;
+    color: rgba(226, 235, 244, 0.88);
+    font-size: 0.88rem;
+    line-height: 1.55;
 }
 
 .command-meta {
@@ -883,12 +1101,24 @@ export default {
 }
 
 @media (max-width: 1199px) {
+    .beginner-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+
     .validation-grid {
         grid-template-columns: 1fr;
     }
 }
 
 @media (max-width: 767px) {
+    .beginner-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .install-step-grid {
+        grid-template-columns: 1fr;
+    }
+
     .os-selector-panel {
         grid-template-columns: 1fr;
     }

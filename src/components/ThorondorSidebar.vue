@@ -5,16 +5,9 @@
     aria-label="Navegación del sistema monitorizado"
   >
     <header class="sidebar-identity">
-      <div class="identity-top">
-        <span class="identity-mark" aria-hidden="true">TH</span>
-        <div class="identity-copy">
-          <span>Thorondor</span>
-          <strong>Panel operativo</strong>
-        </div>
-      </div>
       <div class="identity-status">
         <span>Sistema seleccionado</span>
-        <strong>{{ selectedAgent ? selectedAgent.displayName : 'Sin seleccion' }}</strong>
+        <strong>{{ selectedAgent ? selectedAgent.displayName : 'Sin selección' }}</strong>
         <small>{{
           selectedAgentStatus || 'Elige un ordenador monitorizado para activar las vistas por host.'
         }}</small>
@@ -184,31 +177,6 @@ export default {
     rgba(12, 15, 19, 0.82);
 }
 
-.identity-top {
-  display: grid;
-  grid-template-columns: 38px minmax(0, 1fr);
-  gap: 10px;
-  align-items: center;
-  padding-bottom: 11px;
-  border-bottom: 1px solid rgba(189, 196, 205, 0.13);
-}
-
-.identity-mark {
-  display: inline-flex;
-  width: 38px;
-  height: 38px;
-  align-items: center;
-  justify-content: center;
-  border: 1px solid rgba(213, 219, 226, 0.24);
-  border-radius: 3px;
-  background: linear-gradient(180deg, rgba(54, 60, 69, 0.88), rgba(23, 27, 33, 0.96));
-  color: #f6f8fb;
-  font-size: 0.78rem;
-  font-weight: 900;
-  letter-spacing: 0.04em;
-}
-
-.identity-copy,
 .identity-status {
   display: grid;
   gap: 4px;
@@ -370,12 +338,54 @@ export default {
 
 @media (max-width: 1040px) {
   .thorondor-sidebar {
+    width: min(330px, 88vw);
+    gap: 10px;
+    padding: 14px 12px;
+    background:
+      linear-gradient(180deg, rgba(24, 28, 34, 0.995), rgba(9, 12, 17, 0.998)),
+      #0d1117;
+    box-shadow: 24px 0 54px rgba(0, 0, 0, 0.46);
     transform: translateX(-104%);
     transition: transform 180ms ease;
   }
 
   .thorondor-sidebar.is-open {
     transform: translateX(0);
+  }
+
+  .sidebar-identity,
+  .sidebar-system {
+    padding: 11px;
+  }
+
+  .sidebar-nav-item {
+    min-height: 43px;
+  }
+}
+
+@media (max-width: 520px) {
+  .thorondor-sidebar {
+    width: min(342px, 92vw);
+    padding: 12px 10px;
+  }
+
+  .sidebar-identity small {
+    font-size: 0.7rem;
+  }
+
+  .sidebar-nav {
+    gap: 13px;
+    padding-right: 2px;
+  }
+
+  .sidebar-nav-group h2 {
+    padding-inline: 8px;
+  }
+
+  .sidebar-nav-item {
+    min-height: 44px;
+    padding-inline: 9px;
+    font-size: 0.8rem;
   }
 }
 </style>

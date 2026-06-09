@@ -2,7 +2,7 @@
     <div class="chart-shell">
         <canvas ref="canvas"></canvas>
         <div v-if="showFallback" class="chart-fallback">
-            Chart.js no esta disponible en este navegador. La tabla de metricas sigue operativa.
+            Chart.js no está disponible en este navegador. La tabla de métricas sigue operativa.
         </div>
     </div>
 </template>

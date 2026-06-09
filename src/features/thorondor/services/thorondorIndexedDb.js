@@ -276,11 +276,11 @@ function runTransaction(db, storeName, mode, callback) {
     }
     transaction.onabort = () =>
       rejectOnce(
-        transaction.error || new Error(`La transaccion de IndexedDB sobre ${storeName} se aborto.`),
+        transaction.error || new Error(`La transacción de IndexedDB sobre ${storeName} se abortó.`),
       )
     transaction.onerror = () =>
       rejectOnce(
-        transaction.error || new Error(`La transaccion de IndexedDB sobre ${storeName} fallo.`),
+        transaction.error || new Error(`La transacción de IndexedDB sobre ${storeName} falló.`),
       )
 
     try {

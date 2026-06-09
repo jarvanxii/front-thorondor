@@ -1,5 +1,6 @@
 <script>
 import { RouterView } from 'vue-router'
+import ThorondorMiniFooter from './components/ThorondorMiniFooter.vue'
 import ThorondorSidebar from './components/ThorondorSidebar.vue'
 import ThorondorTopHeader from './components/ThorondorTopHeader.vue'
 
@@ -8,6 +9,7 @@ export default {
 
   components: {
     RouterView,
+    ThorondorMiniFooter,
     ThorondorSidebar,
     ThorondorTopHeader,
   },
@@ -47,6 +49,7 @@ export default {
 
     <main class="thorondor-route-frame" :class="{ 'is-auth-layout': isAuthLayout }" @click="sidebarOpen = false">
       <RouterView />
+      <ThorondorMiniFooter v-if="!isAuthLayout" />
     </main>
   </section>
 </template>
@@ -96,6 +99,20 @@ export default {
 
   .sidebar-backdrop.is-visible {
     display: block;
+  }
+}
+
+@media (max-width: 900px) {
+  .thorondor-app-shell {
+    background:
+      radial-gradient(circle at 50% -12%, rgba(226, 232, 240, 0.09), transparent 30%),
+      linear-gradient(180deg, #111720 0%, #0b1016 54%, #080c11 100%);
+    background-size: auto;
+  }
+
+  .sidebar-backdrop {
+    background: rgba(3, 6, 10, 0.68);
+    backdrop-filter: blur(4px);
   }
 }
 </style>

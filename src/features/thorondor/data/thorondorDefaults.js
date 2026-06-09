@@ -13,19 +13,71 @@ export const THORONDOR_IDB_EVENT_LIMIT = 1000;
 export const THORONDOR_SWEEP_INTERVAL_MS = 3_600_000;
 
 export const THORONDOR_MODULE_KEYS = [
-  { key: "systemMetrics", label: "Metricas de sistema" },
-  { key: "securityLogs", label: "Logs de seguridad" },
-  { key: "sudoCommands", label: "Comandos sudo" },
-  { key: "fileIntegrity", label: "Integridad de archivos" },
-  { key: "networkConnections", label: "Conexiones de red" },
-  { key: "applicationLogs", label: "Logs de aplicacion" },
-  { key: "networkRates", label: "Velocidad de red en tiempo real" },
-  { key: "establishedConnections", label: "Conexiones ESTABLISHED con PID" },
-  { key: "hardwareMonitor", label: "Hardware (fans, bateria, GPU)" },
-  { key: "dockerMonitor", label: "Contenedores Docker" },
-  { key: "updateMonitor", label: "Parches y actualizaciones pendientes" },
-  { key: "loginHistory", label: "Historial de logins (last)" },
-  { key: "smartMonitor", label: "Estado SMART de discos" }
+  {
+    key: "systemMetrics",
+    label: "Métricas de sistema",
+    description: "Recoge CPU, memoria, swap, discos, procesos, interfaces de red, puertos abiertos y datos base del sistema."
+  },
+  {
+    key: "securityLogs",
+    label: "Logs de seguridad",
+    description: "Normaliza eventos de autenticación, fallos de login, accesos relevantes y señales de seguridad del sistema."
+  },
+  {
+    key: "sudoCommands",
+    label: "Comandos sudo",
+    description: "Busca ejecuciones sudo o elevadas para detectar acciones administrativas fuera de lo esperado."
+  },
+  {
+    key: "fileIntegrity",
+    label: "Integridad de archivos",
+    description: "Calcula y compara hashes de archivos críticos como hosts, passwd, shadow, sudoers o equivalentes de Windows."
+  },
+  {
+    key: "networkConnections",
+    label: "Conexiones de red",
+    description: "Lista puertos abiertos y conexiones relevantes para revisar exposición de servicios y actividad de red."
+  },
+  {
+    key: "applicationLogs",
+    label: "Logs de aplicación",
+    description: "Lee las fuentes diagnósticas seleccionadas en el bloque anterior: web, base de datos, PHP, firewall, IDS y rutas personalizadas."
+  },
+  {
+    key: "networkRates",
+    label: "Velocidad de red en tiempo real",
+    description: "Calcula tasas de entrada y salida por interfaz para detectar picos de tráfico o actividad anómala."
+  },
+  {
+    key: "establishedConnections",
+    label: "Conexiones ESTABLISHED con PID",
+    description: "Relaciona conexiones establecidas con procesos cuando el sistema lo permite, útil para investigar origen y propietario."
+  },
+  {
+    key: "hardwareMonitor",
+    label: "Hardware (fans, batería, GPU)",
+    description: "Añade sensores disponibles: temperatura, ventiladores, batería y GPU cuando el host expone esa información."
+  },
+  {
+    key: "dockerMonitor",
+    label: "Contenedores Docker",
+    description: "Consulta contenedores, estado y salud cuando Docker está instalado y el agente tiene permisos de lectura."
+  },
+  {
+    key: "updateMonitor",
+    label: "Parches y actualizaciones pendientes",
+    description: "Comprueba actualizaciones pendientes para detectar servidores con mantenimiento atrasado o parches críticos sin aplicar."
+  },
+  {
+    key: "loginHistory",
+    label: "Historial de logins (last)",
+    description: "Incluye sesiones recientes y usuarios conectados para revisar accesos interactivos y actividad de cuentas."
+  },
+  {
+    key: "smartMonitor",
+    label: "Estado SMART de discos",
+    description: "Intenta leer salud SMART de discos para anticipar fallos físicos o degradación de almacenamiento."
+  }
 ];
 
 export const THORONDOR_DISTRO_OPTIONS = [
@@ -99,13 +151,13 @@ export const THORONDOR_NETWORK_SCOPE_OPTIONS = [
     value: "lan",
     label: "LAN / VPN",
     shortLabel: "LAN",
-    copy: "El navegador llega al agente por IP privada, VPN o red de administracion. Es el modo recomendado para laboratorio y homelab."
+    copy: "El navegador llega al agente por IP privada, VPN o red de administración. Es el modo recomendado para laboratorio y homelab."
   },
   {
     value: "public",
-    label: "Remoto / IP publica / DNS",
+    label: "Remoto / IP pública / DNS",
     shortLabel: "Remoto",
-    copy: "El navegador llega al agente mediante una IP publica o un dominio. Usa firewall restrictivo y, si la web va por HTTPS, endpoint HTTPS."
+    copy: "El navegador llega al agente mediante una IP pública o un dominio. Usa firewall restrictivo y, si la web va por HTTPS, endpoint HTTPS."
   }
 ];
 
@@ -196,20 +248,20 @@ export const THORONDOR_ALERT_TYPES = {
   cpu: "CPU sostenida alta",
   ram: "RAM alta",
   disk: "Disco alto",
-  failedLogins: "Exceso de logs de autenticacion fallidos",
+  failedLogins: "Exceso de logs de autenticación fallidos",
   unknownLoginIp: "Login exitoso desde IP desconocida",
-  criticalFileChange: "Cambio en archivo critico",
+  criticalFileChange: "Cambio en archivo crítico",
   heartbeat: "Agente sin heartbeat",
   sudoUnauthorized: "Comando sudo no autorizado",
   newUser: "Nuevo usuario creado",
   networkExposure: "Puerto en escucha sospechoso",
   failedService: "Servicio systemd en estado FAILED",
-  pendingUpdates: "Actualizaciones criticas pendientes",
+  pendingUpdates: "Actualizaciones críticas pendientes",
   dockerUnhealthy: "Contenedor Docker en estado anomalo",
   dnsFailure: "Fallo de resolucion DNS",
-  smartError: "Atributo SMART de disco en estado critico",
+  smartError: "Atributo SMART de disco en estado crítico",
   highNetworkRate: "Trafico de red inusualmente elevado",
-  tempCritical: "Temperatura de componente critica"
+  tempCritical: "Temperatura de componente crítica"
 };
 
 export function buildDefaultThorondorRuleSet() {
@@ -256,7 +308,7 @@ export function buildDefaultThorondorRuleSet() {
     },
     {
       id: "rule-heartbeat-lost",
-      name: "Heartbeat ausente mas de 3 minutos",
+      name: "Heartbeat ausente más de 3 minutos",
       type: "heartbeat",
       enabled: true,
       threshold: 3,
@@ -272,7 +324,7 @@ export function buildDefaultThorondorRuleSet() {
       threshold: 1,
       durationMinutes: 1,
       scope: "all",
-      description: "Dispara ante cambios de integridad en archivos criticos."
+      description: "Dispara ante cambios de integridad en archivos críticos."
     },
     {
       id: "rule-sudo-unauthorized",
@@ -369,10 +421,10 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
     systemName: "",
     distro: defaultDistro,
     osVersion: getThorondorDefaultOsVersionForTarget(normalizedTargetOs, defaultDistro),
-    receiverUrl: "",
-    networkScope: "lan",
+    receiverUrl: "http://127.0.0.1:8765",
+    networkScope: "local",
     corsOrigin: "*",
-    port: "",
+    port: 8765,
     intervalSeconds: 30,
     additionalLogPaths: getThorondorDefaultLogPathsForOs(normalizedTargetOs),
     modules: {
@@ -391,9 +443,9 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
       smartMonitor: false
     },
     generateSystemd: normalizedTargetOs !== "windows",
-    hostIp: "",
-    installUser: "",
-    serviceName: "",
+    hostIp: "127.0.0.1",
+    installUser: "thorondor",
+    serviceName: "thorondor-agent",
     autoStart: true,
     notes: ""
   };

@@ -76,7 +76,7 @@ export function evaluateThorondorRules({ agent, rules, snapshots, securityEvents
       const match = recentEvents.find((event) => event.kind === 'critical_file_change')
       if (match) {
         alerts.push(
-          buildAlert(agent, rule, `Cambio detectado en ${match.file || 'archivo critico'}.`),
+          buildAlert(agent, rule, `Cambio detectado en ${match.file || 'archivo crítico'}.`),
         )
       }
     }
@@ -189,7 +189,7 @@ export function evaluateThorondorRules({ agent, rules, snapshots, securityEvents
           buildAlert(
             agent,
             rule,
-            `Temperatura critica en ${hot.label || hot.source}: ${hot.current?.toFixed(1)}°C.`,
+            `Temperatura crítica en ${hot.label || hot.source}: ${hot.current?.toFixed(1)}°C.`,
           ),
         )
       }
@@ -235,7 +235,7 @@ export function deriveThorondorAgentStatus(agent) {
     return {
       label: 'Desconectado',
       color: 'danger',
-      note: `Sin heartbeat desde hace mas de ${THORONDOR_HEARTBEAT_CRITICAL_MINUTES} min.`,
+      note: `Sin heartbeat desde hace más de ${THORONDOR_HEARTBEAT_CRITICAL_MINUTES} min.`,
     }
   }
 
@@ -243,7 +243,7 @@ export function deriveThorondorAgentStatus(agent) {
     return {
       label: 'Sin datos recientes',
       color: 'warning',
-      note: `Heartbeat mas antiguo que ${THORONDOR_HEARTBEAT_WARNING_MINUTES} min.`,
+      note: `Heartbeat más antiguo que ${THORONDOR_HEARTBEAT_WARNING_MINUTES} min.`,
     }
   }
 

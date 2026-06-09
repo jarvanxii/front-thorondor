@@ -53,6 +53,20 @@ function escapeXmlAttribute(value) {
     .replace(/'/g, "&apos;");
 }
 
+function base64Utf8(value) {
+  if (typeof globalThis.Buffer !== "undefined") {
+    return globalThis.Buffer.from(String(value), "utf8").toString("base64");
+  }
+
+  const bytes = new TextEncoder().encode(String(value));
+  const chunkSize = 0x8000;
+  let binary = "";
+  for (let index = 0; index < bytes.length; index += chunkSize) {
+    binary += String.fromCharCode(...bytes.subarray(index, index + chunkSize));
+  }
+  return btoa(binary);
+}
+
 function deterministicGuid(seed) {
   const bytes = [];
   let hash = 0x811c9dc5;
@@ -76,6 +90,21 @@ function resolveListenHost(config) {
   return config.networkScope === "local" ? "127.0.0.1" : "0.0.0.0";
 }
 
+function normalizeAgentId(config) {
+  const raw = `${config.systemName || config.displayName || "thorondor-agent"}-${config.hostIp || "local"}-${Number(config.port) || 8765}`;
+  return raw
+    .toLowerCase()
+    .replace(/[^a-z0-9_.-]+/g, "-")
+    .replace(/^-+|-+$/g, "")
+    .slice(0, 160) || "thorondor-agent";
+}
+
+function normalizeCentralApiBaseUrl(config) {
+  const fromDraft = String(config.centralApiBaseUrl || "").trim();
+  const fromEnv = String(import.meta.env.VITE_THORONDOR_API_BASE_URL || import.meta.env.VITE_API_BASE_URL || "").trim();
+  return (fromDraft || fromEnv).replace(/\/+$/, "");
+}
+
 export function buildThorondorAgentFiles(draft) {
   const logPaths = String(draft.additionalLogPaths || "")
     .split("\n")
@@ -86,6 +115,8 @@ export function buildThorondorAgentFiles(draft) {
     ...draft,
     logPaths
   };
+  config.agentId = config.agentId || normalizeAgentId(config);
+  config.centralApiBaseUrl = normalizeCentralApiBaseUrl(config);
 
   const isWindows = config.targetOs === "windows";
   const shouldBuildSystemd = !isWindows && config.generateSystemd && config.autoStart !== false;
@@ -93,13 +124,15 @@ export function buildThorondorAgentFiles(draft) {
   return {
     agentFileName: "thorondor-agent.py",
     serviceFileName: shouldBuildSystemd ? buildServiceFileName(config) : null,
-    installFileName: isWindows ? "install-thorondor-agent.ps1" : "install-thorondor-agent.sh",
+    installFileName: isWindows ? "crear-e-instalar-thorondor-agent-msi.ps1" : "install-thorondor-agent.sh",
+    windowsInstallFileName: isWindows ? "install-thorondor-agent.ps1" : null,
     msiFileName: isWindows ? "ThorondorAgent.msi" : null,
     wixFileName: isWindows ? "thorondor-agent.wxs" : null,
     msiBuildFileName: isWindows ? "build-thorondor-msi.ps1" : null,
     python: buildThorondorPythonAgent(config),
     systemd: shouldBuildSystemd ? buildThorondorSystemdUnit(config) : null,
-    installScript: isWindows ? buildThorondorWindowsInstallScript(config) : buildThorondorInstallScript(config),
+    installScript: isWindows ? buildThorondorWindowsMsiBootstrapperScript(config) : buildThorondorInstallScript(config),
+    windowsInstallScript: isWindows ? buildThorondorWindowsInstallScript(config) : null,
     wixSource: isWindows ? buildThorondorWixSource(config) : null,
     msiBuildScript: isWindows ? buildThorondorMsiBuildScript(config) : null,
     instructions: buildThorondorInstallInstructions(config)
@@ -126,6 +159,8 @@ import subprocess
 import sys
 import threading
 import time
+import urllib.error
+import urllib.request
 from datetime import datetime
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
@@ -139,11 +174,14 @@ except ImportError:
 
 HOST_LABEL = ${JSON.stringify(config.displayName)}
 SYSTEM_NAME = ${JSON.stringify(config.systemName)}
+AGENT_ID = ${JSON.stringify(config.agentId)}
+AGENT_VERSION = "1.1.0"
 DISTRO = ${JSON.stringify(config.distro)}
 OS_VERSION = ${JSON.stringify(config.osVersion)}
 LISTEN_HOST = ${JSON.stringify(resolveListenHost(config))}
 LISTEN_PORT = ${Number(config.port) || 8765}
 POLL_INTERVAL_SECONDS = ${Number(config.intervalSeconds) || 30}
+CENTRAL_API_BASE_URL = ${JSON.stringify(config.centralApiBaseUrl)}
 INSTALL_USER = ${JSON.stringify(config.installUser || "thorondor")}
 NETWORK_SCOPE = ${JSON.stringify(config.networkScope || "lan")}
 CORS_ORIGIN = ${JSON.stringify(String(config.corsOrigin || "*").trim() || "*")}
@@ -187,6 +225,59 @@ HEADERS = {
 
 def now_iso():
     return datetime.utcnow().isoformat() + "Z"
+
+
+def central_api_root():
+    base = str(CENTRAL_API_BASE_URL or "").rstrip("/")
+    if not base:
+        return ""
+    if base.endswith("/thorondor/api"):
+        return base
+    return base + "/thorondor/api"
+
+
+def central_request(method, path, payload=None):
+    root = central_api_root()
+    if not root:
+        return None
+
+    data = None
+    headers = {
+        "Accept": "application/json",
+        "Content-Type": "application/json",
+        "User-Agent": f"Thorondor-Agent/{AGENT_VERSION}"
+    }
+    if payload is not None:
+        data = json.dumps(payload).encode("utf-8")
+
+    request = urllib.request.Request(root + path, data=data, headers=headers, method=method)
+    with urllib.request.urlopen(request, timeout=15) as response:
+        raw = response.read().decode("utf-8")
+        return json.loads(raw) if raw.strip() else None
+
+
+def register_with_central():
+    if not central_api_root():
+        return
+
+    payload = {
+        "id": AGENT_ID,
+        "agent": {
+            "id": AGENT_ID,
+            "version": AGENT_VERSION,
+            "hostLabel": HOST_LABEL,
+            "systemName": SYSTEM_NAME,
+            "distro": DISTRO,
+            "osVersion": OS_VERSION,
+            "targetOs": "windows" if IS_WINDOWS else "linux",
+            "listenPort": LISTEN_PORT,
+            "networkScope": NETWORK_SCOPE,
+            "endpoint": f"http://{find_local_ip()}:{LISTEN_PORT}",
+            "modules": MODULES
+        },
+        "heartbeat": now_iso()
+    }
+    central_request("POST", "/agents/register", payload)
 
 
 def run_command(command):
@@ -248,7 +339,7 @@ def validate_blockable_ip(raw_ip, requester_ip=""):
     if parsed.is_loopback or parsed.is_multicast or parsed.is_unspecified:
         raise ValueError("No se permite bloquear loopback, multicast o IP sin especificar")
     if requester_ip and str(parsed) == requester_ip:
-        raise ValueError("No se permite bloquear la IP que esta gestionando el agente ahora mismo")
+        raise ValueError("No se permite bloquear la IP que está gestionando el agente ahora mismo")
 
     return str(parsed)
 
@@ -421,22 +512,22 @@ def firewall_error_hints(result, provider):
     text = f"{result.get('stdout', '')} {result.get('stderr', '')}".lower()
     hints = []
     if "sudo" in text or "permission" in text or "not permitted" in text or "access is denied" in text:
-        hints.append("El agente no tiene permisos para modificar el firewall. Revisa sudoers en Linux o ejecucion elevada en Windows.")
-    if "not found" in text or "no se encontro" in text:
-        hints.append("No se encontro un proveedor de firewall compatible en el host.")
+        hints.append("El agente no tiene permisos para modificar el firewall. Revisa sudoers en Linux o ejecución elevada en Windows.")
+    if "not found" in text or "no se encontró" in text:
+        hints.append("No se encontró un proveedor de firewall compatible en el host.")
     if provider == "firewalld-direct":
-        hints.append("Se intento usar firewalld direct. Comprueba que firewalld esta activo y que firewall-cmd funciona con permisos.")
+        hints.append("Se intentó usar firewalld direct. Comprueba que firewalld está activo y que firewall-cmd funciona con permisos.")
     if provider in ["iptables", "ip6tables"]:
-        hints.append("Se intento usar iptables/ip6tables. Comprueba que el backend esta disponible y que el usuario del agente tiene NOPASSWD.")
+        hints.append("Se intentó usar iptables/ip6tables. Comprueba que el backend está disponible y que el usuario del agente tiene NOPASSWD.")
     if provider == "ufw":
-        hints.append("Se intento usar ufw. Comprueba que ufw esta instalado y acepta reglas desde el usuario del agente.")
+        hints.append("Se intentó usar ufw. Comprueba que ufw está instalado y acepta reglas desde el usuario del agente.")
     return hints
 
 
 def firewall_response_payload(action, ip_address, result, provider, changed=None, blocked=None):
     ok = bool(result.get("ok"))
     message = result.get("stdout") or result.get("stderr") or (
-        "Operacion completada" if ok else "No se pudo completar la operacion"
+        "Operación completada" if ok else "No se pudo completar la operación"
     )
     return {
         "ok": ok,
@@ -505,7 +596,7 @@ def block_ip(raw_ip, reason="manual", requester_ip=""):
                 "ok": False,
                 "exitCode": -1,
                 "stdout": "",
-                "stderr": "No se encontro iptables, ip6tables ni ufw"
+                "stderr": "No se encontró iptables, ip6tables ni ufw"
             }
 
     return firewall_response_payload("block", ip_address, result, provider)
@@ -990,14 +1081,23 @@ def collect_logs():
 
     syslog_path = detect_syslog_path()
     journal_output = run_command(["journalctl", "-n", str(MAX_LOG_LINES), "--no-pager"])
-    kernel_errors = run_command(["sh", "-c", "dmesg | grep -i error | tail -n 25"])
     return {
         "syslogPath": syslog_path,
         "syslogTail": read_tail(syslog_path, MAX_LOG_LINES),
         "journalTail": journal_output.splitlines()[-MAX_LOG_LINES:],
-        "kernelErrors": kernel_errors.splitlines() if kernel_errors else [],
+        "kernelErrors": collect_kernel_errors(),
         "customLogs": custom_logs
     }
+
+
+def collect_kernel_errors():
+    binary = shutil.which("dmesg")
+    if not binary:
+        return []
+    result = run_command_result(with_admin([binary]), timeout=8)
+    if not result["ok"]:
+        return []
+    return [line for line in result["stdout"].splitlines() if "error" in line.lower()][-25:]
 
 
 _NET_IO_PREV = {}
@@ -1112,7 +1212,8 @@ def collect_battery():
 def collect_smart_data():
     if IS_WINDOWS:
         return []
-    if not shutil.which("smartctl"):
+    smartctl_binary = shutil.which("smartctl")
+    if not smartctl_binary:
         return []
     try:
         lsblk = run_command(["lsblk", "-dno", "NAME,TYPE"])
@@ -1121,7 +1222,8 @@ def collect_smart_data():
             parts = line.split()
             if len(parts) >= 2 and parts[1] == "disk":
                 dev = f"/dev/{parts[0]}"
-                out = run_command(["smartctl", "-A", "-j", dev])
+                result = run_command_result(with_admin([smartctl_binary, "-A", "-j", dev]), timeout=15)
+                out = result["stdout"] if result["ok"] else ""
                 try:
                     data = json.loads(out)
                     attrs = data.get("ata_smart_attributes", {}).get("table", [])
@@ -1308,6 +1410,8 @@ def collect_payload():
 
     payload = {
         "agent": {
+            "id": AGENT_ID,
+            "version": AGENT_VERSION,
             "hostLabel": HOST_LABEL,
             "systemName": SYSTEM_NAME,
             "distro": DISTRO,
@@ -1376,6 +1480,55 @@ def collect_payload():
         )
     }
     return payload
+
+
+def execute_central_command(command):
+    command_type = str(command.get("type", ""))
+    payload = command.get("payload") or {}
+
+    if command_type == "block-ip":
+        return block_ip(payload.get("ip"), payload.get("reason") or command.get("reason") or "central", "")
+
+    if command_type == "unblock-ip":
+        return unblock_ip(payload.get("ip"))
+
+    if command_type == "collect-telemetry":
+        return {"ok": True, "telemetry": collect_payload(), "message": "Telemetría recogida"}
+
+    if command_type == "collect-logs":
+        return {"ok": True, "logs": collect_logs(), "message": "Logs recogidos"}
+
+    return {"ok": False, "error": f"Comando no soportado por el agente: {command_type}"}
+
+
+def process_central_commands():
+    commands = central_request("GET", f"/agents/{AGENT_ID}/commands/pending") or []
+    if not isinstance(commands, list):
+        return
+
+    for command in commands:
+        command_id = command.get("id")
+        if not command_id:
+            continue
+        try:
+            result = execute_central_command(command)
+        except Exception as exc:
+            result = {"ok": False, "error": str(exc)}
+        central_request("POST", f"/agents/{AGENT_ID}/commands/{command_id}/result", result)
+
+
+def central_agent_loop():
+    if not central_api_root():
+        return
+
+    while True:
+        try:
+            register_with_central()
+            central_request("POST", f"/agents/{AGENT_ID}/telemetry", collect_payload())
+            process_central_commands()
+        except Exception as exc:
+            print(f"[thorondor] aviso: no se pudo sincronizar con API central: {exc}", file=sys.stderr)
+        time.sleep(max(10, POLL_INTERVAL_SECONDS))
 
 
 class ThorondorHandler(BaseHTTPRequestHandler):
@@ -1464,6 +1617,9 @@ class ThorondorHTTPServer(ThreadingHTTPServer):
 
 def main():
     print(f"[thorondor] iniciando agente {SYSTEM_NAME} en {LISTEN_HOST}:{LISTEN_PORT}")
+    if central_api_root():
+        print(f"[thorondor] modo central activo: {central_api_root()}")
+        threading.Thread(target=central_agent_loop, daemon=True).start()
     server = ThorondorHTTPServer((LISTEN_HOST, LISTEN_PORT), ThorondorHandler)
     server.serve_forever()
 
@@ -1485,7 +1641,7 @@ Wants=network-online.target
 Type=simple
 User=${config.installUser || "thorondor"}
 WorkingDirectory=/opt/thorondor-agent
-ExecStart=/usr/bin/python3 /opt/thorondor-agent/thorondor-agent.py
+ExecStart=/opt/thorondor-agent/venv/bin/python /opt/thorondor-agent/thorondor-agent.py
 Restart=always
 RestartSec=10
 TimeoutStopSec=10
@@ -1502,23 +1658,24 @@ export function buildThorondorInstallScript(config) {
   const pythonAgent = buildThorondorPythonAgent(config);
   const autoStart = config.autoStart !== false && config.generateSystemd;
   const serviceFileName = buildServiceFileName(config);
-  const shouldOpenFirewall = normalizeThorondorNetworkScope(config.networkScope) !== "local";
+  const networkScope = normalizeThorondorNetworkScope(config.networkScope);
+  const shouldPrepareFirewall = networkScope !== "local";
   const systemdBlock = autoStart
     ? `
 cat > "/tmp/$SERVICE_FILE" <<'UNIT'
 ${buildThorondorSystemdUnit(config)}
 UNIT
 
-sudo cp "/tmp/$SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE"
-sudo systemctl daemon-reload
-sudo systemctl enable --now "$SERVICE_FILE"
+$SUDO cp "/tmp/$SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE"
+$SUDO systemctl daemon-reload
+$SUDO systemctl enable --now "$SERVICE_FILE"
 `
     : "";
   const completionMessage = autoStart
-    ? `echo "Instalacion completada. Comprueba el servicio con:"
+    ? `echo "Instalación completada. Comprueba el servicio con:"
 echo "sudo systemctl status $SERVICE_FILE"`
-    : `echo "Instalacion completada. Prueba el agente manualmente con:"
-echo "python3 $INSTALL_DIR/thorondor-agent.py"`;
+    : `echo "Instalación completada. Prueba el agente manualmente con:"
+echo "sudo $INSTALL_DIR/venv/bin/python $INSTALL_DIR/thorondor-agent.py"`;
 
   return `#!/usr/bin/env bash
 set -euo pipefail
@@ -1528,47 +1685,77 @@ INSTALL_USER="${config.installUser || "thorondor"}"
 SERVICE_FILE="${serviceFileName}"
 PORT="${Number(config.port) || 8765}"
 TMP_AGENT="$(mktemp)"
+SUDO=""
+
+if [ "$(id -u)" -ne 0 ]; then
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "ERROR: ejecuta este instalador como root o instala sudo." >&2
+    exit 1
+  fi
+  SUDO="sudo"
+fi
+
+echo "=== Thorondor Agent Installer para Linux ==="
+echo "[1/6] Preparando dependencias del sistema..."
+
+if command -v apt >/dev/null 2>&1; then
+  $SUDO apt update
+  $SUDO apt install -y python3 python3-venv python3-pip lm-sensors smartmontools
+elif command -v dnf >/dev/null 2>&1; then
+  $SUDO dnf install -y python3 python3-pip python3-virtualenv lm_sensors smartmontools
+elif command -v pacman >/dev/null 2>&1; then
+  $SUDO pacman -Sy --noconfirm python python-pip python-virtualenv lm_sensors smartmontools
+else
+  echo "Aviso: no se ha detectado apt, dnf ni pacman. Se intentará usar el Python disponible."
+fi
 
 cat > "$TMP_AGENT" <<'PY'
 ${pythonAgent}
 PY
 
+echo "[2/6] Creando usuario y rutas..."
 if ! id "$INSTALL_USER" >/dev/null 2>&1; then
-  sudo useradd --system --create-home --shell /usr/sbin/nologin "$INSTALL_USER"
+  NOLOGIN_SHELL="$(command -v nologin || true)"
+  [ -n "$NOLOGIN_SHELL" ] || NOLOGIN_SHELL="/usr/sbin/nologin"
+  $SUDO useradd --system --create-home --shell "$NOLOGIN_SHELL" "$INSTALL_USER"
 fi
 
-sudo mkdir -p "$INSTALL_DIR"
-sudo cp "$TMP_AGENT" "$INSTALL_DIR/thorondor-agent.py"
+$SUDO mkdir -p "$INSTALL_DIR"
+$SUDO cp "$TMP_AGENT" "$INSTALL_DIR/thorondor-agent.py"
 rm -f "$TMP_AGENT"
-sudo chown -R "$INSTALL_USER:$INSTALL_USER" "$INSTALL_DIR"
-sudo chmod 750 "$INSTALL_DIR/thorondor-agent.py"
 
-sudo usermod -aG adm "$INSTALL_USER" || true
-sudo usermod -aG systemd-journal "$INSTALL_USER" || true
-sudo tee "/etc/sudoers.d/thorondor-agent-firewall" >/dev/null <<SUDOERS
+echo "[3/6] Creando entorno Python aislado..."
+$SUDO python3 -m venv "$INSTALL_DIR/venv"
+$SUDO "$INSTALL_DIR/venv/bin/python" -m pip install --upgrade pip
+$SUDO "$INSTALL_DIR/venv/bin/python" -m pip install psutil
+
+echo "[4/6] Ajustando permisos de lectura y firewall operativo..."
+$SUDO chown -R "$INSTALL_USER:$INSTALL_USER" "$INSTALL_DIR"
+$SUDO chmod 750 "$INSTALL_DIR/thorondor-agent.py"
+
+$SUDO usermod -aG adm "$INSTALL_USER" || true
+$SUDO usermod -aG systemd-journal "$INSTALL_USER" || true
+getent group docker >/dev/null 2>&1 && $SUDO usermod -aG docker "$INSTALL_USER" || true
+$SUDO tee "/etc/sudoers.d/thorondor-agent-firewall" >/dev/null <<SUDOERS
 Cmnd_Alias THORONDOR_FIREWALL = /usr/sbin/iptables, /sbin/iptables, /usr/sbin/ip6tables, /sbin/ip6tables, /usr/sbin/ufw, /usr/bin/ufw, /usr/bin/firewall-cmd, /bin/firewall-cmd
-$INSTALL_USER ALL=(root) NOPASSWD: THORONDOR_FIREWALL
+Cmnd_Alias THORONDOR_DIAGNOSTICS = /usr/sbin/smartctl, /usr/bin/smartctl, /bin/dmesg, /usr/bin/dmesg
+$INSTALL_USER ALL=(root) NOPASSWD: THORONDOR_FIREWALL, THORONDOR_DIAGNOSTICS
 SUDOERS
-sudo chmod 440 "/etc/sudoers.d/thorondor-agent-firewall"
-
-if command -v apt >/dev/null 2>&1; then
-  sudo apt update
-  sudo apt install -y python3 python3-pip lm-sensors
-elif command -v dnf >/dev/null 2>&1; then
-  sudo dnf install -y python3 python3-pip lm_sensors
-elif command -v pacman >/dev/null 2>&1; then
-  sudo pacman -Sy --noconfirm python python-pip lm_sensors
-fi
-
-sudo python3 -m pip install --upgrade pip
-sudo python3 -m pip install psutil
+$SUDO chmod 440 "/etc/sudoers.d/thorondor-agent-firewall"
+$SUDO visudo -cf "/etc/sudoers.d/thorondor-agent-firewall" >/dev/null
 
 ${systemdBlock}
 
-if ${shouldOpenFirewall ? "true" : "false"} && command -v ufw >/dev/null 2>&1; then
-  sudo ufw allow "$PORT/tcp" || true
+if ${shouldPrepareFirewall ? "true" : "false"}; then
+  echo "[5/6] Firewall sin apertura amplia automática."
+  echo "Abre el puerto solo desde el cliente, VPN o red de administración. Ejemplo UFW:"
+  echo "sudo ufw allow from <IP_CLIENTE_O_CIDR> to any port $PORT proto tcp"
+else
+  echo "[5/6] Modo local: firewall sin cambios."
 fi
 
+echo "[6/6] Validación local:"
+echo "curl http://127.0.0.1:$PORT/health"
 ${completionMessage}
 `;
 }
@@ -1588,7 +1775,7 @@ export function buildThorondorWixSource(config) {
     UpgradeCode="${upgradeCode}"
     Scope="perMachine">
 
-    <MajorUpgrade DowngradeErrorMessage="Ya existe una version mas reciente de Thorondor Agent." />
+    <MajorUpgrade DowngradeErrorMessage="Ya existe una versión más reciente de Thorondor Agent." />
     <MediaTemplate EmbedCab="yes" />
 
     <StandardDirectory Id="ProgramFiles64Folder">
@@ -1642,7 +1829,7 @@ foreach ($file in $requiredFiles) {
 
 if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
   if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) {
-    throw "No se encontro wix ni dotnet. Instala .NET SDK y despues ejecuta: dotnet tool install --global wix"
+    throw "No se encontró wix ni dotnet. Instala .NET SDK y después ejecuta: dotnet tool install --global wix"
   }
 
   Write-Host "Instalando WiX Toolset como herramienta dotnet..." -ForegroundColor Yellow
@@ -1655,50 +1842,359 @@ wix build ".\\thorondor-agent.wxs" -o ".\\${msiFileName}"
 
 Write-Host ""
 Write-Host "MSI generado: $root\\${msiFileName}" -ForegroundColor Green
-Write-Host "Ejecutalo como administrador en el host Windows que quieras monitorizar."
+Write-Host "Ejecútalo como administrador en el host Windows que quieras monitorizar."
+`;
+}
+
+export function buildThorondorWindowsMsiBootstrapperScript(config) {
+  const packageName = normalizeWindowsPackageName(config);
+  const msiFileName = "ThorondorAgent.msi";
+  const installScriptB64 = base64Utf8(buildThorondorWindowsInstallScript(config));
+  const wixSourceB64 = base64Utf8(buildThorondorWixSource(config));
+
+  return `#Requires -RunAsAdministrator
+<#
+.SYNOPSIS
+    Crea e instala un MSI real de Thorondor Agent para Windows.
+.DESCRIPTION
+    Es el instalador de usuario final para Windows. Genera los artefactos internos,
+    compila ${msiFileName} con WiX Toolset y lo instala con msiexec. Al terminar deja
+    una copia del MSI en el Escritorio para poder reutilizarlo.
+#>
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$PACKAGE_NAME = "${packageName.replace(/"/g, "`\"")}"
+$MSI_FILE = "${msiFileName}"
+$BUILD_ROOT = Join-Path $env:ProgramData "Thorondor-Agent\\msi-build"
+$INSTALL_SCRIPT = Join-Path $BUILD_ROOT "install-thorondor-agent.ps1"
+$WIX_SOURCE = Join-Path $BUILD_ROOT "thorondor-agent.wxs"
+$MSI_PATH = Join-Path $BUILD_ROOT $MSI_FILE
+
+function Write-Utf8FileFromBase64 {
+    param(
+        [Parameter(Mandatory = $true)][string]$Path,
+        [Parameter(Mandatory = $true)][string]$Base64
+    )
+    [System.IO.File]::WriteAllBytes($Path, [System.Convert]::FromBase64String($Base64))
+}
+
+function Add-DotnetToolsToPath {
+    $toolsPath = Join-Path $env:USERPROFILE ".dotnet\\tools"
+    if ((Test-Path $toolsPath) -and ($env:PATH -notlike "*$toolsPath*")) {
+        $env:PATH = "$env:PATH;$toolsPath"
+    }
+}
+
+function Ensure-Dotnet {
+    if (Get-Command dotnet -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "No se encontró dotnet ni winget. Instala .NET SDK 8 o WiX Toolset y vuelve a ejecutar este instalador."
+    }
+
+    Write-Host "[2/6] Instalando .NET SDK con winget..." -ForegroundColor Yellow
+    winget install --id Microsoft.DotNet.SDK.8 --scope machine --silent --accept-source-agreements --accept-package-agreements
+    $env:PATH = "$env:PATH;C:\\Program Files\\dotnet"
+}
+
+function Ensure-Wix {
+    Add-DotnetToolsToPath
+    if (Get-Command wix -ErrorAction SilentlyContinue) {
+        return
+    }
+
+    Ensure-Dotnet
+    Add-DotnetToolsToPath
+
+    Write-Host "[3/6] Preparando WiX Toolset..." -ForegroundColor Yellow
+    dotnet tool update --global wix
+    if ($LASTEXITCODE -ne 0) {
+        dotnet tool install --global wix
+    }
+    Add-DotnetToolsToPath
+
+    if (-not (Get-Command wix -ErrorAction SilentlyContinue)) {
+        throw "WiX Toolset no quedó disponible en PATH. Cierra y abre PowerShell como administrador y vuelve a ejecutar este archivo."
+    }
+}
+
+function Ensure-Python {
+    foreach ($cmd in @("python", "python3", "py")) {
+        try {
+            $ver = & $cmd --version 2>&1
+            if ($ver -match "Python 3\\.(\\d+)") {
+                Write-Host "Python encontrado: $ver" -ForegroundColor Green
+                return
+            }
+        } catch { }
+    }
+
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "No se encontró Python 3 ni winget. Instala Python 3.11 desde python.org y vuelve a ejecutar este instalador."
+    }
+
+    Write-Host "[4/6] Instalando Python 3.11 con winget..." -ForegroundColor Yellow
+    winget install --id Python.Python.3.11 --scope machine --silent --accept-source-agreements --accept-package-agreements
+    $env:PATH = "$env:PATH;C:\\Program Files\\Python311;C:\\Program Files\\Python311\\Scripts"
+}
+
+Write-Host "=== Thorondor Agent MSI ===" -ForegroundColor Cyan
+Write-Host "Paquete: $PACKAGE_NAME" -ForegroundColor Gray
+
+Write-Host "[1/6] Preparando paquete local..." -ForegroundColor Yellow
+New-Item -ItemType Directory -Force -Path $BUILD_ROOT | Out-Null
+Write-Utf8FileFromBase64 -Path $INSTALL_SCRIPT -Base64 @'
+${installScriptB64}
+'@
+Write-Utf8FileFromBase64 -Path $WIX_SOURCE -Base64 @'
+${wixSourceB64}
+'@
+
+Ensure-Wix
+Ensure-Python
+
+Write-Host "[5/6] Compilando $MSI_FILE..." -ForegroundColor Yellow
+Set-Location $BUILD_ROOT
+wix build $WIX_SOURCE -o $MSI_PATH
+if ($LASTEXITCODE -ne 0 -or -not (Test-Path $MSI_PATH)) {
+    throw "No se pudo generar $MSI_FILE. Revisa la salida de WiX."
+}
+
+$desktop = [Environment]::GetFolderPath("Desktop")
+if ($desktop) {
+    Copy-Item -Force $MSI_PATH (Join-Path $desktop $MSI_FILE)
+}
+
+Write-Host "[6/6] Instalando MSI..." -ForegroundColor Yellow
+Start-Process -FilePath "msiexec.exe" -ArgumentList @("/i", $MSI_PATH, "/passive") -Wait
+
+Write-Host ""
+Write-Host "Instalación completada." -ForegroundColor Green
+Write-Host "MSI generado: $MSI_PATH" -ForegroundColor Green
+if ($desktop) {
+    Write-Host "Copia reutilizable: $(Join-Path $desktop $MSI_FILE)" -ForegroundColor Green
+}
+Write-Host "Valida el agente con: Invoke-RestMethod http://127.0.0.1:${Number(config.port) || 8765}/health"
 `;
 }
 
 export function buildThorondorInstallInstructions(config) {
+  const isWindows = config.targetOs === "windows";
   const baseUrl = normalizeReceiverBaseUrl(config);
-  const installerName = config.targetOs === "windows" ? "install-thorondor-agent.ps1" : "install-thorondor-agent.sh";
-  const windowsMsiNote = config.targetOs === "windows"
-    ? `
-> MSI opcional: para generar un MSI real, descarga tambien \`thorondor-agent.wxs\` y \`build-thorondor-msi.ps1\` en la misma carpeta que \`${installerName}\`. Ejecuta \`build-thorondor-msi.ps1\` en Windows con WiX Toolset disponible. El navegador no renombra el script a MSI: compila un paquete Windows Installer real.
-`
-    : "";
+  const port = Number(config.port) || 8765;
+  const networkScope = normalizeThorondorNetworkScope(config.networkScope);
+  const installerName = isWindows ? "crear-e-instalar-thorondor-agent-msi.ps1" : "install-thorondor-agent.sh";
   const serviceFileName = buildServiceFileName(config);
-  const runCommand = config.targetOs === "windows"
-    ? `powershell -ExecutionPolicy Bypass -File .\\${installerName}`
-    : `chmod +x ./${installerName}\nsudo ./${installerName}`;
-  const serviceCheck = config.targetOs === "windows"
-    ? `Get-ScheduledTask -TaskName ThorondorAgent`
-    : `sudo systemctl status ${serviceFileName}`;
+  const autoStart = config.autoStart !== false;
+  const targetLabel = isWindows ? "Windows" : "Linux";
+  const installFence = isWindows ? "powershell" : "bash";
+  const runCommand = isWindows
+    ? `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+cd <CARPETA_DONDE_DESCARGASTE_EL_INSTALADOR>
+.\\${installerName}`
+    : `chmod +x ./${installerName}
+sudo ./${installerName}`;
+  const preflightCommand = isWindows
+    ? `([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue
+Get-Command winget,dotnet,powershell -ErrorAction SilentlyContinue
+Get-Service EventLog
+Get-WinEvent -LogName Security -MaxEvents 1 -ErrorAction SilentlyContinue`
+    : `hostname -I
+ip route get 1.1.1.1 2>/dev/null || true
+sudo -v
+command -v python3 || true
+command -v sudo || true
+command -v systemctl || true
+command -v journalctl || true
+command -v smartctl || true
+ss -ltnp 2>/dev/null | grep ':${port}' || true`;
+  const artifactCheck = isWindows
+    ? `Get-ChildItem 'C:\\ProgramData\\Thorondor-Agent'
+Test-Path "$env:USERPROFILE\\Desktop\\ThorondorAgent.msi"
+Get-ScheduledTask -TaskName ThorondorAgent -ErrorAction SilentlyContinue`
+    : `sudo ls -la /opt/thorondor-agent
+sudo test -x /opt/thorondor-agent/venv/bin/python && echo 'venv ok'
+id ${config.installUser || "thorondor"}
+sudo -l -U ${config.installUser || "thorondor"} | grep -E 'THORONDOR_(FIREWALL|DIAGNOSTICS)' || true
+sudo find /etc/systemd/system -maxdepth 1 \\( -iname '*thorondor*.service' -o -iname '*-agent.service' \\) -print`;
+  const localValidation = isWindows
+    ? `Invoke-RestMethod http://127.0.0.1:${port}/health
+Invoke-RestMethod http://127.0.0.1:${port}/telemetry | ConvertTo-Json -Depth 4`
+    : `curl -s http://127.0.0.1:${port}/health
+curl -s http://127.0.0.1:${port}/telemetry | python3 -m json.tool | head -60`;
+  const serviceCheck = isWindows
+    ? `Get-ScheduledTask -TaskName ThorondorAgent -ErrorAction SilentlyContinue | Select-Object TaskName,State
+Get-ScheduledTaskInfo -TaskName ThorondorAgent -ErrorAction SilentlyContinue`
+    : `sudo systemctl status ${serviceFileName} --no-pager
+sudo systemctl show ${serviceFileName} -p ActiveState,NRestarts,ExecMainStatus --value
+sudo journalctl -u ${serviceFileName} -n 80 --no-pager`;
+  const remoteValidationCommand = networkScope === "local"
+    ? null
+    : `curl -v --connect-timeout 5 ${baseUrl}/health
+curl -s ${baseUrl}/telemetry`;
+  const networkNote = networkScope === "local"
+    ? "Este host está en modo local: no abras firewall. El agente debe responder solo en 127.0.0.1 desde la misma máquina."
+    : networkScope === "lan"
+      ? "Este host está en modo LAN/VPN: permite el puerto solo desde la máquina que abre Thorondor, la VPN o la subred de administración."
+      : "Este host está en modo remoto: usa origen restringido, DNS/IP correcta y HTTPS o proxy TLS si la consola se sirve por HTTPS.";
+  const installerDoes = isWindows
+    ? `- Genera artefactos internos temporales desde este único archivo.
+- Compila \`ThorondorAgent.msi\`.
+- Copia el MSI al Escritorio para poder reutilizarlo.
+- Instala el agente en \`C:\\ProgramData\\Thorondor-Agent\`.
+- Instala o prepara dependencias Python necesarias.
+- En LAN abre firewall solo para LocalSubnet; en remoto te deja el comando para crear una regla restringida.
+- Crea la tarea \`ThorondorAgent\` solo si activaste autoarranque.`
+    : `- Crea \`/opt/thorondor-agent\`.
+- Genera un entorno Python aislado en \`/opt/thorondor-agent/venv\`.
+- Escribe \`thorondor-agent.py\` con la configuración del formulario.
+- Instala \`psutil\`, sensores y smartmontools cuando el gestor de paquetes lo permite.
+- Prepara grupos de lectura (\`adm\`, \`systemd-journal\`, \`docker\` si existe) y sudoers limitado para firewall, \`smartctl\` y \`dmesg\`.
+- No abre firewall de forma amplia; muestra el comando restrictivo que debes ajustar a tu cliente, VPN o subred.
+- Crea y arranca \`${serviceFileName}\` solo si activaste autoarranque.`;
+  const autoStartNote = autoStart
+    ? `Autoarranque activado: revisa el estado de ${isWindows ? "Task Scheduler" : serviceFileName} después de instalar.`
+    : "Autoarranque desactivado: el instalador deja el agente preparado, pero tendrás que arrancarlo manualmente.";
 
-  return `## Instalacion guiada para ${config.systemName}
+  return `## Instalación guiada para ${config.systemName}
 
-1. Descarga unicamente \`${installerName}\` en el sistema monitorizado.
-${windowsMsiNote}
+### Resumen del despliegue
+- Sistema objetivo: ${targetLabel}
+- Instalador: \`${installerName}\`
+- URL base que usará Thorondor: \`${baseUrl}\`
+- Puerto del agente: \`${port}\`
+- ${autoStartNote}
+- ${networkNote}
 
-2. Ejecuta el instalador con permisos de administrador:
-\`\`\`bash
+### Paso 1 - Preparar el host
+Ejecuta estas comprobaciones en el equipo que vas a monitorizar antes de instalar.
+
+\`\`\`${installFence}
+${preflightCommand}
+\`\`\`
+
+Para qué sirve:
+- Confirma permisos de administrador o sudo.
+- Detecta si el puerto ya está ocupado.
+- Ayuda a elegir la IP correcta en LAN/VPN.
+- Anticipa si faltan herramientas que el instalador intentará preparar.
+- Verifica acceso a Event Log en Windows o permisos sudo/systemd en Linux.
+
+Resultado esperado:
+- El puerto ${port} no aparece en uso.
+- La consola tiene permisos elevados.
+- En Linux hay Python 3 o gestor de paquetes; en Windows hay winget/dotnet o el asistente intentará prepararlo.
+- Si activas SMART, bloqueo de IPs o lectura de kernel, el instalador dejará permisos sudoers limitados para el usuario del agente.
+
+### Paso 2 - Descargar y llevar el instalador al host
+Descarga únicamente \`${installerName}\` desde Thorondor y colócalo en el host monitorizado.
+
+Para qué sirve:
+- Garantiza que instalas la configuración exacta generada para este host.
+- Evita editar el agente a mano o copiar piezas sueltas.
+- Reduce errores entre formulario, URL, puerto, módulos y fuentes de logs.
+
+Resultado esperado:
+- El archivo está en el host que quieres vigilar, por ejemplo en Descargas o en \`/tmp\`.
+
+### Paso 3 - Ejecutar con permisos elevados
+\`\`\`${installFence}
 ${runCommand}
 \`\`\`
 
-3. El instalador crea \`thorondor-agent.py\`, instala dependencias y configura el arranque automatico solo si lo has activado en el formulario.
+Para qué sirve:
+- Escribe el agente Python en la ruta del sistema.
+- Instala dependencias.
+- Aplica módulos y fuentes de logs seleccionados.
+- Prepara persistencia si activaste autoarranque.
 
-4. Si activaste el arranque automatico, revisa el servicio:
-\`\`\`bash
+El instalador hace:
+${installerDoes}
+
+Resultado esperado:
+- La consola termina con instalación completada.
+- El endpoint local \`/health\` responde.
+- Si es Windows, existe una copia reutilizable de \`ThorondorAgent.msi\` en el Escritorio.
+
+### Paso 4 - Comprobar artefactos instalados
+\`\`\`${installFence}
+${artifactCheck}
+\`\`\`
+
+Para qué sirve:
+- Confirma que el instalador no solo se ejecutó, sino que dejó archivos reales en la ruta de instalación.
+- Comprueba el venv de Linux o el MSI reutilizable de Windows.
+- Verifica si existe servicio/tarea cuando el autoarranque está activado.
+- En Linux confirma usuario dedicado, grupos de lectura y sudoers limitado.
+
+Resultado esperado:
+- Aparece \`thorondor-agent.py\`.
+- La ruta de instalación existe.
+- El servicio o tarea aparece si activaste autoarranque.
+
+### Paso 5 - Revisar servicio o tarea programada
+${autoStart ? `\`\`\`${installFence}
 ${serviceCheck}
+\`\`\`` : "Autoarranque está desactivado en este paquete. Omite este paso salvo que arranques el agente manualmente."}
+
+Para qué sirve:
+- Comprueba que el agente queda persistente tras reinicio.
+- Detecta errores de permisos, puerto ocupado o dependencias.
+- Permite ver logs recientes del arranque.
+
+Resultado esperado:
+- Linux: \`ActiveState=active\`, \`NRestarts=0\` y \`ExecMainStatus=0\`.
+- Windows: tarea \`ThorondorAgent\` en estado Ready o Running y \`LastTaskResult=0\` tras ejecutarse.
+
+### Paso 6 - Validar HTTP local
+\`\`\`${installFence}
+${localValidation}
 \`\`\`
 
-5. Valida respuesta HTTP:
-\`\`\`bash
-curl ${baseUrl}/health
-curl ${baseUrl}/telemetry
+Para qué sirve:
+- Aísla problemas del agente antes de mirar firewall, NAT, DNS o CORS.
+- Comprueba que \`/health\` responde y que \`/telemetry\` devuelve JSON útil.
+
+Resultado esperado:
+- \`/health\` devuelve \`status: ok\`.
+- \`/telemetry\` contiene bloques como \`system\`, \`metrics\`, \`security\`, \`logs\` y \`heartbeat\`.
+
+### Paso 7 - Validar desde la URL real
+${remoteValidationCommand ? `\`\`\`bash
+${remoteValidationCommand}
+\`\`\`` : "Modo local: la URL real debe ser el propio localhost del equipo que abre Thorondor."}
+
+Para qué sirve:
+- Comprueba la ruta completa que usará el navegador.
+- En LAN/VPN valida firewall y direccionamiento privado.
+- En remoto valida DNS/IP pública, NAT, proxy, TLS y mixed content.
+
+Resultado esperado:
+- HTTP 200 en \`/health\`.
+- Si hay timeout, revisa red o firewall.
+- Si hay connection refused, revisa puerto o proceso.
+- Si hay error TLS o mixed content, corrige HTTPS/proxy antes de registrar el host.
+
+### Paso 8 - Registrar y operar
+Registra este host en el dashboard con esta URL base:
+
+\`\`\`text
+${baseUrl}
 \`\`\`
 
-6. Registra este host en el dashboard con la misma URL base: \`${baseUrl}\`.
+Para qué sirve:
+- Evita registrar hosts que todavía fallan por instalación o red.
+- Permite que dashboard, logs, reglas, alertas y bloqueo de IP trabajen sobre un endpoint validado.
+
+Resultado esperado:
+- El host aparece online.
+- La última conexión se actualiza.
+- La telemetría y los logs entran sin duplicidades visibles.
 `;
 }
 
@@ -1707,20 +2203,27 @@ export function buildThorondorWindowsInstallScript(config) {
   const installDir = "C:\\ProgramData\\Thorondor-Agent";
   const pythonAgent = buildThorondorPythonAgent(config);
   const autoStart = config.autoStart !== false;
-  const shouldOpenFirewall = normalizeThorondorNetworkScope(config.networkScope) !== "local";
+  const networkScope = normalizeThorondorNetworkScope(config.networkScope);
+  const shouldPrepareFirewall = networkScope !== "local";
   const verifyCommand = `Invoke-RestMethod http://127.0.0.1:$PORT/health | ConvertTo-Json -Depth 3`;
-  const firewallBlock = shouldOpenFirewall
-    ? `# 4. Regla de firewall
-Write-Host "[4/6] Abriendo puerto $PORT en Windows Firewall..." -ForegroundColor Yellow
-New-NetFirewallRule -DisplayName "Thorondor Agent HTTP" -Direction Inbound -Protocol TCP -LocalPort $PORT -Action Allow -Profile Any -ErrorAction SilentlyContinue | Out-Null
-Write-Host "    Regla de firewall creada." -ForegroundColor Green`
+  const firewallBlock = shouldPrepareFirewall
+    ? networkScope === "lan"
+      ? `# 4. Regla de firewall LAN
+Write-Host "[4/6] Abriendo puerto $PORT solo para LocalSubnet en Windows Firewall..." -ForegroundColor Yellow
+New-NetFirewallRule -DisplayName "Thorondor Agent HTTP" -Direction Inbound -Protocol TCP -LocalPort $PORT -Action Allow -Profile Private -RemoteAddress LocalSubnet -ErrorAction SilentlyContinue | Out-Null
+Write-Host "    Regla LAN creada. Si usas VPN o una IP concreta, ajusta RemoteAddress manualmente." -ForegroundColor Green`
+      : `# 4. Firewall remoto
+Write-Host "[4/6] Modo remoto: no se abre firewall de forma amplia." -ForegroundColor Yellow
+Write-Host "    Crea una regla restringida a tu IP, VPN o bastión:" -ForegroundColor Yellow
+Write-Host "    New-NetFirewallRule -DisplayName 'Thorondor Agent HTTP' -Direction Inbound -Protocol TCP -LocalPort $PORT -Action Allow -Profile Any -RemoteAddress <IP_CLIENTE_O_CIDR>" -ForegroundColor Yellow`
     : `# 4. Firewall local
-Write-Host "[4/6] Monitorizacion local: no se abre firewall." -ForegroundColor Yellow`;
+Write-Host "[4/6] Monitorización local: no se abre firewall." -ForegroundColor Yellow`;
   const taskBlock = autoStart
     ? `
 # 5. Crear tarea programada
 Write-Host "[5/6] Registrando tarea programada '$TASK_NAME'..." -ForegroundColor Yellow
-$action   = New-ScheduledTaskAction -Execute $python -Argument "$INSTALL_DIR\\$AGENT_FILE"
+$runnerPath = Join-Path $INSTALL_DIR $RUNNER_FILE
+$action   = New-ScheduledTaskAction -Execute "powershell.exe" -Argument "-NoProfile -ExecutionPolicy Bypass -File \`"$runnerPath\`""
 $trigger  = New-ScheduledTaskTrigger -AtStartup
 $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Seconds 0)
 $principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
@@ -1737,11 +2240,11 @@ Write-Host "    Estado de la tarea: $state" -ForegroundColor $(if ($state -eq "R
 `
     : `
 # 5. Arranque manual
-Write-Host "[5/6] Autoarranque desactivado por configuracion." -ForegroundColor Yellow
-Write-Host "    Para iniciar manualmente: & $python '$INSTALL_DIR\\$AGENT_FILE'" -ForegroundColor Yellow
+Write-Host "[5/6] Autoarranque desactivado por configuración." -ForegroundColor Yellow
+Write-Host "    Para iniciar manualmente: powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$INSTALL_DIR\\$RUNNER_FILE'" -ForegroundColor Yellow
 
-# 6. No se inicia el agente automaticamente
-Write-Host "[6/6] Instalacion preparada sin iniciar tarea programada." -ForegroundColor Yellow
+# 6. No se inicia el agente automáticamente
+Write-Host "[6/6] Instalación preparada sin iniciar tarea programada." -ForegroundColor Yellow
 `;
 
   return `#Requires -RunAsAdministrator
@@ -1749,7 +2252,7 @@ Write-Host "[6/6] Instalacion preparada sin iniciar tarea programada." -Foregrou
 .SYNOPSIS
     Instala el agente Thorondor en Windows como tarea programada.
 .DESCRIPTION
-    Crea el directorio de instalacion, instala dependencias Python
+    Crea el directorio de instalación, instala dependencias Python
     y registra el agente como tarea programada de inicio de sistema.
     Requiere PowerShell 5.1+ y permisos de Administrador.
 #>
@@ -1759,12 +2262,18 @@ $ErrorActionPreference = "Stop"
 
 $INSTALL_DIR  = "${installDir}"
 $AGENT_FILE   = "thorondor-agent.py"
+$RUNNER_FILE  = "run-thorondor-agent.ps1"
 $TASK_NAME    = "ThorondorAgent"
 $PORT         = ${port}
 
+function ConvertTo-SingleQuotedPowerShellString {
+    param([Parameter(Mandatory = $true)][string]$Value)
+    return "'" + $Value.Replace("'", "''") + "'"
+}
+
 Write-Host "=== Thorondor Agent Installer ===" -ForegroundColor Cyan
 
-# 1. Crear directorio de instalacion
+# 1. Crear directorio de instalación
 Write-Host "[1/6] Creando directorio $INSTALL_DIR..." -ForegroundColor Yellow
 New-Item -ItemType Directory -Force -Path $INSTALL_DIR | Out-Null
 $agentSource = @'
@@ -1775,38 +2284,88 @@ Set-Content -Path "$INSTALL_DIR\\$AGENT_FILE" -Value $agentSource -Encoding UTF8
 # 2. Verificar Python
 Write-Host "[2/6] Verificando Python..." -ForegroundColor Yellow
 $python = $null
-foreach ($cmd in @("python", "python3", "py")) {
+$pythonArgs = @()
+foreach ($cmd in @("python", "python3")) {
     try {
         $ver = & $cmd --version 2>&1
         if ($ver -match "Python 3\\.(\\d+)") {
-            $python = $cmd
+            $python = (Get-Command $cmd -ErrorAction Stop).Source
             Write-Host "    Python encontrado: $ver" -ForegroundColor Green
             break
         }
     } catch { }
 }
 if (-not $python) {
+    try {
+        $ver = & py -3 --version 2>&1
+        if ($ver -match "Python 3\\.(\\d+)") {
+            $python = (Get-Command py -ErrorAction Stop).Source
+            $pythonArgs = @("-3")
+            Write-Host "    Python encontrado mediante py launcher: $ver" -ForegroundColor Green
+        }
+    } catch { }
+}
+if (-not $python) {
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "No se encontró Python 3 ni winget. Instala Python 3.11 desde python.org y vuelve a ejecutar el instalador."
+    }
     Write-Host "    Python no encontrado. Instalando via winget..." -ForegroundColor Yellow
-    winget install --id Python.Python.3.11 --silent --accept-source-agreements --accept-package-agreements
-    $python = "python"
+    winget install --id Python.Python.3.11 --scope machine --silent --accept-source-agreements --accept-package-agreements
+    $env:PATH = "$env:PATH;C:\\Program Files\\Python311;C:\\Program Files\\Python311\\Scripts"
+    foreach ($cmd in @("python", "python3")) {
+        try {
+            $ver = & $cmd --version 2>&1
+            if ($ver -match "Python 3\\.(\\d+)") {
+                $python = (Get-Command $cmd -ErrorAction Stop).Source
+                Write-Host "    Python disponible tras instalar: $ver" -ForegroundColor Green
+                break
+            }
+        } catch { }
+    }
+    if (-not $python) {
+        try {
+            $ver = & py -3 --version 2>&1
+            if ($ver -match "Python 3\\.(\\d+)") {
+                $python = (Get-Command py -ErrorAction Stop).Source
+                $pythonArgs = @("-3")
+                Write-Host "    Python disponible mediante py launcher tras instalar: $ver" -ForegroundColor Green
+            }
+        } catch { }
+    }
+    if (-not $python) {
+        throw "Python se ha instalado, pero todavía no está disponible en PATH. Cierra PowerShell, abre otra consola como administrador y ejecuta de nuevo el instalador."
+    }
 }
 
 # 3. Instalar psutil
 Write-Host "[3/6] Instalando dependencias Python..." -ForegroundColor Yellow
-& $python -m pip install --upgrade pip --quiet
-& $python -m pip install psutil --quiet
+& $python @pythonArgs -m pip install --upgrade pip --quiet
+& $python @pythonArgs -m pip install psutil --quiet
 Write-Host "    psutil instalado correctamente." -ForegroundColor Green
+
+$runnerArguments = @()
+$runnerArguments += $pythonArgs
+$runnerArguments += (Join-Path $INSTALL_DIR $AGENT_FILE)
+$runnerSource = @(
+    'Set-StrictMode -Version Latest',
+    '$ErrorActionPreference = "Stop"',
+    '$python = ' + (ConvertTo-SingleQuotedPowerShellString $python),
+    '$arguments = @(' + (($runnerArguments | ForEach-Object { ConvertTo-SingleQuotedPowerShellString $_ }) -join ', ') + ')',
+    '& $python @arguments'
+) -join [Environment]::NewLine
+Set-Content -Path (Join-Path $INSTALL_DIR $RUNNER_FILE) -Value $runnerSource -Encoding UTF8
 
 ${firewallBlock}
 
 ${taskBlock}
 
 Write-Host ""
-Write-Host "=== Instalacion completada ===" -ForegroundColor Green
+Write-Host "=== Instalación completada ===" -ForegroundColor Green
 Write-Host "Verifica el agente con:"
 Write-Host "  ${verifyCommand}"
 Write-Host ""
-Write-Host "Logs del proceso:"
-Write-Host "  Get-EventLog -LogName Application -Source 'ThorondorAgent' -Newest 20"
+Write-Host "Diagnóstico de arranque:"
+Write-Host "  Get-ScheduledTaskInfo -TaskName ThorondorAgent"
+Write-Host "  Get-WinEvent -LogName Microsoft-Windows-TaskScheduler/Operational -MaxEvents 20"
 `;
 }

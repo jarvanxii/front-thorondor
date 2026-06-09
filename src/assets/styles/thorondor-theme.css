@@ -796,19 +796,84 @@
   }
 }
 
+@media (max-width: 900px) {
+  .thorondor-page {
+    width: 100%;
+    padding: 20px 18px 52px;
+  }
+
+  .thorondor-page .section-box {
+    padding: 20px;
+    margin-bottom: 18px;
+    border-color: rgba(190, 198, 209, 0.16);
+    box-shadow:
+      inset 0 1px 0 rgba(255, 255, 255, 0.026),
+      0 14px 30px rgba(0, 0, 0, 0.2);
+  }
+
+  .thorondor-page .intro-box {
+    gap: 18px;
+    padding-bottom: 22px;
+  }
+
+  .thorondor-page .section-topline,
+  .thorondor-page .intro-layout {
+    gap: 16px;
+  }
+
+  .thorondor-page .section-name,
+  .thorondor-page .module-title {
+    font-size: clamp(1.36rem, 3.8vw, 1.78rem);
+  }
+
+  .thorondor-page .section-copy,
+  .thorondor-page .module-copy,
+  .thorondor-page .intro-point span,
+  .thorondor-page .guide-card span,
+  .thorondor-page .metric-card small,
+  .thorondor-page .signal-card small {
+    line-height: 1.58;
+  }
+
+  .thorondor-page .phase-badge-block {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px 10px;
+  }
+
+  .thorondor-page .phase-badge-block small {
+    max-width: 48ch;
+  }
+
+  .thorondor-page .table-wrap {
+    border: 1px solid rgba(176, 184, 194, 0.12);
+    background: rgba(8, 12, 17, 0.42);
+  }
+
+  .thorondor-page .table {
+    min-width: 720px;
+    font-size: 0.82rem;
+  }
+}
+
 @media (max-width: 767px) {
   .thorondor-page {
     width: 100%;
     max-width: 100%;
-    padding-left: 14px;
-    padding-right: 14px;
-    padding-top: var(--thorondor-content-gap-mobile);
+    padding-left: 12px;
+    padding-right: 12px;
+    padding-top: 14px;
     padding-bottom: 42px;
   }
 
   .thorondor-page .section-box {
-    padding: 16px;
-    margin-bottom: 18px;
+    padding: 14px;
+    margin-bottom: 14px;
+    border-radius: 3px;
+    background:
+      linear-gradient(180deg, rgba(24, 29, 37, 0.98), rgba(12, 16, 22, 0.99)),
+      var(--thorondor-surface);
   }
 
   .thorondor-page .guide-grid,
@@ -834,6 +899,60 @@
   .thorondor-page .card-head {
     flex-direction: column;
     align-items: flex-start;
+    gap: 8px;
+  }
+
+  .thorondor-page .guide-card,
+  .thorondor-page .metric-card,
+  .thorondor-page .signal-card,
+  .thorondor-page .tool-card {
+    padding: 13px;
+    border-radius: 3px;
+  }
+
+  .thorondor-page .section-kicker,
+  .thorondor-page .guide-card label,
+  .thorondor-page .metric-card label,
+  .thorondor-page .signal-card label,
+  .thorondor-page .field-label {
+    font-size: 0.68rem;
+    letter-spacing: 0.07em;
+  }
+
+  .thorondor-page .section-name,
+  .thorondor-page .module-title {
+    font-size: clamp(1.24rem, 6vw, 1.58rem);
+  }
+
+  .thorondor-page .mini-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .thorondor-page .mini-stat {
+    min-width: 0;
+    padding: 10px;
+  }
+
+  .thorondor-page .endpoint-mini-stat {
+    grid-column: 1 / -1;
+  }
+
+  .thorondor-page .output-box {
+    padding: 10px;
+    background: #0b0f14;
+  }
+
+  .thorondor-page .result-pre {
+    font-size: 0.76rem;
+    line-height: 1.55;
+  }
+
+  .thorondor-page .state-chip,
+  .thorondor-page .mini-badge {
+    padding: 4px 8px;
+    font-size: 0.66rem;
   }
 
   .thorondor-page .inline-actions .btn,
@@ -869,5 +988,13 @@
 
   .thorondor-page .section-kicker {
     letter-spacing: 0.08em;
+  }
+
+  .thorondor-page .mini-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .thorondor-page .table {
+    min-width: 640px;
   }
 }

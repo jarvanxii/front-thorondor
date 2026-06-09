@@ -71,7 +71,7 @@ export default {
 
     description() {
       if (this.hasProviderError) {
-        return 'Cuando conectemos la API, esta pantalla mostrara el detalle del error y permitira reintentar con el proveedor correcto.'
+        return 'Cuando conectemos la API, está pantalla mostrará el detalle del error y permitirá reintentar con el proveedor correcto.'
       }
 
       if (this.hasAuthCode) {

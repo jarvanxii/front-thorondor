@@ -28,7 +28,7 @@ Thorondor ya incluye pantalla de login, acceso local temporal y botones de acces
 Configura la API en `.env` a partir de `.env.example`:
 
 ```sh
-VITE_THORONDOR_API_BASE_URL=http://localhost:3000
+VITE_THORONDOR_API_BASE_URL=http://localhost:18080
 VITE_THORONDOR_AUTH_CALLBACK_PATH=/#/auth/callback
 ```
 

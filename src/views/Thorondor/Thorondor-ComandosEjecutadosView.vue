@@ -37,7 +37,7 @@
               <option value="all">Todos</option>
               <option value="sudo_command">Sudo</option>
               <option value="command_execution">Proceso Windows</option>
-              <option value="response_action">Accion Thorondor</option>
+              <option value="response_action">Acción Thorondor</option>
             </select>
           </label>
           <label class="control-field" for="command-user">
@@ -236,7 +236,7 @@ export default {
           label: 'Procesos Windows',
           value: String(windows),
           tone: windows ? 'tone-blue' : 'tone-success',
-          note: 'Evento 4688 si esta habilitado',
+          note: 'Evento 4688 si está habilitado',
         },
         {
           label: 'Acciones Thorondor',

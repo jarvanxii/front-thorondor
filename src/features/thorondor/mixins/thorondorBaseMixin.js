@@ -225,7 +225,7 @@ export default {
       return (
         THORONDOR_MODULE_KEYS.filter((item) => modules?.[item.key])
           .map((item) => item.label)
-          .join(', ') || 'Sin modulos'
+          .join(', ') || 'Sin módulos'
       )
     },
 
@@ -254,7 +254,7 @@ export default {
         failed_login: 'Login fallido',
         successful_login: 'Login exitoso',
         sudo_command: 'Comando sudo',
-        critical_file_change: 'Cambio en archivo critico',
+        critical_file_change: 'Cambio en archivo crítico',
         new_user: 'Nuevo usuario o grupo',
       }
       return map[kind] || kind || 'Evento'

@@ -109,8 +109,8 @@
           </select>
         </div>
         <div class="control-field">
-          <label class="field-label" for="retention">Retencion local</label>
-          <input id="retention" :value="`${retentionDays} dias`" class="form-control input-dark" type="text" disabled />
+          <label class="field-label" for="retention">Retención local</label>
+          <input id="retention" :value="`${retentionDays} días`" class="form-control input-dark" type="text" disabled />
         </div>
       </div>
     </section>
@@ -121,19 +121,19 @@
           <span class="section-kicker">Notificaciones</span>
           <h2 class="module-title">Alertas por email</h2>
           <p class="module-copy">
-            Preparado para activar envios cuando conectemos el proveedor de correo. La experiencia ya queda ordenada por
-            severidad y tipo de evento.
+            Esta parte queda preparada para más adelante. Durante las pruebas local/LAN no envía correos ni cambia el
+            comportamiento del SIEM.
           </p>
         </div>
         <div class="phase-badge-block">
-          <span class="phase-badge">Mail</span>
-          <small>{{ enabledMailRules }} reglas activadas</small>
+          <span class="phase-badge">Pendiente</span>
+          <small>SMTP se integrará en una fase posterior.</small>
         </div>
       </div>
 
       <div class="mail-grid">
-        <label v-for="rule in mailRules" :key="rule.id" class="mail-rule">
-          <input v-model="rule.enabled" type="checkbox" />
+        <label v-for="rule in mailRules" :key="rule.id" class="mail-rule mail-rule--disabled">
+          <input v-model="rule.enabled" type="checkbox" disabled />
           <span>
             <strong>{{ rule.label }}</strong>
             <small>{{ rule.copy }}</small>
@@ -163,7 +163,7 @@
           <strong>{{ persistenceLabel }}</strong>
           <small>{{ persistenceCopy }}</small>
           <small v-if="persistenceStatus.lastError" class="settings-warning">
-            Ultimo intento cloud: {{ persistenceStatus.lastError }}
+            Ultimo intentó cloud: {{ persistenceStatus.lastError }}
           </small>
         </div>
       </article>
@@ -184,8 +184,8 @@
             <span>{{ activeAlerts.length }}</span>
           </div>
           <div class="mini-stat">
-            <label>Retencion</label>
-            <span>{{ retentionDays }} dias</span>
+            <label>Retención</label>
+            <span>{{ retentionDays }} días</span>
           </div>
           <div class="mini-stat">
             <label>Datos</label>
@@ -224,8 +224,8 @@ export default {
       },
       settingsSections: [
         { id: "cuenta-seguridad", label: "Cuenta y seguridad", copy: "Perfil, rol y acceso" },
-        { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retencion" },
-        { id: "alertas-email", label: "Alertas por email", copy: "Avisos y resumenes" },
+        { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retención" },
+        { id: "alertas-email", label: "Alertas por email", copy: "Pendiente SMTP" },
         { id: "persistencia-datos", label: "Persistencia", copy: "Datos y uso" }
       ],
       securityOptions: [
@@ -244,21 +244,21 @@ export default {
         {
           id: "two-factor",
           label: "Doble factor",
-          copy: "Preparado para activarlo cuando exista autenticacion remota.",
+          copy: "Preparado para activarlo cuando exista autenticación remota.",
           enabled: false
         }
       ],
       mailRules: [
         {
           id: "critical-alerts",
-          label: "Alertas criticas",
-          copy: "CPU, memoria, disco, heartbeat caido y reglas marcadas como criticas.",
+          label: "Alertas críticas",
+          copy: "CPU, memoria, disco, heartbeat caido y reglas marcadas como críticas.",
           enabled: true
         },
         {
           id: "auth-failures",
           label: "Intentos fallidos",
-          copy: "Picos de autenticacion fallida y origenes repetidos por sistema.",
+          copy: "Picos de autenticación fallida y orígenes repetidos por sistema.",
           enabled: true
         },
         {
@@ -282,10 +282,6 @@ export default {
       return this.thorondorState.retentionDays || 30;
     },
 
-    enabledMailRules() {
-      return this.mailRules.filter((rule) => rule.enabled).length;
-    },
-
     persistenceStatus() {
       return this.thorondorState.persistence || {};
     },
@@ -304,16 +300,16 @@ export default {
 
     storageModeCopy() {
       return this.isCloudPersistence
-        ? "Workspace sincronizado con base de datos para consultar historico desde cualquier sesion."
+        ? "Workspace sincronizado con base de datos para consultar histórico desde cualquier sesión."
         : "Workspace local, ideal para laboratorio y primeros despliegues.";
     },
 
     persistenceLabel() {
       if (this.persistenceStatus.syncStatus === "cloud-degraded") {
-        return "Cloud en espera, cache local activa";
+        return "Cloud en espera, caché local activa";
       }
 
-      return this.isCloudPersistence ? "Base de datos cloud + cache local" : "IndexedDB local";
+      return this.isCloudPersistence ? "Base de datos cloud + caché local" : "IndexedDB local";
     },
 
     persistenceShortLabel() {
@@ -322,7 +318,7 @@ export default {
 
     persistenceCopy() {
       if (this.isCloudPersistence) {
-        return `Workspace ${this.persistenceStatus.workspaceId || "default"} sincronizado con la API. IndexedDB queda como cache del navegador.`;
+        return `Workspace ${this.persistenceStatus.workspaceId || "default"} sincronizado con la API. IndexedDB queda como caché del navegador.`;
       }
 
       return "El modo local conserva agentes, logs, alertas y reglas en IndexedDB de este navegador.";
@@ -451,6 +447,14 @@ export default {
   border: 1px solid rgba(176, 184, 194, 0.15);
   border-radius: 4px;
   background: rgba(16, 20, 26, 0.52);
+}
+
+.mail-rule--disabled {
+  opacity: 0.72;
+}
+
+.mail-rule--disabled input {
+  cursor: not-allowed;
 }
 
 .security-row input,

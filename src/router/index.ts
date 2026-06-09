@@ -38,6 +38,11 @@ const routes = [
     component: () => import('../views/Thorondor/Thorondor-DashboardView.vue'),
   },
   {
+    path: '/thorondor/eventos',
+    name: 'thorondor-events',
+    component: () => import('../views/Thorondor/Thorondor-EventosView.vue'),
+  },
+  {
     path: '/thorondor/detalle-de-hosts',
     name: 'thorondor-host-detail',
     component: () => import('../views/Thorondor/Thorondor-DetalleHostsView.vue'),

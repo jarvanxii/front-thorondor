@@ -69,28 +69,28 @@ async function readResponsePayload(response) {
 function buildRequestHints({ status, endpoint, payload, isNetworkError }) {
   if (status === 401) {
     return [
-      "El agente o el proxy ha rechazado la peticion por autenticacion.",
-      "Revisa la configuracion del endpoint, del proxy frontal o del agente instalado."
+      "El agente o el proxy ha rechazado la petición por autenticación.",
+      "Revisa la configuración del endpoint, del proxy frontal o del agente instalado."
     ];
   }
 
   if (status === 404) {
     return [
       "La URL apunta a un servicio que no expone los endpoints de Thorondor.",
-      "Comprueba que el host registrado usa la URL base del agente y que el agente instalado esta actualizado."
+      "Comprueba que el host registrado usa la URL base del agente y que el agente instalado está actualizado."
     ];
   }
 
   if (status === 400) {
     return [
-      normalizeResponseMessage(payload) || "El agente rechazo la peticion por validacion.",
+      normalizeResponseMessage(payload) || "El agente rechazó la petición por validación.",
       "Revisa IP, payload y reglas de seguridad del agente."
     ].filter(Boolean);
   }
 
   if (status >= 500) {
     return [
-      "El agente ha fallado ejecutando la operacion.",
+      "El agente ha fallado ejecutando la operación.",
       "Revisa permisos de firewall, sudoers, Task Scheduler/systemd y logs del agente en el host."
     ];
   }
@@ -104,7 +104,7 @@ function buildRequestHints({ status, endpoint, payload, isNetworkError }) {
     return [
       "El navegador no pudo conectar con el agente: servicio parado, IP/puerto incorrectos, firewall, DNS o CORS.",
       isHttpsAppToHttpAgent
-        ? "La app esta en HTTPS y el agente esta en HTTP; el navegador puede bloquear la peticion por mixed content. Usa HTTPS o un tunel/proxy seguro."
+        ? "La app está en HTTPS y el agente está en HTTP; el navegador puede bloquear la petición por mixed content. Usa HTTPS o un túnel/proxy seguro."
         : "",
       "Comprueba /health desde la misma maquina que abre Thorondor."
     ].filter(Boolean);
@@ -141,7 +141,7 @@ function buildNetworkError(errorLabel, error, context, timeoutMs) {
         detail: "Tiempo de espera agotado",
         hints: [
           "El agente no respondio dentro del timeout configurado.",
-          "Comprueba que el proceso esta vivo, que el puerto escucha y que la red permite la conexion."
+          "Comprueba que el proceso está vivo, que el puerto escucha y que la red permite la conexión."
         ]
       }
     );
