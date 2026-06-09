@@ -270,7 +270,7 @@
                         <thead>
                             <tr>
                                 <th>Interfaz</th>
-                                <th>TX (envia)</th>
+                                <th>TX (envía)</th>
                                 <th>RX (recibe)</th>
                             </tr>
                         </thead>

@@ -225,7 +225,7 @@ export function saveThorondorJwtToken(payload) {
     window.localStorage.removeItem(THORONDOR_LEGACY_JWT_STORAGE_KEY)
     window.sessionStorage.setItem(THORONDOR_JWT_STORAGE_KEY, JSON.stringify(token))
   } catch {
-    // El JWT tambien vive en memoria de Vuex; sessionStorage solo evita pedirlo en cada render.
+    // El JWT también vive en memoria de Vuex; sessionStorage solo evita pedirlo en cada render.
   }
   return token
 }
@@ -327,6 +327,31 @@ export async function confirmThorondorEmailSignup(payload) {
   return session
 }
 
+export async function requestThorondorPasswordRecovery(payload) {
+  return requestThorondorAuth('/auth/local/recovery/start', {
+    method: 'POST',
+    skipAuthHeader: true,
+    body: JSON.stringify({
+      email: payload?.email || '',
+    }),
+  })
+}
+
+export async function confirmThorondorPasswordRecovery(payload) {
+  const session = await requestThorondorAuth('/auth/local/recovery/confirm', {
+    method: 'POST',
+    skipAuthHeader: true,
+    body: JSON.stringify({
+      resetId: payload?.resetId || payload?.reset_id || '',
+      email: payload?.email || '',
+      token: payload?.token || '',
+      password: payload?.password || '',
+    }),
+  })
+  saveThorondorSession(session)
+  return session
+}
+
 export async function logoutThorondorSession() {
   const { apiBaseUrl } = getThorondorAuthConfig()
   if (!apiBaseUrl) {
@@ -396,13 +421,13 @@ async function requestThorondorAuth(path, options = {}) {
     const body = isJson ? await response.json() : null
 
     if (!response.ok) {
-      throw new Error(body?.message || `Peticion auth fallida (${response.status})`)
+      throw new Error(body?.message || `Petición auth fallida (${response.status})`)
     }
 
     return body
   } catch (error) {
     if (error?.name === 'AbortError') {
-      throw new Error('La API de autenticacion no respondio en 15s')
+      throw new Error('La API de autenticación no respondió en 15s')
     }
     throw error
   } finally {

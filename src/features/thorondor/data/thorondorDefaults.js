@@ -151,7 +151,7 @@ export const THORONDOR_NETWORK_SCOPE_OPTIONS = [
     value: "lan",
     label: "LAN / VPN",
     shortLabel: "LAN",
-    copy: "El agente puede escuchar en IP privada o VPN, pero telemetria y comandos viajan por la API central autenticada."
+    copy: "El agente puede escuchar en IP privada o VPN, pero telemetría y comandos viajan por la API central autenticada."
   },
   {
     value: "public",

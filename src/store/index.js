@@ -469,7 +469,7 @@ function configureThorondorCloudAccess(session, token) {
   const authorized = isThorondorUserAuthorizedForCloudPersistence(session?.user)
 
   if (!authenticated) {
-    disableThorondorCloudPersistence('Inicia sesion para usar BBDD por API.')
+    disableThorondorCloudPersistence('Inicia sesión para usar BBDD por API.')
     return
   }
 
@@ -954,7 +954,7 @@ export default createStore({
         session = (await requestThorondorLogout()) || anonymousSession
       } catch (error) {
         saveThorondorSession(anonymousSession)
-        commit('pushThorondorError', `No se pudo cerrar la sesion remota: ${error.message}`)
+        commit('pushThorondorError', `No se pudo cerrar la sesión remota: ${error.message}`)
       }
 
       clearThorondorJwtToken()
@@ -1159,7 +1159,7 @@ export default createStore({
       requireThorondorApiToken(state)
 
       if (!isThorondorCentralConfigured()) {
-        throw new Error('API central requerida para consultar bloqueos con validacion JWT.')
+        throw new Error('API central requerida para consultar bloqueos con validación JWT.')
       }
 
       if (isThorondorCentralConfigured()) {
@@ -1195,7 +1195,7 @@ export default createStore({
       requireThorondorApiToken(state)
 
       if (!isThorondorCentralConfigured()) {
-        throw new Error('API central requerida para bloquear IPs con validacion JWT.')
+        throw new Error('API central requerida para bloquear IPs con validación JWT.')
       }
 
       if (isThorondorCentralConfigured()) {
@@ -1284,7 +1284,7 @@ export default createStore({
       requireThorondorApiToken(state)
 
       if (!isThorondorCentralConfigured()) {
-        throw new Error('API central requerida para desbloquear IPs con validacion JWT.')
+        throw new Error('API central requerida para desbloquear IPs con validación JWT.')
       }
 
       if (isThorondorCentralConfigured()) {

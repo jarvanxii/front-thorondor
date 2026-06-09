@@ -41,7 +41,7 @@ export default {
       class="sidebar-backdrop"
       :class="{ 'is-visible': sidebarOpen }"
       type="button"
-      aria-label="Cerrar navegacion"
+      aria-label="Cerrar navegación"
       @click="sidebarOpen = false"
     ></button>
 

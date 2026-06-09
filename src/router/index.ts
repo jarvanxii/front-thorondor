@@ -117,7 +117,7 @@ router.beforeEach(async (to) => {
       return true
     }
   } catch {
-    // Si la API no puede validar la sesion, no se monta ninguna vista privada.
+    // Si la API no puede validar la sesión, no se monta ninguna vista privada.
   }
 
   return {

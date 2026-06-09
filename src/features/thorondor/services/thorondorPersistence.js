@@ -32,7 +32,7 @@ export const THORONDOR_CLOUD_SYNC_META_KEY = 'cloudSyncState'
 
 let cloudPersistenceAccess = {
   allowed: false,
-  reason: 'Sesion no verificada para persistencia cloud.',
+  reason: 'Sesión no verificada para persistencia cloud.',
 }
 
 function getEnvValue(key) {

@@ -97,7 +97,7 @@
                   <div class="modal-panel-heading">
                     <span>Perfil local</span>
                     <strong>Identidad del operador</strong>
-                    <small>Estos datos complementan la sesion OAuth/JWT activa y solo ajustan la vista local.</small>
+                    <small>Estos datos complementan la sesión OAuth/JWT activa y solo ajustan la vista local.</small>
                   </div>
                   <div class="settings-form-grid">
                     <label class="settings-field">
@@ -369,7 +369,7 @@ export default {
         {
           key: 'lockInactiveSession',
           label: 'Bloquear sesiones inactivas',
-          copy: 'Cerrar la vista local tras inactividad aunque la sesion OAuth siga activa.',
+          copy: 'Cerrar la vista local tras inactividad aunque la sesión OAuth siga activa.',
         },
         {
           key: 'twoFactorPrepared',

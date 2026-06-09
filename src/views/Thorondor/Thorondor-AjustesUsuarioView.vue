@@ -121,12 +121,12 @@
           <span class="section-kicker">Notificaciones</span>
           <h2 class="module-title">Alertas por email</h2>
           <p class="module-copy">
-            Configuración SMTP pendiente. Sin envío de correo en esta fase.
+            SMTP operativo para autenticación. Las notificaciones de alertas quedan pendientes de configuración.
           </p>
         </div>
         <div class="phase-badge-block">
-          <span class="phase-badge">Pendiente</span>
-          <small>SMTP pendiente de integración.</small>
+          <span class="phase-badge">Auth activo</span>
+          <small>Registro y recuperación por email disponibles.</small>
         </div>
       </div>
 
@@ -389,8 +389,8 @@ export default {
     settingsSections() {
       const sections = [
         { id: "cuenta-seguridad", label: "Cuenta y seguridad", copy: "Perfil, rol y acceso" },
-        { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retencion" },
-        { id: "alertas-email", label: "Alertas por email", copy: "Pendiente SMTP" },
+        { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retención" },
+        { id: "alertas-email", label: "Alertas por email", copy: "SMTP de acceso activo" },
         { id: "persistencia-datos", label: "Persistencia", copy: "Datos y uso" }
       ];
 
@@ -449,7 +449,7 @@ export default {
 
     persistenceCopy() {
       if (this.persistenceStatus.syncStatus === "cloud-blocked") {
-        return this.persistenceStatus.cloudAccessReason || "Esta cuenta no esta autorizada para usar BBDD por API.";
+        return this.persistenceStatus.cloudAccessReason || "Esta cuenta no está autorizada para usar BBDD por API.";
       }
 
       if (this.isCloudPersistence) {

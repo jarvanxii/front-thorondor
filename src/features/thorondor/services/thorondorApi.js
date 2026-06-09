@@ -140,7 +140,7 @@ function buildNetworkError(errorLabel, error, context, timeoutMs) {
         code: "TIMEOUT",
         detail: "Tiempo de espera agotado",
         hints: [
-          "El agente no respondio dentro del timeout configurado.",
+          "El agente no respondió dentro del timeout configurado.",
           "Comprueba que el proceso está vivo, que el puerto escucha y que la red permite la conexión."
         ]
       }

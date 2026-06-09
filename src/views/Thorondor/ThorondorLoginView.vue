@@ -8,7 +8,7 @@
       <section class="login-card" aria-labelledby="login-title">
         <header class="login-card-header">
           <span class="section-kicker">Acceso</span>
-          <h1 id="login-title">Inicio de sesión</h1>
+          <h1 id="login-title">{{ pageTitle }}</h1>
         </header>
 
         <section class="auth-mode-switch" aria-label="Tipo de acceso">
@@ -24,7 +24,14 @@
             :class="{ 'is-active': authMode === 'signup' }"
             @click="setAuthMode('signup')"
           >
-            Sign up
+            Registro
+          </button>
+          <button
+            type="button"
+            :class="{ 'is-active': authMode === 'recovery' }"
+            @click="setAuthMode('recovery')"
+          >
+            Recuperar
           </button>
         </section>
 
@@ -94,12 +101,14 @@
             <span>Iniciar sesión</span>
           </button>
 
-          <RouterLink :to="{ name: 'thorondor-login' }" class="recover-link">Recuperar acceso</RouterLink>
+          <button class="recover-link as-button" type="button" @click="setAuthMode('recovery')">
+            Recuperar acceso
+          </button>
 
           <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
         </form>
 
-        <form v-else class="login-form" @submit.prevent="submitSignup">
+        <form v-else-if="authMode === 'signup'" class="login-form" @submit.prevent="submitSignup">
           <template v-if="signupStep === 'request'">
             <label class="login-field" for="signup-display-name">
               <span>Nombre</span>
@@ -125,18 +134,18 @@
             </label>
 
             <label class="login-field" for="signup-password">
-              <span>ContraseÃ±a</span>
+              <span>Contraseña</span>
               <div class="password-control">
                 <input
                   id="signup-password"
                   v-model="signupForm.password"
                   :type="showPassword ? 'text' : 'password'"
                   autocomplete="new-password"
-                  placeholder="Minimo 8 caracteres"
+                  placeholder="Mínimo 8 caracteres"
                 />
                 <button
                   type="button"
-                  :aria-label="showPassword ? 'Ocultar contraseÃ±a' : 'Mostrar contraseÃ±a'"
+                  :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
                   @click="showPassword = !showPassword"
                 >
                   <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -148,13 +157,13 @@
             </label>
 
             <button class="login-submit" type="submit" :disabled="localAuthBusy">
-              <span>Enviar codigo</span>
+              <span>Enviar código</span>
             </button>
           </template>
 
           <template v-else>
             <label class="login-field" for="signup-code">
-              <span>Codigo</span>
+              <span>Código</span>
               <input
                 id="signup-code"
                 v-model.trim="signupForm.code"
@@ -178,6 +187,61 @@
           <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
         </form>
 
+        <form v-else class="login-form" @submit.prevent="submitRecovery">
+          <template v-if="recoveryStep === 'request'">
+            <label class="login-field" for="recovery-email">
+              <span>Email</span>
+              <input
+                id="recovery-email"
+                v-model.trim="recoveryForm.email"
+                autocomplete="email"
+                inputmode="email"
+                placeholder="tu@email.com"
+                type="email"
+              />
+            </label>
+
+            <button class="login-submit" type="submit" :disabled="localAuthBusy">
+              <span>Enviar enlace</span>
+            </button>
+
+            <button class="recover-link as-button" type="button" @click="setAuthMode('login')">
+              Volver al acceso
+            </button>
+          </template>
+
+          <template v-else>
+            <label class="login-field" for="recovery-password">
+              <span>Nueva contraseña</span>
+              <div class="password-control">
+                <input
+                  id="recovery-password"
+                  v-model="recoveryForm.password"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  placeholder="Mínimo 8 caracteres"
+                />
+                <button
+                  type="button"
+                  :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  @click="showPassword = !showPassword"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                  </svg>
+                </button>
+              </div>
+            </label>
+
+            <button class="login-submit" type="submit" :disabled="localAuthBusy">
+              <span>Guardar contraseña</span>
+            </button>
+          </template>
+
+          <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
+        </form>
+
       </section>
     </section>
   </main>
@@ -188,10 +252,12 @@ import loginBanner from '@/assets/images/brand/banner_login.png'
 import {
   THORONDOR_SOCIAL_AUTH_PROVIDERS,
   confirmThorondorEmailSignup,
+  confirmThorondorPasswordRecovery,
   fetchThorondorSession,
   getThorondorAuthConfig,
   loginThorondorCredentials,
   requestThorondorEmailSignup,
+  requestThorondorPasswordRecovery,
   startThorondorSocialAuth,
 } from '@/features/thorondor/services/thorondorAuth'
 
@@ -209,6 +275,7 @@ export default {
       showPassword: false,
       feedbackMessage: '',
       signupStep: 'request',
+      recoveryStep: 'request',
       form: {
         email: '',
         password: '',
@@ -220,10 +287,28 @@ export default {
         password: '',
         code: '',
       },
+      recoveryForm: {
+        email: '',
+        resetId: '',
+        token: '',
+        password: '',
+      },
     }
   },
 
   computed: {
+    pageTitle() {
+      if (this.authMode === 'signup') {
+        return this.signupStep === 'confirm' ? 'Confirma tu cuenta' : 'Crear cuenta'
+      }
+
+      if (this.authMode === 'recovery') {
+        return this.recoveryStep === 'reset' ? 'Nueva contraseña' : 'Recuperar acceso'
+      }
+
+      return 'Inicio de sesión'
+    },
+
     socialProviders() {
       return THORONDOR_SOCIAL_AUTH_PROVIDERS.map((provider) => ({
         ...provider,
@@ -234,6 +319,7 @@ export default {
   },
 
   mounted() {
+    this.bootstrapRecoveryFromQuery()
     this.loadProviderConfiguration()
   },
 
@@ -241,6 +327,25 @@ export default {
     setAuthMode(mode) {
       this.authMode = mode
       this.feedbackMessage = ''
+      if (mode === 'recovery' && !this.recoveryForm.token) {
+        this.recoveryStep = 'request'
+      }
+    },
+
+    bootstrapRecoveryFromQuery() {
+      const resetId = this.$route.query.reset_id || this.$route.query.resetId || ''
+      const token = this.$route.query.token || ''
+      const email = this.$route.query.email || ''
+
+      if (!resetId || !token) {
+        return
+      }
+
+      this.authMode = 'recovery'
+      this.recoveryStep = 'reset'
+      this.recoveryForm.resetId = String(resetId)
+      this.recoveryForm.token = String(token)
+      this.recoveryForm.email = String(email || '')
     },
 
     async loadProviderConfiguration() {
@@ -264,7 +369,7 @@ export default {
 
     startSocialLogin(provider) {
       if (provider.checked && !provider.configured) {
-        this.feedbackMessage = `${provider.label} esta pendiente de configurar en el backend.`
+        this.feedbackMessage = `${provider.label} está pendiente de configurar en el backend.`
         return
       }
 
@@ -282,10 +387,6 @@ export default {
       this.feedbackMessage = `Redirigiendo a ${provider.label}...`
     },
 
-    legacySubmitLogin() {
-      this.feedbackMessage =
-        'El acceso por email queda preparado para la API propia de Thorondor. Puedes acceder sin logarte para explorar la aplicación.'
-    },
     async submitLogin() {
       if (this.localAuthBusy) return
       this.localAuthBusy = true
@@ -295,7 +396,7 @@ export default {
         await loginThorondorCredentials(this.form)
         await this.completeLocalAuth()
       } catch (error) {
-        this.feedbackMessage = error.message || 'No se pudo iniciar sesion.'
+        this.feedbackMessage = error.message || 'No se pudo iniciar sesión.'
       } finally {
         this.localAuthBusy = false
       }
@@ -310,7 +411,7 @@ export default {
         if (this.signupStep === 'request') {
           await requestThorondorEmailSignup(this.signupForm)
           this.signupStep = 'confirm'
-          this.feedbackMessage = 'Te hemos enviado un codigo de verificacion al email.'
+          this.feedbackMessage = 'Te hemos enviado un código de verificación al email.'
           return
         }
 
@@ -318,6 +419,27 @@ export default {
         await this.completeLocalAuth()
       } catch (error) {
         this.feedbackMessage = error.message || 'No se pudo completar el registro.'
+      } finally {
+        this.localAuthBusy = false
+      }
+    },
+
+    async submitRecovery() {
+      if (this.localAuthBusy) return
+      this.localAuthBusy = true
+      this.feedbackMessage = ''
+
+      try {
+        if (this.recoveryStep === 'request') {
+          await requestThorondorPasswordRecovery(this.recoveryForm)
+          this.feedbackMessage = 'Te hemos enviado un enlace de recuperación al email.'
+          return
+        }
+
+        await confirmThorondorPasswordRecovery(this.recoveryForm)
+        await this.completeLocalAuth()
+      } catch (error) {
+        this.feedbackMessage = error.message || 'No se pudo recuperar el acceso.'
       } finally {
         this.localAuthBusy = false
       }
@@ -442,7 +564,7 @@ export default {
 
 .auth-mode-switch {
   display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+  grid-template-columns: repeat(3, minmax(0, 1fr));
   gap: 4px;
   padding: 4px;
   border: 1px solid rgba(176, 184, 194, 0.18);
@@ -775,7 +897,6 @@ export default {
     font-size: 0.66rem;
   }
 
-  .guest-access-button,
   .login-submit,
   .social-login-button,
   .login-field input {

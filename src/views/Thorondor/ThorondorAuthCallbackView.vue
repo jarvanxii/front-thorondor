@@ -79,14 +79,14 @@ export default {
       }
 
       if (this.sessionStatus === 'success') {
-        return 'Sesion iniciada'
+        return 'Sesión iniciada'
       }
 
       if (this.sessionStatus === 'error') {
-        return 'No hay sesion activa'
+        return 'No hay sesión activa'
       }
 
-      return 'Comprobando sesion'
+      return 'Comprobando sesión'
     },
 
     title() {
@@ -99,33 +99,33 @@ export default {
       }
 
       if (this.sessionStatus === 'error') {
-        return 'No se pudo validar la sesion'
+        return 'No se pudo validar la sesión'
       }
 
-      return 'Validando sesion'
+      return 'Validando sesión'
     },
 
     description() {
       if (this.hasProviderError) {
         return (
           this.$route.query.message ||
-          'El proveedor no esta disponible o no pudo completar el flujo OAuth.'
+          'El proveedor no está disponible o no pudo completar el flujo OAuth.'
         )
       }
 
       if (this.sessionStatus === 'success') {
         const name = this.session?.user?.displayName || this.session?.user?.email || 'operador'
-        return `Sesion iniciada como ${name}. Te llevamos a la consola.`
+        return `Sesión iniciada como ${name}. Te llevamos a la consola.`
       }
 
       if (this.sessionStatus === 'error') {
         return (
           this.sessionError ||
-          'El backend no devolvio una sesion autenticada. Revisa cookies, CORS y callback OAuth.'
+          'El backend no devolvió una sesión autenticada. Revisa cookies, CORS y callback OAuth.'
         )
       }
 
-      return 'Cerrando el flujo con la API y cargando la sesion del workspace sin guardar secretos en el navegador.'
+      return 'Cerrando el flujo con la API y cargando la sesión del workspace sin guardar secretos en el navegador.'
     },
   },
 }

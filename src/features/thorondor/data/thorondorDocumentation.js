@@ -2,8 +2,8 @@ export const thorondorDocumentation = `
 # Thorondor como SIEM personal
 
 Thorondor es una consola de observabilidad y seguridad para hosts propios. El modelo base actual usa una API central:
-cada host ejecuta un agente Python, el agente se registra contra el back con token propio y sincroniza telemetria,
-logs y resultados de comandos por HTTPS. La aplicacion conserva IndexedDB como cache local y, si el usuario esta
+cada host ejecuta un agente Python, el agente se registra contra el back con token propio y sincroniza telemetría,
+logs y resultados de comandos por HTTPS. La aplicación conserva IndexedDB como caché local y, si el usuario está
 autorizado, sincroniza su workspace privado con una base de datos por API.
 
 ## Componentes

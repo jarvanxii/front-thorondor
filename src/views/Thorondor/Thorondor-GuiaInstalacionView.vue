@@ -502,7 +502,7 @@ export default {
                     index: "07",
                     title: "Validar endpoints",
                     badge: "HTTP",
-                    copy: "Primero prueba /health en localhost, despues /telemetry con token y finalmente la sincronizacion contra la API central.",
+                    copy: "Primero prueba /health en localhost, después /telemetry con token y finalmente la sincronización contra la API central.",
                     purpose: "Comprueba proceso, JSON, permisos de lectura, CORS, firewall, NAT, DNS y TLS antes de dar el host por bueno.",
                     expected: "Recibes JSON con status ok, heartbeat, system, metrics, security y logs."
                 },
