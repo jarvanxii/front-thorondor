@@ -38,7 +38,7 @@ export const THORONDOR_SOCIAL_AUTH_PROVIDERS = [
   },
 ]
 
-const DEFAULT_CALLBACK_PATH = '/#/auth/callback'
+const DEFAULT_CALLBACK_PATH = '/auth/callback'
 const THORONDOR_SESSION_STORAGE_KEY = 'thorondor.session'
 const THORONDOR_JWT_STORAGE_KEY = 'thorondor.jwt'
 const AUTH_REQUEST_TIMEOUT_MS = 15000
@@ -64,7 +64,13 @@ export function getThorondorAuthReturnUrl() {
     return callbackPath
   }
 
-  return `${window.location.origin}${window.location.pathname}${callbackPath}`
+  const basePath = String(import.meta.env.BASE_URL || '/')
+    .replace(/\/+$/, '')
+    .replace(/^\/?/, '/')
+  const normalizedBasePath = basePath === '/' ? '' : basePath
+  const normalizedCallbackPath = callbackPath.startsWith('/') ? callbackPath : `/${callbackPath}`
+
+  return `${window.location.origin}${normalizedBasePath}${normalizedCallbackPath}`
 }
 
 export function buildThorondorSocialAuthUrl(providerId, options = {}) {

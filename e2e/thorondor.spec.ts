@@ -11,6 +11,6 @@ test('renders Thorondor shell and generator route', async ({ page }) => {
   await expect(page.getByRole('heading', { name: 'Thorondor', exact: true })).toBeVisible()
   await expect(page.getByText('Generador de agentes')).toBeVisible()
 
-  await page.goto('/#/thorondor/generador-de-agentes')
+  await page.goto('/thorondor/generador-de-agentes')
   await expect(page.getByText('Fuentes de logs diagnósticos')).toBeVisible()
 })

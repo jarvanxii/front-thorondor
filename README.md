@@ -29,7 +29,7 @@ Configura la API en `.env` a partir de `.env.example`:
 
 ```sh
 VITE_THORONDOR_API_BASE_URL=http://localhost:18080
-VITE_THORONDOR_AUTH_CALLBACK_PATH=/#/auth/callback
+VITE_THORONDOR_AUTH_CALLBACK_PATH=/auth/callback
 ```
 
 En produccion con Nginx o Cloudflare Tunnel bajo el mismo origen, usa el proxy del servidor:
