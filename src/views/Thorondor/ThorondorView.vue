@@ -2,16 +2,15 @@
     <ThorondorPageShell>
         <section class="home-hero" aria-labelledby="thorondor-home-title">
             <article class="hero-copy">
-                <div class="hero-heading-row">
-                    <img class="hero-logo" src="@/assets/images/brand/logo_thorondor.png" alt="Sello de Thorondor" />
-                    <div class="hero-heading-text">
-                        <span class="section-kicker">SIEM para infraestructura propia</span>
-                        <h1 id="thorondor-home-title">Thorondor</h1>
-                        <p>
-                            Supervisa hosts Linux y Windows, centraliza eventos relevantes y ejecuta respuesta manual
-                            con trazabilidad.
-                        </p>
-                    </div>
+                <div class="hero-brand-panel">
+                    <span class="section-kicker">SIEM para infraestructura propia</span>
+                    <img class="hero-wordmark" src="@/assets/images/brand/logo_completo_thorondor.png"
+                        alt="Thorondor SIEM" />
+                    <h1 id="thorondor-home-title" class="sr-only">Thorondor</h1>
+                    <p>
+                        Supervisa hosts Linux y Windows, centraliza eventos relevantes y ejecuta respuesta manual
+                        con trazabilidad.
+                    </p>
                 </div>
                 <dl class="hero-status-bar" aria-label="Estado de Thorondor">
                     <div v-for="item in heroStats" :key="item.label">
@@ -291,23 +290,35 @@ export default {
 .home-hero {
     position: relative;
     isolation: isolate;
+    display: grid;
     margin-bottom: 18px;
-    padding: clamp(14px, 1.6vw, 18px) clamp(18px, 2.4vw, 28px);
+    min-height: clamp(245px, 24vw, 310px);
+    padding: clamp(20px, 2.7vw, 36px) clamp(22px, 3vw, 42px);
     overflow: hidden;
     border: 1px solid rgba(236, 194, 119, 0.18);
     border-radius: 4px;
     background:
-        radial-gradient(circle at 92% 0%, rgba(218, 166, 92, 0.12), transparent 34%),
-        linear-gradient(115deg, #171d25, #0f141b 64%, #0b0f14);
+        linear-gradient(115deg, rgba(21, 26, 32, 0.98), rgba(13, 16, 21, 0.98) 58%, rgba(8, 10, 13, 0.99)),
+        #10151b;
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.05),
         0 18px 42px rgba(0, 0, 0, 0.28);
 }
 
+.home-hero::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background:
+        linear-gradient(90deg, rgba(236, 194, 119, 0.06), transparent 30%),
+        linear-gradient(180deg, rgba(255, 255, 255, 0.035), transparent 42%);
+}
+
 .home-hero::after {
     content: "";
     position: absolute;
-    inset: auto 22px 0;
+    inset: auto 26px 0;
     z-index: -1;
     height: 1px;
     background: linear-gradient(90deg, rgba(236, 194, 119, 0.56), rgba(236, 194, 119, 0.12), transparent);
@@ -315,44 +326,42 @@ export default {
 
 .hero-copy {
     display: grid;
-    gap: 14px;
+    grid-template-columns: minmax(320px, 560px) minmax(260px, 360px);
+    gap: clamp(22px, 4vw, 56px);
     min-width: 0;
+    align-items: end;
 }
 
-.hero-heading-row {
+.hero-brand-panel {
     display: grid;
-    grid-template-columns: 62px minmax(0, 1fr);
-    gap: 16px;
-    align-items: center;
+    gap: 12px;
+    min-width: 0;
+    align-content: start;
+    align-self: start;
 }
 
-.hero-logo {
-    width: 62px;
-    height: 62px;
+.hero-wordmark {
+    display: block;
+    width: min(100%, clamp(250px, 29vw, 385px));
+    height: auto;
     object-fit: contain;
-    background: rgba(5, 7, 10, 0.72);
-    border-radius: 4px;
-    filter: contrast(1.06) saturate(1.02) drop-shadow(0 14px 22px rgba(0, 0, 0, 0.36));
+    object-position: left center;
+    filter: contrast(1.06) saturate(1.04) drop-shadow(0 18px 24px rgba(0, 0, 0, 0.38));
 }
 
-.hero-heading-text {
-    display: grid;
-    gap: 6px;
-    min-width: 0;
+.sr-only {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
 }
 
-.hero-heading-text h1 {
-    margin: 0;
-    color: #f8fafc;
-    font-family: "Space Grotesk", "Inter", sans-serif;
-    font-size: clamp(1.95rem, 3.4vw, 3.15rem);
-    font-weight: 800;
-    line-height: 0.98;
-    letter-spacing: 0;
-}
-
-.hero-heading-text p {
-    max-width: 70ch;
+.hero-brand-panel p {
+    max-width: 62ch;
     margin: 0;
     color: #c9d3df;
     font-size: clamp(0.94rem, 1.1vw, 1.04rem);
@@ -361,24 +370,28 @@ export default {
 
 .hero-status-bar {
     display: grid;
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: 1fr;
     gap: 0;
     min-width: 0;
     margin: 0;
     padding: 0;
-    max-width: 560px;
+    width: min(100%, 360px);
+    justify-self: end;
     border: 1px solid rgba(196, 204, 214, 0.16);
     background: rgba(255, 255, 255, 0.035);
 }
 
 .hero-status-bar div {
-    display: grid;
-    gap: 2px;
-    padding: 8px 12px;
+    display: flex;
+    min-height: 54px;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 10px 14px;
 }
 
 .hero-status-bar div + div {
-    border-left: 1px solid rgba(196, 204, 214, 0.16);
+    border-top: 1px solid rgba(196, 204, 214, 0.16);
 }
 
 .hero-status-bar dt {
@@ -393,37 +406,32 @@ export default {
 .hero-status-bar dd {
     margin: 0;
     color: #f8fafc;
-    font-size: 1rem;
-    font-weight: 800;
+    font-size: 1.18rem;
+    font-weight: 900;
 }
 
 .storage-grid {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-@media (max-width: 720px) {
+@media (max-width: 980px) {
     .home-hero {
         margin-bottom: 14px;
+        min-height: auto;
         padding: 14px;
         border-radius: 3px;
     }
 
-    .hero-heading-row {
-        grid-template-columns: 44px minmax(0, 1fr);
-        gap: 10px;
-        align-items: start;
+    .hero-copy {
+        grid-template-columns: 1fr;
+        gap: 16px;
     }
 
-    .hero-logo {
-        width: 44px;
-        height: 44px;
+    .hero-wordmark {
+        width: min(100%, 320px);
     }
 
-    .hero-heading-text h1 {
-        font-size: clamp(1.72rem, 8.6vw, 2.28rem);
-    }
-
-    .hero-heading-text p {
+    .hero-brand-panel p {
         font-size: 0.9rem;
         line-height: 1.5;
     }
@@ -432,6 +440,7 @@ export default {
         grid-template-columns: repeat(3, minmax(0, 1fr));
         width: 100%;
         max-width: none;
+        justify-self: stretch;
     }
 
     .hero-status-bar div + div {
@@ -440,7 +449,10 @@ export default {
     }
 
     .hero-status-bar div {
+        display: grid;
         padding: 9px 8px;
+        justify-content: start;
+        gap: 2px;
     }
 
     .hero-status-bar dt {
@@ -457,13 +469,8 @@ export default {
 }
 
 @media (max-width: 420px) {
-    .hero-heading-row {
-        grid-template-columns: 38px minmax(0, 1fr);
-    }
-
-    .hero-logo {
-        width: 38px;
-        height: 38px;
+    .hero-wordmark {
+        width: min(100%, 265px);
     }
 
     .hero-status-bar dt {
