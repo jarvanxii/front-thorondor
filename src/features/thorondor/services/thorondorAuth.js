@@ -352,6 +352,30 @@ export async function confirmThorondorPasswordRecovery(payload) {
   return session
 }
 
+export async function sendThorondorContactMessage(payload) {
+  return requestThorondorAuth('/auth/contact', {
+    method: 'POST',
+    skipAuthHeader: true,
+    body: JSON.stringify({
+      name: payload?.name || '',
+      email: payload?.email || '',
+      subject: payload?.subject || '',
+      message: payload?.message || '',
+      website: payload?.website || '',
+    }),
+  })
+}
+
+export async function updateThorondorKeyAgents(payload = {}) {
+  return requestThorondorAuth('/auth/profile/key-agents', {
+    method: 'PUT',
+    body: JSON.stringify({
+      keyAgents: payload?.keyAgents || payload?.key_agents || '',
+      regenerate: Boolean(payload?.regenerate),
+    }),
+  })
+}
+
 export async function logoutThorondorSession() {
   const { apiBaseUrl } = getThorondorAuthConfig()
   if (!apiBaseUrl) {
@@ -379,6 +403,27 @@ export async function logoutThorondorSession() {
 export async function fetchThorondorAdminUsers() {
   return requestThorondorAuth('/auth/admin/users', {
     method: 'GET',
+  })
+}
+
+export async function fetchThorondorAdminLogs(filters = {}) {
+  const params = new URLSearchParams()
+  if (filters.userId) params.set('userId', filters.userId)
+  if (filters.category) params.set('category', filters.category)
+  if (filters.severity) params.set('severity', filters.severity)
+  if (filters.query) params.set('q', filters.query)
+  if (filters.limit) params.set('limit', String(filters.limit))
+  const suffix = params.toString() ? `?${params.toString()}` : ''
+
+  return requestThorondorAuth(`/auth/admin/logs${suffix}`, {
+    method: 'GET',
+  })
+}
+
+export async function updateThorondorAdminUser(userId, payload = {}) {
+  return requestThorondorAuth(`/auth/admin/users/${encodeURIComponent(userId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload),
   })
 }
 

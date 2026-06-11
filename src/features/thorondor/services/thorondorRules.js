@@ -16,7 +16,12 @@ function getRecentSnapshots(snapshots, durationMinutes) {
 
 export function evaluateThorondorRules({ agent, rules, snapshots, securityEvents }) {
   const alerts = []
-  const activeRules = (rules || []).filter((rule) => rule.enabled && rule.scope === agent.id)
+  if (isThorondorAgentAlertsPaused(agent)) {
+    return alerts
+  }
+  const activeRules = (rules || []).filter(
+    (rule) => rule.enabled && (rule.scope === 'all' || rule.scope === agent.id),
+  )
   const recentEvents = securityEvents || []
 
   activeRules.forEach((rule) => {
@@ -142,6 +147,24 @@ export function evaluateThorondorRules({ agent, rules, snapshots, securityEvents
       }
     }
 
+    if (rule.type === 'inventoryChange') {
+      const snapshot = snapshots?.[snapshots.length - 1]
+      const changes = snapshot?.inventoryChanges?.events || []
+      if (changes.length >= rule.threshold) {
+        const sample = changes
+          .slice(0, 3)
+          .map((item) => `${item.label || item.kind}: ${item.key || item.action}`)
+          .join(', ')
+        alerts.push(
+          buildAlert(
+            agent,
+            rule,
+            `${changes.length} cambio(s) relevantes de inventario detectados${sample ? `: ${sample}` : ''}.`,
+          ),
+        )
+      }
+    }
+
     if (rule.type === 'failedService') {
       const snapshot = snapshots?.[snapshots.length - 1]
       const failed = (snapshot?.failedServices || []).filter(
@@ -220,7 +243,39 @@ export function evaluateThorondorRules({ agent, rules, snapshots, securityEvents
   return dedupeAlerts(alerts)
 }
 
+export function isThorondorAgentPaused(agent) {
+  return Boolean(
+    agent?.siemPaused ||
+    agent?.siem_paused ||
+    agent?.pollingPaused ||
+    agent?.polling_paused ||
+    agent?.monitoringPaused ||
+    agent?.paused,
+  )
+}
+
+export function isThorondorAgentAlertsPaused(agent) {
+  const until = agent?.alertsPausedUntil || agent?.alerts_paused_until || agent?.maintenanceUntil
+  const untilTime = until ? new Date(until).getTime() : 0
+  const futureWindow = Number.isFinite(untilTime) && untilTime > Date.now()
+  if (until) return futureWindow
+  return Boolean(
+    agent?.alertsPaused ||
+      agent?.alerts_paused ||
+      agent?.maintenanceMode ||
+      agent?.maintenance_mode,
+  )
+}
+
 export function deriveThorondorAgentStatus(agent) {
+  if (isThorondorAgentPaused(agent)) {
+    return {
+      label: 'Pausado',
+      color: 'warning',
+      note: 'Thorondor no hace peticiones a este host mientras el SIEM está pausado.',
+    }
+  }
+
   if (!agent?.lastHeartbeatAt) {
     return {
       label: 'Sin datos',

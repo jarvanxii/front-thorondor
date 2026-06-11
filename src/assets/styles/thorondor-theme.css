@@ -2,9 +2,9 @@
   --thorondor-header-offset: var(--main-header-height, 68px);
   --thorondor-content-gap: 22px;
   --thorondor-content-gap-mobile: 14px;
-  --thorondor-surface: #151a21;
-  --thorondor-surface-strong: #0b1016;
-  --thorondor-line: rgba(236, 194, 119, 0.18);
+  --thorondor-surface: var(--thorondor-panel);
+  --thorondor-surface-strong: var(--thorondor-panel-strong);
+  --thorondor-line: rgba(236, 194, 119, 0.22);
   --thorondor-text: #f8fafc;
   --thorondor-muted: #9aa6b3;
   width: min(100%, 1480px);
@@ -25,8 +25,8 @@
   padding: 20px;
   margin-bottom: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.028),
-    0 12px 26px rgba(0, 0, 0, 0.18);
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 12px 28px rgba(6, 10, 12, 0.2);
   min-width: 0;
 }
 
@@ -35,7 +35,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.42), transparent);
+  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.36), transparent);
   pointer-events: none;
 }
 
@@ -197,10 +197,12 @@
   position: relative;
   overflow: hidden;
   background: var(--thorondor-nested-background);
-  border: 1px solid rgba(236, 194, 119, 0.14);
+  border: 1px solid rgba(236, 194, 119, 0.17);
   border-radius: 4px;
   min-width: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.028);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 8px 18px rgba(6, 10, 12, 0.12);
 }
 
 .thorondor-page .guide-card::before,
@@ -211,7 +213,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 2px;
-  background: linear-gradient(180deg, rgba(236, 194, 119, 0.42), rgba(236, 194, 119, 0.12));
+  background: linear-gradient(180deg, rgba(236, 194, 119, 0.38), rgba(236, 194, 119, 0.1));
 }
 
 .thorondor-page .guide-card:hover,
@@ -271,7 +273,7 @@
   padding: 6px 12px;
   border-radius: 4px;
   background: var(--thorondor-soft-background);
-  border: 1px solid rgba(236, 194, 119, 0.28);
+  border: 1px solid rgba(236, 194, 119, 0.3);
   color: #f0c77e;
   font-size: 0.76rem;
   font-weight: 800;
@@ -349,14 +351,64 @@
 
 .thorondor-page .input-dark {
   background: var(--thorondor-soft-background);
-  border: 1px solid rgba(176, 184, 194, 0.28);
+  border: 1px solid rgba(205, 213, 210, 0.28);
   color: #f8fafc !important;
   caret-color: #f8fafc;
 }
 
+.thorondor-page select,
+.thorondor-page select.input-dark,
+.thorondor-page select.form-select,
+.thorondor-page .form-select.input-dark {
+  min-height: 40px;
+  appearance: none;
+  padding-right: 42px;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--thorondor-gold-strong) 50%)
+      calc(100% - 19px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--thorondor-gold-strong) 50%, transparent 50%)
+      calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 34px), rgba(236, 194, 119, 0.11) calc(100% - 34px)),
+    var(--thorondor-soft-background);
+  border-color: rgba(236, 194, 119, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.045),
+    0 8px 16px rgba(6, 10, 12, 0.11);
+}
+
+.thorondor-page select:hover,
+.thorondor-page select.input-dark:hover,
+.thorondor-page select.form-select:hover,
+.thorondor-page .form-select.input-dark:hover {
+  border-color: rgba(236, 194, 119, 0.48);
+  background:
+    linear-gradient(45deg, transparent 50%, #ffe0a6 50%)
+      calc(100% - 19px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(135deg, #ffe0a6 50%, transparent 50%)
+      calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 34px), rgba(236, 194, 119, 0.16) calc(100% - 34px)),
+    var(--thorondor-nested-background);
+}
+
+.thorondor-page select option,
 .thorondor-page select.input-dark option {
-  background: #10141a;
+  background: #1f282b;
   color: #f8fafc;
+}
+
+.thorondor-page select:disabled,
+.thorondor-page select.input-dark:disabled,
+.thorondor-page select.form-select:disabled,
+.thorondor-page .form-select.input-dark:disabled {
+  opacity: 0.64;
+  border-color: rgba(176, 184, 194, 0.16);
+  background:
+    linear-gradient(45deg, transparent 50%, rgba(154, 166, 179, 0.72) 50%)
+      calc(100% - 19px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(135deg, rgba(154, 166, 179, 0.72) 50%, transparent 50%)
+      calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 34px), rgba(176, 184, 194, 0.08) calc(100% - 34px)),
+    var(--thorondor-soft-background);
 }
 
 .thorondor-page .input-dark::placeholder {
@@ -376,7 +428,20 @@
   border-color: rgba(236, 194, 119, 0.58);
   box-shadow:
     0 0 0 0.18rem rgba(218, 166, 92, 0.12),
-    0 10px 18px rgba(0, 0, 0, 0.18);
+    0 10px 18px rgba(6, 10, 12, 0.16);
+}
+
+.thorondor-page select:focus,
+.thorondor-page select.input-dark:focus,
+.thorondor-page select.form-select:focus,
+.thorondor-page .form-select.input-dark:focus {
+  background:
+    linear-gradient(45deg, transparent 50%, #ffe0a6 50%)
+      calc(100% - 19px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(135deg, #ffe0a6 50%, transparent 50%)
+      calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 34px), rgba(236, 194, 119, 0.18) calc(100% - 34px)),
+    var(--thorondor-nested-background);
 }
 
 .thorondor-page .textarea-dark {

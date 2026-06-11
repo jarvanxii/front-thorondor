@@ -19,6 +19,24 @@ const routes = [
     meta: { authLayout: true },
   },
   {
+    path: '/privacidad',
+    name: 'thorondor-privacy',
+    component: () => import('../views/Thorondor/ThorondorLegalView.vue'),
+    meta: { authLayout: true },
+  },
+  {
+    path: '/terminos',
+    name: 'thorondor-terms',
+    component: () => import('../views/Thorondor/ThorondorLegalView.vue'),
+    meta: { authLayout: true },
+  },
+  {
+    path: '/contacto',
+    name: 'thorondor-contact',
+    component: () => import('../views/Thorondor/ThorondorLegalView.vue'),
+    meta: { authLayout: true },
+  },
+  {
     path: '/inicio',
     name: 'thorondor-information',
     component: () => import('../views/Thorondor/ThorondorView.vue'),
@@ -59,6 +77,11 @@ const routes = [
     component: () => import('../views/Thorondor/Thorondor-ReglasMonitorizacionView.vue'),
   },
   {
+    path: '/respuesta-inteligente',
+    name: 'thorondor-smart-response',
+    component: () => import('../views/Thorondor/Thorondor-RespuestaInteligenteView.vue'),
+  },
+  {
     path: '/bloqueo-ips',
     name: 'thorondor-ip-blocks',
     component: () => import('../views/Thorondor/Thorondor-BloqueoIpsView.vue'),
@@ -74,9 +97,13 @@ const routes = [
     component: () => import('../views/Thorondor/Thorondor-CasosView.vue'),
   },
   {
-    path: '/hosts',
+    path: '/agentes',
     name: 'thorondor-agents',
     component: () => import('../views/Thorondor/Thorondor-AgentesView.vue'),
+  },
+  {
+    path: '/hosts',
+    redirect: { name: 'thorondor-agents' },
   },
   {
     path: '/ajustes',

@@ -225,7 +225,7 @@ export default {
       return (
         THORONDOR_MODULE_KEYS.filter((item) => modules?.[item.key])
           .map((item) => item.label)
-          .join(', ') || 'Sin módulos'
+          .join(', ') || 'Detección automática pendiente'
       )
     },
 

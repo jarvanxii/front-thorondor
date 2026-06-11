@@ -1,6 +1,10 @@
 import {
+  THORONDOR_AGENT_FIXED_PORT,
+  THORONDOR_AGENT_FIXED_SERVICE_NAME,
+  THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS,
   THORONDOR_MODULE_KEYS,
-  normalizeThorondorNetworkScope
+  THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS,
+  getThorondorDefaultOsVersionForTarget
 } from "@/features/thorondor/data/thorondorDefaults";
 
 function serializeBoolean(value) {
@@ -11,23 +15,30 @@ function pythonList(list) {
   return `[${(list || []).map((item) => JSON.stringify(item)).join(", ")}]`;
 }
 
+function pythonBooleanDict(record) {
+  const entries = Object.entries(record || {})
+    .map(([key, value]) => `    ${JSON.stringify(key)}: ${serializeBoolean(value)}`)
+    .join(",\n");
+  return `{\n${entries}\n}`;
+}
+
 function normalizeReceiverBaseUrl(config) {
   const raw = String(config.receiverUrl || "").trim().replace(/\/+$/, "");
   if (raw) return raw;
 
   const host = String(config.hostIp || "127.0.0.1").trim();
-  const port = Number(config.port) || 8765;
+  const port = Number(config.port) || THORONDOR_AGENT_FIXED_PORT;
   return `http://${host}:${port}`;
 }
 
 function normalizeServiceName(config) {
-  const raw = String(config.serviceName || "thorondor-agent")
+  const raw = String(config.serviceName || THORONDOR_AGENT_FIXED_SERVICE_NAME)
     .trim()
     .replace(/\.service$/i, "")
     .replace(/[^a-zA-Z0-9_.@-]+/g, "-")
     .replace(/^-+|-+$/g, "");
 
-  return raw || "thorondor-agent";
+  return raw || THORONDOR_AGENT_FIXED_SERVICE_NAME;
 }
 
 function buildServiceFileName(config) {
@@ -35,13 +46,13 @@ function buildServiceFileName(config) {
 }
 
 function normalizeWindowsPackageName(config) {
-  const raw = String(config.systemName || config.displayName || "thorondor-agent")
+  const raw = String(config.systemName || config.displayName || THORONDOR_AGENT_FIXED_SERVICE_NAME)
     .trim()
     .replace(/[^a-zA-Z0-9_. -]+/g, "-")
     .replace(/\s+/g, " ")
     .replace(/^-+|-+$/g, "");
 
-  return raw || "thorondor-agent";
+  return raw || THORONDOR_AGENT_FIXED_SERVICE_NAME;
 }
 
 function escapeXmlAttribute(value) {
@@ -70,7 +81,7 @@ function base64Utf8(value) {
 function deterministicGuid(seed) {
   const bytes = [];
   let hash = 0x811c9dc5;
-  const source = String(seed || "thorondor-agent");
+  const source = String(seed || THORONDOR_AGENT_FIXED_SERVICE_NAME);
 
   for (let index = 0; index < source.length + 48; index += 1) {
     const charCode = source.charCodeAt(index % source.length) + index * 17;
@@ -91,15 +102,19 @@ function resolveListenHost(config) {
 }
 
 function normalizeAgentId(config) {
-  const raw = `${config.systemName || config.displayName || "thorondor-agent"}-${config.hostIp || "local"}-${Number(config.port) || 8765}`;
+  const raw = `${config.systemName || config.displayName || THORONDOR_AGENT_FIXED_SERVICE_NAME}-${config.hostIp || "local"}-${Number(config.port) || THORONDOR_AGENT_FIXED_PORT}`;
   return raw
     .toLowerCase()
     .replace(/[^a-z0-9_.-]+/g, "-")
     .replace(/^-+|-+$/g, "")
-    .slice(0, 160) || "thorondor-agent";
+    .slice(0, 160) || THORONDOR_AGENT_FIXED_SERVICE_NAME;
 }
 
 function normalizeCentralApiBaseUrl(config) {
+  if (config.centralSyncEnabled === false || config.persistenceMode === "local") {
+    return "";
+  }
+
   const fromDraft = String(config.centralApiBaseUrl || "").trim();
   const fromEnv = String(
     import.meta.env.VITE_THORONDOR_AGENT_CENTRAL_API_BASE_URL
@@ -122,19 +137,35 @@ function generateAgentToken(byteLength = 32) {
   return Array.from(bytes, (byte) => byte.toString(16).padStart(2, "0")).join("");
 }
 
-export function buildThorondorAgentFiles(draft) {
-  const logPaths = String(draft.additionalLogPaths || "")
-    .split("\n")
-    .map((line) => line.trim())
-    .filter(Boolean);
+export function buildThorondorAgentFiles(draft = {}) {
+  const normalizedTargetOs = draft.targetOs === "windows" ? "windows" : "linux";
+  const normalizedDistro = normalizedTargetOs === "windows"
+    ? "Windows"
+    : String(draft.distro || "Ubuntu/Debian").trim();
+  const normalizedOsVersion = String(
+    draft.osVersion || getThorondorDefaultOsVersionForTarget(normalizedTargetOs, normalizedDistro)
+  ).trim();
+  const displayName = String(draft.displayName || draft.systemName || THORONDOR_AGENT_FIXED_SERVICE_NAME).trim();
+  const systemName = String(draft.systemName || draft.displayName || THORONDOR_AGENT_FIXED_SERVICE_NAME).trim();
+  const logPaths = normalizedTargetOs === "windows"
+    ? THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS
+    : THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS;
 
   const config = {
     ...draft,
+    targetOs: normalizedTargetOs,
+    displayName,
+    systemName,
+    distro: normalizedDistro,
+    osVersion: normalizedOsVersion,
     logPaths
   };
   config.agentId = config.agentId || normalizeAgentId(config);
-  config.agentToken = String(config.agentToken || generateAgentToken()).trim();
+  config.keyAgents = String(config.keyAgents || config.key_agents || config.agentToken || generateAgentToken()).trim();
+  config.agentToken = config.keyAgents;
   config.centralEnrollmentToken = String(config.centralEnrollmentToken || "").trim();
+  config.persistenceMode = config.persistenceMode === "cloud" ? "cloud" : "local";
+  config.centralSyncEnabled = config.persistenceMode === "cloud" && config.centralSyncEnabled !== false;
   config.centralApiBaseUrl = normalizeCentralApiBaseUrl(config);
 
   const isWindows = config.targetOs === "windows";
@@ -143,9 +174,9 @@ export function buildThorondorAgentFiles(draft) {
   return {
     agentFileName: "thorondor-agent.py",
     serviceFileName: shouldBuildSystemd ? buildServiceFileName(config) : null,
-    installFileName: isWindows ? "crear-e-instalar-thorondor-agent-msi.ps1" : "install-thorondor-agent.sh",
-    windowsInstallFileName: isWindows ? "install-thorondor-agent.ps1" : null,
-    msiFileName: isWindows ? "ThorondorAgent.msi" : null,
+    installFileName: isWindows ? "thorondor-installer.ps1" : "thorondor-installer.sh",
+    windowsInstallFileName: isWindows ? "thorondor-agent-install.ps1" : null,
+    msiFileName: isWindows ? "thorondor-agent.msi" : null,
     wixFileName: isWindows ? "thorondor-agent.wxs" : null,
     msiBuildFileName: isWindows ? "build-thorondor-msi.ps1" : null,
     python: buildThorondorPythonAgent(config),
@@ -159,8 +190,8 @@ export function buildThorondorAgentFiles(draft) {
 }
 
 export function buildThorondorPythonAgent(config) {
-  const moduleFlags = THORONDOR_MODULE_KEYS.reduce((acc, item) => {
-    acc[item.key] = !!config.modules?.[item.key];
+  const moduleCandidates = THORONDOR_MODULE_KEYS.reduce((acc, item) => {
+    acc[item.key] = true;
     return acc;
   }, {});
 
@@ -181,7 +212,7 @@ import threading
 import time
 import urllib.error
 import urllib.request
-from datetime import datetime
+from datetime import datetime, timezone
 from hashlib import sha256
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import urlparse
@@ -199,31 +230,20 @@ AGENT_VERSION = "1.1.0"
 DISTRO = ${JSON.stringify(config.distro)}
 OS_VERSION = ${JSON.stringify(config.osVersion)}
 LISTEN_HOST = ${JSON.stringify(resolveListenHost(config))}
-LISTEN_PORT = ${Number(config.port) || 8765}
+LISTEN_PORT = ${Number(config.port) || THORONDOR_AGENT_FIXED_PORT}
 POLL_INTERVAL_SECONDS = ${Number(config.intervalSeconds) || 30}
 CENTRAL_API_BASE_URL = ${JSON.stringify(config.centralApiBaseUrl)}
-AGENT_TOKEN = ${JSON.stringify(config.agentToken)}
+PERSISTENCE_MODE = ${JSON.stringify(config.persistenceMode)}
+KEY_AGENTS = ${JSON.stringify(config.keyAgents)}
+AGENT_TOKEN = KEY_AGENTS
 CENTRAL_ENROLLMENT_TOKEN = ${JSON.stringify(config.centralEnrollmentToken)}
 INSTALL_USER = ${JSON.stringify(config.installUser || "thorondor")}
 NETWORK_SCOPE = ${JSON.stringify(config.networkScope || "lan")}
 CORS_ORIGIN = ${JSON.stringify(String(config.corsOrigin || "*").trim() || "*")}
 IS_WINDOWS = platform.system() == "Windows"
-MODULES = {
-    "systemMetrics": ${serializeBoolean(moduleFlags.systemMetrics)},
-    "securityLogs": ${serializeBoolean(moduleFlags.securityLogs)},
-    "sudoCommands": ${serializeBoolean(moduleFlags.sudoCommands)},
-    "fileIntegrity": ${serializeBoolean(moduleFlags.fileIntegrity)},
-    "networkConnections": ${serializeBoolean(moduleFlags.networkConnections)},
-    "applicationLogs": ${serializeBoolean(moduleFlags.applicationLogs)},
-    "networkRates": ${serializeBoolean(moduleFlags.networkRates)},
-    "establishedConnections": ${serializeBoolean(moduleFlags.establishedConnections)},
-    "hardwareMonitor": ${serializeBoolean(moduleFlags.hardwareMonitor)},
-    "dockerMonitor": ${serializeBoolean(moduleFlags.dockerMonitor)},
-    "updateMonitor": ${serializeBoolean(moduleFlags.updateMonitor)},
-    "loginHistory": ${serializeBoolean(moduleFlags.loginHistory)},
-    "smartMonitor": ${serializeBoolean(moduleFlags.smartMonitor)},
-}
-ADDITIONAL_LOG_PATHS = ${pythonList(config.logPaths)}
+MODULE_CANDIDATES = ${pythonBooleanDict(moduleCandidates)}
+MODULES = dict(MODULE_CANDIDATES)
+CANDIDATE_LOG_PATHS = ${pythonList(config.logPaths)}
 CRITICAL_FILES = (
     [
         os.path.join(os.environ.get("SystemRoot", "C:\\\\Windows"), "System32", "drivers", "etc", "hosts"),
@@ -233,20 +253,37 @@ CRITICAL_FILES = (
     else ["/etc/passwd", "/etc/shadow", "/etc/sudoers", "/etc/hosts"]
 )
 BASELINE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".thorondor-baseline.json")
+INVENTORY_BASELINE_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".thorondor-inventory-baseline.json")
+DETECTED_LOG_PATHS_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".thorondor-log-sources.json")
+DETECTED_MODULES_PATH = os.path.join(os.path.dirname(os.path.abspath(__file__)), ".thorondor-modules.json")
 MAX_LOG_LINES = 60
 MAX_CUSTOM_LOG_FILES = 8
 HEADERS = {
     "Access-Control-Allow-Origin": CORS_ORIGIN,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Thorondor-Agent-Token",
+    "Access-Control-Allow-Headers": "Content-Type, X-Thorondor-Key-Agents, X-Thorondor-Agent-Token",
     "Access-Control-Max-Age": "600",
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8"
 }
+CENTRAL_WARNING_INTERVAL_SECONDS = 300
+_CENTRAL_LAST_WARNING_AT = 0
+_CENTRAL_LAST_WARNING_MESSAGE = ""
 
 
 def now_iso():
-    return datetime.utcnow().isoformat() + "Z"
+    return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def log_central_warning(message):
+    global _CENTRAL_LAST_WARNING_AT, _CENTRAL_LAST_WARNING_MESSAGE
+    now = time.time()
+    text = str(message or "").strip()
+    if text == _CENTRAL_LAST_WARNING_MESSAGE and now - _CENTRAL_LAST_WARNING_AT < CENTRAL_WARNING_INTERVAL_SECONDS:
+        return
+    _CENTRAL_LAST_WARNING_AT = now
+    _CENTRAL_LAST_WARNING_MESSAGE = text
+    print(f"[thorondor] aviso: no se pudo sincronizar con API central: {text}", file=sys.stderr)
 
 
 def central_api_root():
@@ -271,7 +308,8 @@ def central_request(method, path, payload=None, enrollment=False):
         "Accept": "application/json",
         "Content-Type": "application/json",
         "User-Agent": f"Thorondor-Agent/{AGENT_VERSION}",
-        "X-Thorondor-Agent-Token": AGENT_TOKEN
+        "X-Thorondor-Key-Agents": KEY_AGENTS,
+        "X-Thorondor-Agent-Token": KEY_AGENTS
     }
     if enrollment and CENTRAL_ENROLLMENT_TOKEN:
         headers["X-Thorondor-Agent-Enroll-Token"] = CENTRAL_ENROLLMENT_TOKEN
@@ -286,7 +324,7 @@ def central_request(method, path, payload=None, enrollment=False):
 
 def register_with_central():
     if not central_api_root():
-        return
+        return None
 
     payload = {
         "id": AGENT_ID,
@@ -305,7 +343,20 @@ def register_with_central():
         },
         "heartbeat": now_iso()
     }
-    central_request("POST", "/agents/register", payload, enrollment=True)
+    return central_request("POST", "/agents/register", payload, enrollment=True)
+
+
+def central_response_paused(response):
+    if not isinstance(response, dict):
+        return False
+    agent = response.get("agent") if isinstance(response.get("agent"), dict) else {}
+    return bool(
+        response.get("paused")
+        or response.get("siemPaused")
+        or response.get("pollingPaused")
+        or agent.get("siemPaused")
+        or agent.get("pollingPaused")
+    )
 
 
 def run_command(command):
@@ -318,9 +369,9 @@ def run_command(command):
             timeout=12,
             check=False
         )
-        return completed.stdout.strip() or completed.stderr.strip()
-    except Exception as exc:
-        return f"ERROR: {exc}"
+        return completed.stdout.strip() if completed.returncode == 0 else ""
+    except Exception:
+        return ""
 
 
 def run_command_result(command, timeout=12):
@@ -346,6 +397,99 @@ def run_command_result(command, timeout=12):
             "stdout": "",
             "stderr": str(exc)
         }
+
+
+def to_number(value, default=0):
+    try:
+        if value is None or value == "":
+            return default
+        return float(str(value).replace(",", ".").strip())
+    except Exception:
+        return default
+
+
+def to_int(value, default=0):
+    try:
+        return int(float(str(value).replace(",", ".").strip()))
+    except Exception:
+        return default
+
+
+def parse_json_output(text, fallback=None):
+    if fallback is None:
+        fallback = []
+    try:
+        raw = json.loads(str(text or "").strip())
+    except Exception:
+        return fallback
+    return raw
+
+
+def as_list(value):
+    if value is None:
+        return []
+    if isinstance(value, list):
+        return value
+    return [value]
+
+
+def powershell_json(script, timeout=15):
+    result = run_command_result(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], timeout=timeout)
+    if not result.get("ok") or not result.get("stdout"):
+        return []
+    return parse_json_output(result.get("stdout"), [])
+
+
+def windows_event_props(event):
+    props = event.get("props") or event.get("Properties") or []
+    if isinstance(props, dict):
+        props = list(props.values())
+    return props if isinstance(props, list) else []
+
+
+def windows_event_prop(event, index, default=""):
+    props = windows_event_props(event)
+    try:
+        value = props[index]
+        return "" if value is None else str(value).strip()
+    except Exception:
+        return default
+
+
+def windows_event_values(message, label):
+    values = re.findall(rf"{re.escape(label)}:\\s*([^\\r\\n]+)", str(message or ""), re.IGNORECASE)
+    return [value.strip() for value in values if value and value.strip() and value.strip() != "-"]
+
+
+def windows_event_account(message, fallback="unknown"):
+    names = [
+        value for value in windows_event_values(message, "Account Name")
+        if value and not value.endswith("$")
+    ]
+    return names[-1] if names else fallback
+
+
+def normalize_event_protocol(value, message=""):
+    raw = f"{value or ''} {message or ''}".lower()
+    if "sudo" in raw:
+        return "sudo"
+    if "sshd" in raw or "ssh" in raw:
+        return "ssh"
+    if "rdp" in raw or "remoteinteractive" in raw or "remote interactive" in raw:
+        return "rdp"
+    if "winrm" in raw or "powershell remoting" in raw:
+        return "winrm"
+    return "local"
+
+
+def valid_source_ip(value):
+    text = str(value or "").strip().lower()
+    return text not in ["", "sin-ip", "win", "local", "localhost", "127.0.0.1", "::1", "-"]
+
+
+def windows_event_source_ip(message, fallback=""):
+    values = windows_event_values(message, "Source Network Address") or windows_event_values(message, "Source Address")
+    return values[-1] if values else fallback
 
 
 def with_admin(command):
@@ -722,8 +866,8 @@ def read_tail(path, lines=MAX_LOG_LINES):
         with open(path, "r", encoding="utf-8", errors="ignore") as handler:
             content = handler.readlines()[-lines:]
         return [line.rstrip("\\n") for line in content]
-    except Exception as exc:
-        return [f"ERROR leyendo {path}: {exc}"]
+    except Exception:
+        return []
 
 
 def collect_windows_event_log_lines(log_name, lines=MAX_LOG_LINES):
@@ -754,8 +898,257 @@ def collect_windows_event_log_lines(log_name, lines=MAX_LOG_LINES):
                     f"[{event.get('ts', '')}] [{event.get('lvl', '')}] [{event.get('id', '')}] {str(event.get('msg', ''))[:300]}"
                 )
         return output
-    except Exception as exc:
-        return [f"ERROR leyendo winlog://{safe_name}: {exc}"]
+    except Exception:
+        return []
+
+
+def windows_event_log_exists(log_name):
+    if not IS_WINDOWS:
+        return False
+
+    safe_name = re.sub(r"[^A-Za-z0-9_ ./-]", "", str(log_name or "")).strip()
+    if not safe_name:
+        return False
+
+    try:
+        ps_script = "if (Get-WinEvent -ListLog '" + safe_name + "' -ErrorAction SilentlyContinue) { exit 0 } else { exit 1 }"
+        result = subprocess.run(
+            ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
+            capture_output=True, text=True, timeout=10
+        )
+        return result.returncode == 0
+    except Exception:
+        return False
+
+
+def detect_log_source(source):
+    source_text = str(source or "").strip()
+    if not source_text:
+        return []
+
+    lower_source = source_text.lower()
+    if IS_WINDOWS and (lower_source.startswith("winlog://") or lower_source.startswith("eventlog://")):
+        log_name = source_text.split("://", 1)[1].strip()
+        return [f"winlog://{log_name}"] if windows_event_log_exists(log_name) else []
+
+    candidates = glob.glob(source_text) if any(char in source_text for char in "*?[]") else [source_text]
+    detected = []
+
+    for candidate in candidates[:MAX_CUSTOM_LOG_FILES]:
+        if os.path.isdir(candidate):
+            try:
+                has_files = any(
+                    os.path.isfile(os.path.join(candidate, item))
+                    for item in os.listdir(candidate)
+                )
+                if has_files:
+                    detected.append(candidate)
+            except Exception:
+                continue
+        elif os.path.isfile(candidate):
+            detected.append(candidate)
+
+    return detected
+
+
+def detect_available_log_paths():
+    detected = []
+    seen = set()
+
+    for source in CANDIDATE_LOG_PATHS:
+        for path in detect_log_source(source):
+            if path in seen:
+                continue
+            seen.add(path)
+            detected.append(path)
+
+    return detected
+
+
+def save_detected_log_paths(paths):
+    payload = {
+        "detectedAt": now_iso(),
+        "paths": list(paths or [])
+    }
+    try:
+        with open(DETECTED_LOG_PATHS_PATH, "w", encoding="utf-8") as handler:
+            json.dump(payload, handler, indent=2)
+    except Exception:
+        pass
+
+
+def load_detected_log_paths():
+    try:
+        with open(DETECTED_LOG_PATHS_PATH, "r", encoding="utf-8") as handler:
+            payload = json.load(handler)
+        paths = payload.get("paths") if isinstance(payload, dict) else payload
+        if isinstance(paths, list):
+            return [str(item).strip() for item in paths if str(item).strip()]
+    except Exception:
+        return None
+    return None
+
+
+def get_additional_log_paths():
+    detected = load_detected_log_paths()
+    if detected is not None:
+        return detected
+
+    detected = detect_available_log_paths()
+    save_detected_log_paths(detected)
+    return detected
+
+
+def run_log_detection_cli():
+    detected = detect_available_log_paths()
+    save_detected_log_paths(detected)
+    print(json.dumps({
+        "ok": True,
+        "detected": detected,
+        "count": len(detected),
+        "configPath": DETECTED_LOG_PATHS_PATH
+    }, ensure_ascii=False))
+
+
+def path_exists_any(paths):
+    return any(os.path.exists(path) for path in paths)
+
+
+def command_exists(*names):
+    return any(shutil.which(name) for name in names)
+
+
+def psutil_network_connections_available():
+    try:
+        psutil.net_connections(kind="inet")
+        return True
+    except Exception:
+        return False
+
+
+def psutil_network_rates_available():
+    try:
+        return bool(psutil.net_io_counters(pernic=True))
+    except Exception:
+        return False
+
+
+def docker_available():
+    docker_binary = shutil.which("docker")
+    if not docker_binary:
+        return False
+    result = run_command_result([docker_binary, "ps", "--format", "{{.ID}}"], timeout=6)
+    return result["ok"]
+
+
+def hardware_monitoring_available():
+    try:
+        if collect_temperatures() or collect_fans() or collect_battery() or collect_gpu_info():
+            return True
+    except Exception:
+        pass
+    return False
+
+
+def update_monitoring_available():
+    if IS_WINDOWS:
+        return command_exists("powershell", "pwsh")
+    return command_exists("apt", "dnf", "pacman", "checkupdates")
+
+
+def smart_monitoring_available():
+    if IS_WINDOWS:
+        return command_exists("powershell", "pwsh")
+    return command_exists("smartctl") and command_exists("lsblk")
+
+
+def security_log_available():
+    if IS_WINDOWS:
+        return windows_event_log_exists("Security")
+    return path_exists_any(["/var/log/auth.log", "/var/log/secure"])
+
+
+def normalize_module_flags(value):
+    source = value if isinstance(value, dict) else {}
+    normalized = {}
+    for key in MODULE_CANDIDATES.keys():
+        normalized[key] = bool(source.get(key, False))
+    normalized["systemMetrics"] = True
+    normalized["networkConnections"] = bool(source.get("networkConnections", True))
+    return normalized
+
+
+def detect_available_modules():
+    detected_logs = get_additional_log_paths()
+    has_security_log = security_log_available()
+    modules = {
+        "systemMetrics": True,
+        "securityLogs": has_security_log,
+        "sudoCommands": has_security_log,
+        "fileIntegrity": any(os.path.exists(path) for path in CRITICAL_FILES),
+        "networkConnections": psutil_network_connections_available(),
+        "applicationLogs": bool(detected_logs),
+        "networkRates": psutil_network_rates_available(),
+        "establishedConnections": psutil_network_connections_available(),
+        "hardwareMonitor": hardware_monitoring_available(),
+        "dockerMonitor": docker_available(),
+        "updateMonitor": update_monitoring_available(),
+        "loginHistory": has_security_log if IS_WINDOWS else command_exists("last"),
+        "smartMonitor": smart_monitoring_available()
+    }
+    return normalize_module_flags(modules)
+
+
+def save_detected_modules(modules):
+    payload = {
+        "detectedAt": now_iso(),
+        "modules": normalize_module_flags(modules)
+    }
+    try:
+        with open(DETECTED_MODULES_PATH, "w", encoding="utf-8") as handler:
+            json.dump(payload, handler, indent=2)
+    except Exception:
+        pass
+
+
+def load_detected_modules():
+    try:
+        with open(DETECTED_MODULES_PATH, "r", encoding="utf-8") as handler:
+            payload = json.load(handler)
+        modules = payload.get("modules") if isinstance(payload, dict) else payload
+        if isinstance(modules, dict):
+            return normalize_module_flags(modules)
+    except Exception:
+        return None
+    return None
+
+
+def get_active_modules():
+    modules = load_detected_modules()
+    if modules is not None:
+        return modules
+
+    modules = detect_available_modules()
+    save_detected_modules(modules)
+    return modules
+
+
+def refresh_active_modules():
+    global MODULES
+    MODULES = get_active_modules()
+    return MODULES
+
+
+def run_module_detection_cli():
+    modules = detect_available_modules()
+    save_detected_modules(modules)
+    print(json.dumps({
+        "ok": True,
+        "modules": modules,
+        "enabled": [key for key, enabled in modules.items() if enabled],
+        "disabled": [key for key, enabled in modules.items() if not enabled],
+        "configPath": DETECTED_MODULES_PATH
+    }, ensure_ascii=False))
 
 
 def expand_log_source(source):
@@ -782,13 +1175,10 @@ def expand_log_source(source):
                 files.sort(key=lambda path: os.path.getmtime(path), reverse=True)
                 for file_path in files[:MAX_CUSTOM_LOG_FILES]:
                     entries.append({"path": file_path, "lines": read_tail(file_path, MAX_LOG_LINES)})
-            except Exception as exc:
-                entries.append({"path": candidate, "lines": [f"ERROR leyendo directorio {candidate}: {exc}"]})
-        else:
+            except Exception:
+                continue
+        elif os.path.isfile(candidate):
             entries.append({"path": candidate, "lines": read_tail(candidate, MAX_LOG_LINES)})
-
-    if not entries:
-        entries.append({"path": source_text, "lines": []})
 
     return entries
 
@@ -818,9 +1208,10 @@ def collect_windows_security_events():
     try:
         ps_script = (
             "Get-WinEvent -LogName Security -MaxEvents 100 "
-            "-FilterXPath '*[System[EventID=4624 or EventID=4625 or EventID=4648 or EventID=4688]]' "
-            "2>$null | Select-Object @{N='id';E={$_.Id}},@{N='ts';E={$_.TimeCreated.ToString('o')}},@{N='msg';E={$_.Message}} "
-            "| ConvertTo-Json -Depth 2 -Compress"
+            "-FilterXPath '*[System[EventID=4624 or EventID=4625 or EventID=4648 or EventID=4672 or EventID=4688 or EventID=4720 or EventID=4722 or EventID=4725 or EventID=4726 or EventID=4728 or EventID=4729 or EventID=4732 or EventID=4733 or EventID=4738]]' "
+            "2>$null | ForEach-Object { "
+            "  [pscustomobject]@{ id=$_.Id; ts=$_.TimeCreated.ToString('o'); msg=$_.Message; props=@($_.Properties | ForEach-Object { $_.Value }) } "
+            "} | ConvertTo-Json -Depth 4 -Compress"
         )
         result = subprocess.run(
             ["powershell", "-NoProfile", "-NonInteractive", "-Command", ps_script],
@@ -831,31 +1222,66 @@ def collect_windows_security_events():
             if isinstance(raw, dict):
                 raw = [raw]
             for evt in raw:
-                eid = evt.get("id")
+                eid = to_int(evt.get("id"), 0)
                 ts = evt.get("ts", now_iso())
                 msg = str(evt.get("msg", ""))
-                user_match = re.search(r"Account Name:\\s+([^\\r\\n]+)", msg)
-                process_match = re.search(r"New Process Name:\\s+([^\\r\\n]+)", msg)
-                command_match = re.search(r"Process Command Line:\\s+([^\\r\\n]+)", msg)
-                username = user_match.group(1).strip() if user_match else "unknown"
+                username = windows_event_prop(evt, 5) if eid in (4624, 4625, 4648) else windows_event_prop(evt, 1)
+                username = username or windows_event_account(msg)
+                source_ip = windows_event_prop(evt, 18 if eid == 4624 else 19) if eid in (4624, 4625) else ""
+                source_ip = source_ip or windows_event_source_ip(msg, "win")
+                logon_type = windows_event_prop(evt, 8 if eid == 4624 else 10) if eid in (4624, 4625) else ""
+                protocol = "rdp" if str(logon_type) == "10" else normalize_event_protocol("windows", msg)
                 if eid == 4625:
-                    events.append({"kind": "failed_login", "user": username, "sourceIp": "win", "message": msg[:600], "timestamp": ts})
+                    events.append({"kind": "failed_login", "user": username, "sourceIp": source_ip, "protocol": protocol, "logonType": logon_type, "message": msg[:600], "timestamp": ts})
                 elif eid in (4624, 4648):
-                    events.append({"kind": "successful_login", "user": username, "sourceIp": "win", "message": msg[:600], "timestamp": ts})
+                    events.append({"kind": "successful_login", "user": username, "sourceIp": source_ip, "protocol": protocol, "logonType": logon_type, "message": msg[:600], "timestamp": ts})
+                elif eid == 4672:
+                    events.append({
+                        "kind": "sudo_command",
+                        "user": username,
+                        "sourceIp": "win",
+                        "protocol": "windows-privilege",
+                        "command": "Windows special privileges assigned",
+                        "message": msg[:600],
+                        "timestamp": ts
+                    })
                 elif eid == 4688:
-                    process_name = process_match.group(1).strip() if process_match else ""
-                    command = command_match.group(1).strip() if command_match else process_name
+                    process_name = windows_event_prop(evt, 5) or (windows_event_values(msg, "New Process Name") or [""])[-1]
+                    command = windows_event_prop(evt, 8) or (windows_event_values(msg, "Process Command Line") or [process_name])[-1]
                     events.append({
                         "kind": "command_execution",
                         "user": username,
                         "sourceIp": "win",
+                        "protocol": "windows-process",
                         "process": process_name,
                         "command": command,
                         "message": msg[:600],
                         "timestamp": ts
                     })
-    except Exception as exc:
-        events.append({"kind": "error", "message": str(exc), "timestamp": now_iso()})
+                elif eid in (4720, 4722, 4725, 4726, 4728, 4729, 4732, 4733, 4738):
+                    target_user = windows_event_prop(evt, 0) or windows_event_account(msg, username)
+                    action_by_id = {
+                        4720: "new_user",
+                        4722: "user_enabled",
+                        4725: "user_disabled",
+                        4726: "user_deleted",
+                        4728: "group_member_added",
+                        4729: "group_member_removed",
+                        4732: "group_member_added",
+                        4733: "group_member_removed",
+                        4738: "user_account_change"
+                    }
+                    events.append({
+                        "kind": action_by_id.get(eid, "user_account_change"),
+                        "user": username,
+                        "subject": target_user,
+                        "sourceIp": "win",
+                        "protocol": "windows-account",
+                        "message": msg[:600],
+                        "timestamp": ts
+                    })
+    except Exception:
+        return []
     return events[-80:]
 
 
@@ -934,40 +1360,127 @@ def collect_integrity_events():
     return events
 
 
-def collect_processes():
+def format_connection_address(address):
+    if not address:
+        return ""
+    ip = getattr(address, "ip", "")
+    port = getattr(address, "port", "")
+    if not ip and isinstance(address, (tuple, list)) and len(address) >= 2:
+        ip = address[0]
+        port = address[1]
+    return f"{ip}:{port}" if ip or port else ""
+
+
+def connection_ip(address):
+    if not address:
+        return ""
+    return getattr(address, "ip", "") or (address[0] if isinstance(address, (tuple, list)) and address else "")
+
+
+def connection_port(address):
+    if not address:
+        return None
+    return getattr(address, "port", None) if hasattr(address, "port") else (address[1] if isinstance(address, (tuple, list)) and len(address) > 1 else None)
+
+
+def connection_protocol(connection):
+    try:
+        if connection.type == socket.SOCK_DGRAM:
+            return "udp"
+    except Exception:
+        pass
+    return "tcp"
+
+
+def connection_family(connection):
+    try:
+        if connection.family == socket.AF_INET6:
+            return "IPv6"
+    except Exception:
+        pass
+    return "IPv4"
+
+
+def process_brief(pid):
+    if not pid:
+        return {"process": "", "user": "", "cmdline": ""}
+    try:
+        process = psutil.Process(pid)
+        cmdline = process.cmdline()
+        return {
+            "process": process.name(),
+            "user": process.username(),
+            "cmdline": " ".join(cmdline[:12]) if cmdline else ""
+        }
+    except Exception:
+        return {"process": "", "user": "", "cmdline": ""}
+
+
+def collect_processes(limit=200):
+    sampled = []
+    for process in psutil.process_iter(["pid", "name", "username", "memory_percent", "cmdline", "status", "create_time", "exe", "num_threads"]):
+        try:
+            process.cpu_percent(None)
+            sampled.append(process)
+        except Exception:
+            continue
+
+    time.sleep(0.12)
     processes = []
-    for process in psutil.process_iter(["pid", "name", "username", "cpu_percent", "memory_percent", "cmdline"]):
+    for process in sampled:
         try:
             info = process.info
             cmdline = info.get("cmdline") or []
+            memory_info = process.memory_info()
+            create_time = info.get("create_time")
             processes.append({
                 "pid": info.get("pid"),
-                "name": info.get("name"),
-                "user": info.get("username"),
-                "cpuPercent": round(info.get("cpu_percent") or 0, 2),
+                "ppid": process.ppid(),
+                "name": info.get("name") or "",
+                "user": info.get("username") or "",
+                "status": info.get("status") or "",
+                "cpuPercent": round(process.cpu_percent(None) or 0, 2),
                 "memoryPercent": round(info.get("memory_percent") or 0, 2),
-                "cmdline": " ".join(cmdline[:8]) if cmdline else ""
+                "memoryRss": getattr(memory_info, "rss", 0),
+                "memoryVms": getattr(memory_info, "vms", 0),
+                "threads": info.get("num_threads") or 0,
+                "createdAt": datetime.fromtimestamp(create_time).isoformat() if create_time else "",
+                "exe": info.get("exe") or "",
+                "cmdline": " ".join(cmdline[:12]) if cmdline else ""
             })
         except Exception:
             continue
 
-    processes.sort(key=lambda item: (item["cpuPercent"], item["memoryPercent"]), reverse=True)
-    return processes[:15]
+    processes.sort(key=lambda item: (item["cpuPercent"], item["memoryPercent"], item["memoryRss"]), reverse=True)
+    return processes[:limit]
 
 
-def collect_open_ports():
+def collect_open_ports(limit=300):
     ports = []
     try:
         for connection in psutil.net_connections(kind="inet"):
-            if connection.status == psutil.CONN_LISTEN and connection.laddr:
-                ports.append({
-                    "ip": connection.laddr.ip,
-                    "port": connection.laddr.port,
-                    "proto": "tcp"
-                })
+            if not connection.laddr:
+                continue
+            proto = connection_protocol(connection)
+            status = connection.status or ("OPEN" if proto == "udp" else "")
+            if proto == "tcp" and status != psutil.CONN_LISTEN:
+                continue
+            owner = process_brief(connection.pid)
+            ports.append({
+                "ip": connection_ip(connection.laddr),
+                "port": connection_port(connection.laddr),
+                "proto": proto,
+                "family": connection_family(connection),
+                "status": status,
+                "pid": connection.pid,
+                "process": owner.get("process", ""),
+                "user": owner.get("user", ""),
+                "cmdline": owner.get("cmdline", "")
+            })
     except Exception:
         pass
-    return ports
+    ports.sort(key=lambda item: (str(item.get("proto") or ""), int(item.get("port") or 0), str(item.get("ip") or "")))
+    return ports[:limit]
 
 
 def collect_network_interfaces():
@@ -988,6 +1501,28 @@ def collect_network_interfaces():
 
 
 def collect_users():
+    if IS_WINDOWS:
+        rows = []
+        query_result = run_command_result(["query", "user"], timeout=8)
+        if query_result.get("ok") and query_result.get("stdout"):
+            for line in query_result.get("stdout", "").splitlines()[1:]:
+                text = line.strip().lstrip(">").strip()
+                if not text:
+                    continue
+                match = re.match(r"^(?P<name>\\S+)\\s+(?P<session>\\S+)\\s+(?P<id>\\d+)\\s+(?P<state>\\S+)\\s+(?P<idle>\\S+)\\s+(?P<logon>.+)$", text)
+                if match:
+                    rows.append({
+                        "name": match.group("name"),
+                        "terminal": match.group("session"),
+                        "host": "windows",
+                        "started": 0,
+                        "sessionId": match.group("id"),
+                        "state": match.group("state"),
+                        "logonTime": match.group("logon").strip()
+                    })
+            if rows:
+                return rows
+
     result = []
     try:
         for user in psutil.users():
@@ -995,14 +1530,411 @@ def collect_users():
                 "name": user.name,
                 "terminal": user.terminal,
                 "host": user.host,
-                "started": user.started
+                "started": user.started,
+                "sessionId": "",
+                "state": ""
             })
     except Exception:
         pass
     return result
 
 
+PRIVILEGED_GROUP_NAMES = {
+    "root",
+    "sudo",
+    "wheel",
+    "adm",
+    "admin",
+    "docker",
+    "lxd",
+    "systemd-journal",
+    "administrators",
+    "administradores",
+    "backup operators",
+    "operadores de copia",
+    "remote desktop users",
+    "usuarios de escritorio remoto",
+}
+
+
+def normalize_account_name(value):
+    text = str(value or "").strip()
+    if "\\\\" in text:
+        text = text.split("\\\\")[-1]
+    return text
+
+
+def is_privileged_group_name(name):
+    return normalize_account_name(name).lower() in PRIVILEGED_GROUP_NAMES
+
+
+def is_safe_account_value(value, label):
+    text = str(value or "").strip()
+    if not text:
+        return False, f"{label} requerido"
+    if len(text) > 128:
+        return False, f"{label} demasiado largo"
+    if text.startswith("-"):
+        return False, f"{label} no puede empezar por guion"
+    if not re.match(r"^[A-Za-z0-9_.@\\\\ -]+$", text):
+        return False, f"{label} contiene caracteres no permitidos"
+    return True, ""
+
+
+def ps_quote(value):
+    return "'" + str(value or "").replace("'", "''") + "'"
+
+
+def collect_windows_user_inventory():
+    script = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$users = @(Get-LocalUser | ForEach-Object {
+  [pscustomobject]@{
+    name = $_.Name
+    fullName = $_.FullName
+    description = $_.Description
+    enabled = [bool]$_.Enabled
+    disabled = -not [bool]$_.Enabled
+    locked = $false
+    passwordRequired = [bool]$_.PasswordRequired
+    passwordExpires = [bool]$_.PasswordExpires
+    userMayChangePassword = [bool]$_.UserMayChangePassword
+    lastLogin = if ($_.LastLogon) { $_.LastLogon.ToString('o') } else { $null }
+    sid = $_.SID.Value
+    groups = @()
+    privileged = $false
+    system = $false
+  }
+})
+$groups = @(Get-LocalGroup | ForEach-Object {
+  $groupName = $_.Name
+  $members = @(Get-LocalGroupMember -Group $groupName -ErrorAction SilentlyContinue | ForEach-Object { $_.Name })
+  [pscustomobject]@{
+    name = $groupName
+    description = $_.Description
+    sid = $_.SID.Value
+    members = $members
+  }
+})
+[pscustomobject]@{
+  users = $users
+  groups = $groups
+} | ConvertTo-Json -Depth 6 -Compress
+"""
+    raw = run_command(["powershell", "-NoProfile", "-NonInteractive", "-Command", script])
+    try:
+        payload = json.loads(raw)
+    except Exception:
+        payload = {"users": [], "groups": []}
+
+    users = payload.get("users") or []
+    groups = payload.get("groups") or []
+    if isinstance(users, dict):
+        users = [users]
+    if isinstance(groups, dict):
+        groups = [groups]
+
+    membership = {}
+    normalized_groups = []
+    for group in groups:
+        members = group.get("members") or []
+        if isinstance(members, str):
+            members = [members]
+        group_name = normalize_account_name(group.get("name"))
+        clean_members = [normalize_account_name(member) for member in members if normalize_account_name(member)]
+        privileged = is_privileged_group_name(group_name)
+        normalized_groups.append({
+            "name": group_name,
+            "description": group.get("description") or "",
+            "sid": group.get("sid") or "",
+            "members": clean_members,
+            "privileged": privileged,
+            "system": group_name.lower() in ["system", "trustedinstaller"]
+        })
+        for member in clean_members:
+            membership.setdefault(member.lower(), []).append(group_name)
+
+    normalized_users = []
+    for user in users:
+        name = normalize_account_name(user.get("name"))
+        user_groups = sorted(set(membership.get(name.lower(), [])))
+        privileged = any(is_privileged_group_name(group) for group in user_groups)
+        normalized_users.append({
+            "name": name,
+            "fullName": user.get("fullName") or "",
+            "description": user.get("description") or "",
+            "sid": user.get("sid") or "",
+            "enabled": bool(user.get("enabled")),
+            "disabled": bool(user.get("disabled")),
+            "locked": bool(user.get("locked")),
+            "system": name.endswith("$") or name.lower() in ["defaultaccount", "guest", "invitado", "wdagutilityaccount"],
+            "privileged": privileged,
+            "groups": user_groups,
+            "primaryGroup": "",
+            "home": "",
+            "shell": "",
+            "lastLogin": user.get("lastLogin") or "",
+            "passwordStatus": "required" if user.get("passwordRequired") else "not-required"
+        })
+
+    return {
+        "collectedAt": now_iso(),
+        "os": "windows",
+        "users": normalized_users,
+        "groups": normalized_groups,
+        "privilegedGroups": sorted([group["name"] for group in normalized_groups if group.get("privileged")])
+    }
+
+
+def collect_linux_password_status():
+    statuses = {}
+    passwd_binary = shutil.which("passwd")
+    if not passwd_binary:
+        return statuses
+    result = run_command_result(with_admin([passwd_binary, "-S", "-a"]), timeout=8)
+    if not result.get("ok"):
+        return statuses
+    for line in result.get("stdout", "").splitlines():
+        parts = line.split()
+        if len(parts) >= 2:
+            statuses[parts[0]] = parts[1]
+    return statuses
+
+
+def collect_linux_user_inventory():
+    try:
+        import grp
+        import pwd
+    except Exception:
+        return {"collectedAt": now_iso(), "os": "linux", "users": [], "groups": [], "privilegedGroups": []}
+
+    passwd_entries = list(pwd.getpwall())
+    group_entries = list(grp.getgrall())
+    group_by_gid = {entry.gr_gid: entry.gr_name for entry in group_entries}
+    members_by_group = {entry.gr_name: set(entry.gr_mem or []) for entry in group_entries}
+    for entry in passwd_entries:
+        primary_group = group_by_gid.get(entry.pw_gid)
+        if primary_group:
+            members_by_group.setdefault(primary_group, set()).add(entry.pw_name)
+
+    password_statuses = collect_linux_password_status()
+    normalized_groups = []
+    for entry in group_entries:
+        group_name = entry.gr_name
+        members = sorted(members_by_group.get(group_name, set()))
+        normalized_groups.append({
+            "name": group_name,
+            "gid": entry.gr_gid,
+            "members": members,
+            "privileged": is_privileged_group_name(group_name),
+            "system": entry.gr_gid < 1000
+        })
+
+    normalized_users = []
+    for entry in passwd_entries:
+        user_groups = sorted([
+            group_name
+            for group_name, members in members_by_group.items()
+            if entry.pw_name in members
+        ])
+        password_status = password_statuses.get(entry.pw_name, "")
+        locked = password_status in ["L", "LK"]
+        disabled_shell = os.path.basename(entry.pw_shell or "").lower() in ["false", "nologin"]
+        privileged = entry.pw_uid == 0 or any(is_privileged_group_name(group) for group in user_groups)
+        normalized_users.append({
+            "name": entry.pw_name,
+            "uid": entry.pw_uid,
+            "gid": entry.pw_gid,
+            "fullName": (entry.pw_gecos or "").split(",")[0],
+            "home": entry.pw_dir,
+            "shell": entry.pw_shell,
+            "enabled": not locked and not disabled_shell,
+            "disabled": locked or disabled_shell,
+            "locked": locked,
+            "system": entry.pw_uid < 1000 and entry.pw_uid != 0,
+            "privileged": privileged,
+            "groups": user_groups,
+            "primaryGroup": group_by_gid.get(entry.pw_gid, ""),
+            "lastLogin": "",
+            "passwordStatus": password_status
+        })
+
+    return {
+        "collectedAt": now_iso(),
+        "os": "linux",
+        "users": normalized_users,
+        "groups": normalized_groups,
+        "privilegedGroups": sorted([group["name"] for group in normalized_groups if group.get("privileged")])
+    }
+
+
+def collect_user_inventory():
+    return collect_windows_user_inventory() if IS_WINDOWS else collect_linux_user_inventory()
+
+
+def execute_windows_user_management(command_type, username, group_name):
+    if command_type in ["disable-user", "lock-user"]:
+        script = f"Disable-LocalUser -Name {ps_quote(username)}"
+    elif command_type in ["enable-user", "unlock-user"]:
+        script = f"Enable-LocalUser -Name {ps_quote(username)}"
+    elif command_type == "add-user-to-group":
+        script = f"Add-LocalGroupMember -Group {ps_quote(group_name)} -Member {ps_quote(username)}"
+    elif command_type == "remove-user-from-group":
+        script = f"Remove-LocalGroupMember -Group {ps_quote(group_name)} -Member {ps_quote(username)} -Confirm:$false"
+    else:
+        return {"ok": False, "error": f"Comando de usuario no soportado: {command_type}"}
+    return run_command_result(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], timeout=20)
+
+
+def execute_linux_user_management(command_type, username, group_name):
+    usermod_binary = shutil.which("usermod")
+    if command_type in ["disable-user", "lock-user"]:
+        if not usermod_binary:
+            return {"ok": False, "error": "usermod no disponible"}
+        return run_command_result(with_admin([usermod_binary, "-L", username]), timeout=20)
+    if command_type in ["enable-user", "unlock-user"]:
+        if not usermod_binary:
+            return {"ok": False, "error": "usermod no disponible"}
+        return run_command_result(with_admin([usermod_binary, "-U", username]), timeout=20)
+    if command_type == "add-user-to-group":
+        if not usermod_binary:
+            return {"ok": False, "error": "usermod no disponible"}
+        return run_command_result(with_admin([usermod_binary, "-aG", group_name, username]), timeout=20)
+    if command_type == "remove-user-from-group":
+        gpasswd_binary = shutil.which("gpasswd")
+        if not gpasswd_binary:
+            return {"ok": False, "error": "gpasswd no disponible"}
+        return run_command_result(with_admin([gpasswd_binary, "-d", username, group_name]), timeout=20)
+    return {"ok": False, "error": f"Comando de usuario no soportado: {command_type}"}
+
+
+def execute_user_management_command(command_type, payload):
+    command_type = str(command_type or "").strip()
+    if command_type == "refresh-user-inventory":
+        return {"ok": True, "userInventory": collect_user_inventory(), "message": "Inventario de usuarios recogido"}
+
+    username = normalize_account_name(payload.get("username") or payload.get("user") or "")
+    ok, error = is_safe_account_value(username, "Usuario")
+    if not ok:
+        return {"ok": False, "error": error}
+
+    group_required = command_type in ["add-user-to-group", "remove-user-from-group"]
+    group_name = normalize_account_name(payload.get("group") or payload.get("groupName") or "")
+    if group_required:
+        ok, error = is_safe_account_value(group_name, "Grupo")
+        if not ok:
+            return {"ok": False, "error": error}
+
+    result = execute_windows_user_management(command_type, username, group_name) if IS_WINDOWS else execute_linux_user_management(command_type, username, group_name)
+    success = bool(result.get("ok"))
+    message = "Operación de usuario ejecutada" if success else (result.get("error") or result.get("stderr") or "No se pudo ejecutar la operación")
+    return {
+        "ok": success,
+        "type": command_type,
+        "username": username,
+        "group": group_name,
+        "stdout": result.get("stdout", ""),
+        "stderr": result.get("stderr", ""),
+        "returncode": result.get("returncode"),
+        "message": message,
+        "userInventory": collect_user_inventory() if success else None
+    }
+
+
+def collect_host_health_summary():
+    disks = []
+    for part in psutil.disk_partitions(all=False):
+        try:
+            usage = psutil.disk_usage(part.mountpoint)
+            disks.append({
+                "mountpoint": part.mountpoint,
+                "device": part.device,
+                "percent": usage.percent,
+                "free": usage.free,
+                "total": usage.total
+            })
+        except Exception:
+            continue
+    return {
+        "ok": True,
+        "checkedAt": now_iso(),
+        "hostname": socket.gethostname(),
+        "uptimeSeconds": int(time.time() - psutil.boot_time()),
+        "cpuTotal": psutil.cpu_percent(interval=0.2),
+        "memoryPercent": psutil.virtual_memory().percent,
+        "diskMaxPercent": max([item.get("percent", 0) for item in disks] or [0]),
+        "disks": disks[:20],
+        "connectedUsers": collect_users(),
+        "failedServices": collect_failed_services(),
+        "openPorts": collect_open_ports(limit=80)
+    }
+
+
+def execute_session_management_command(command_type, payload):
+    command_type = str(command_type or "").strip()
+    if command_type == "list-connected-users":
+        return {"ok": True, "users": collect_users(), "message": "Usuarios conectados recogidos"}
+
+    if command_type != "terminate-user-session":
+        return {"ok": False, "error": f"Comando de sesión no soportado: {command_type}"}
+
+    username = normalize_account_name(payload.get("username") or payload.get("user") or "")
+    session_id = str(payload.get("sessionId") or payload.get("session_id") or "").strip()
+    ok, error = is_safe_account_value(username, "Usuario")
+    if not ok:
+        return {"ok": False, "error": error}
+
+    if IS_WINDOWS:
+        target_id = session_id
+        if not target_id:
+            for item in collect_users():
+                if str(item.get("name") or "").lower() == username.lower() and item.get("sessionId"):
+                    target_id = str(item.get("sessionId"))
+                    break
+        if not target_id or not re.fullmatch(r"\\d+", target_id):
+            return {"ok": False, "error": "ID de sesión Windows requerido para cerrar la sesión"}
+        result = run_command_result(["logoff", target_id], timeout=20)
+    else:
+        loginctl = shutil.which("loginctl")
+        if not loginctl:
+            return {"ok": False, "error": "loginctl no disponible. No se cerrará la sesión con métodos destructivos."}
+        result = run_command_result(with_admin([loginctl, "terminate-user", username]), timeout=20)
+
+    return {
+        "ok": bool(result.get("ok")),
+        "username": username,
+        "sessionId": session_id,
+        "stdout": result.get("stdout", ""),
+        "stderr": result.get("stderr", ""),
+        "message": "Sesión de usuario cerrada" if result.get("ok") else "No se pudo cerrar la sesión de usuario",
+        "connectedUsers": collect_users() if result.get("ok") else None
+    }
+
+
 def collect_temperatures():
+    if IS_WINDOWS:
+        try:
+            ps = (
+                "Get-CimInstance -Namespace root/wmi -ClassName MSAcpi_ThermalZoneTemperature -ErrorAction SilentlyContinue "
+                "| Select-Object InstanceName,@{N='CurrentCelsius';E={[math]::Round(($_.CurrentTemperature / 10) - 273.15, 1)}} "
+                "| ConvertTo-Json -Compress"
+            )
+            sensors = []
+            for item in as_list(powershell_json(ps, timeout=10)):
+                celsius = to_number(item.get("CurrentCelsius"), None)
+                if celsius is None or celsius < -20 or celsius > 140:
+                    continue
+                sensors.append({
+                    "source": "ACPI",
+                    "label": item.get("InstanceName") or "Thermal zone",
+                    "current": celsius,
+                    "high": 85,
+                    "critical": 100
+                })
+            return sensors
+        except Exception:
+            return []
+
     try:
         temps = psutil.sensors_temperatures()
         output = []
@@ -1011,8 +1943,38 @@ def collect_temperatures():
                 output.append({
                     "source": key,
                     "label": reading.label or key,
-                    "current": reading.current
+                    "current": reading.current,
+                    "high": getattr(reading, "high", None),
+                    "critical": getattr(reading, "critical", None)
                 })
+        if output:
+            return output
+    except Exception:
+        pass
+
+    output = []
+    try:
+        for temp_file in glob.glob("/sys/class/thermal/thermal_zone*/temp"):
+            zone_dir = os.path.dirname(temp_file)
+            try:
+                raw_value = read_tail(temp_file, 1)[0]
+                celsius = to_number(raw_value, 0)
+                if celsius > 1000:
+                    celsius = celsius / 1000
+                label = os.path.basename(zone_dir)
+                type_file = os.path.join(zone_dir, "type")
+                if os.path.exists(type_file):
+                    label = read_tail(type_file, 1)[0] or label
+                if -20 <= celsius <= 140:
+                    output.append({
+                        "source": "sysfs",
+                        "label": label,
+                        "current": round(celsius, 1),
+                        "high": 85,
+                        "critical": 100
+                    })
+            except Exception:
+                continue
         return output
     except Exception:
         return []
@@ -1030,6 +1992,7 @@ def parse_sudo_event(line, timestamp, fallback_ip):
         "kind": "sudo_command",
         "user": username,
         "sourceIp": fallback_ip,
+        "protocol": "sudo",
         "runAs": field_pairs.get("USER", ""),
         "tty": field_pairs.get("TTY", ""),
         "cwd": field_pairs.get("PWD", ""),
@@ -1048,12 +2011,14 @@ def parse_auth_events(lines):
         user_match = re.search(r"for\\s+(invalid user\\s+)?([a-zA-Z0-9._-]+)", line) or re.search(r"user=([a-zA-Z0-9._-]+)", line)
         username = user_match.group(user_match.lastindex or 1) if user_match else "desconocido"
         ip_address = ip_match.group(1) if ip_match else "sin-ip"
+        protocol = normalize_event_protocol("", line)
 
         if "failed password" in lower or "authentication failure" in lower:
             events.append({
                 "kind": "failed_login",
                 "user": username,
                 "sourceIp": ip_address,
+                "protocol": protocol,
                 "message": line,
                 "timestamp": timestamp
             })
@@ -1062,6 +2027,7 @@ def parse_auth_events(lines):
                 "kind": "successful_login",
                 "user": username,
                 "sourceIp": ip_address,
+                "protocol": protocol,
                 "message": line,
                 "timestamp": timestamp
             })
@@ -1071,10 +2037,82 @@ def parse_auth_events(lines):
             events.append({
                 "kind": "new_user",
                 "subject": username,
+                "protocol": "account",
                 "message": line,
                 "timestamp": timestamp
             })
     return events[-80:]
+
+
+def counter_rows(counter, limit=8):
+    return [
+        {"value": key, "count": value}
+        for key, value in sorted(counter.items(), key=lambda item: (-item[1], str(item[0])))[:limit]
+    ]
+
+
+def build_security_access_summary(security, blocked_ips):
+    events = as_list(security.get("events") if isinstance(security, dict) else [])
+    failed = [event for event in events if isinstance(event, dict) and event.get("kind") == "failed_login"]
+    successful = [event for event in events if isinstance(event, dict) and event.get("kind") == "successful_login"]
+    sudo = [event for event in events if isinstance(event, dict) and event.get("kind") == "sudo_command"]
+    blocked = as_list(blocked_ips)
+
+    users = {}
+    ips = {}
+    protocols = {}
+    for event in failed:
+        user = str(event.get("user") or "desconocido").strip() or "desconocido"
+        ip = str(event.get("sourceIp") or "sin-ip").strip() or "sin-ip"
+        protocol = normalize_event_protocol(event.get("protocol"), event.get("message"))
+        users[user] = users.get(user, 0) + 1
+        if valid_source_ip(ip):
+            ips[ip] = ips.get(ip, 0) + 1
+        protocols[protocol] = protocols.get(protocol, 0) + 1
+    for event in sudo:
+        protocols["sudo"] = protocols.get("sudo", 0) + 1
+
+    top_ip = counter_rows(ips, 1)
+    top_user = counter_rows(users, 1)
+    repeated_ips = [item for item in counter_rows(ips, 10) if item["count"] >= 2]
+    attacked_users = counter_rows(users, 10)
+    blocked_ip_values = {
+        str(item.get("ip") or "").strip()
+        for item in blocked
+        if isinstance(item, dict) and item.get("ip")
+    }
+    unblocked_repeated = [
+        item for item in repeated_ips
+        if item["value"] not in blocked_ip_values
+    ]
+
+    if unblocked_repeated and unblocked_repeated[0]["count"] >= 5:
+        recommendation = f"Bloquear {unblocked_repeated[0]['value']} y revisar el usuario {top_user[0]['value'] if top_user else 'afectado'}."
+        severity = "danger"
+    elif len(failed) >= 5:
+        recommendation = "Revisar accesos fallidos, confirmar origen y ajustar reglas de respuesta inteligente."
+        severity = "warning"
+    elif sudo:
+        recommendation = "Revisar comandos privilegiados recientes y validar que corresponden a operación autorizada."
+        severity = "warning"
+    else:
+        recommendation = "Sin patrón de acceso anómalo en la muestra actual."
+        severity = "ok"
+
+    return {
+        "collectedAt": now_iso(),
+        "failedLogins": len(failed),
+        "successfulLogins": len(successful),
+        "sudoEvents": len(sudo),
+        "blockedIps": len(blocked),
+        "repeatedIps": repeated_ips,
+        "attackedUsers": attacked_users,
+        "protocols": counter_rows(protocols, 8),
+        "topIp": top_ip[0] if top_ip else None,
+        "topUser": top_user[0] if top_user else None,
+        "recommendation": recommendation,
+        "severity": severity
+    }
 
 
 def collect_security():
@@ -1094,7 +2132,7 @@ def collect_security():
 
 def collect_logs():
     custom_logs = []
-    for path in ADDITIONAL_LOG_PATHS:
+    for path in get_additional_log_paths():
         custom_logs.extend(expand_log_source(path))
 
     if IS_WINDOWS:
@@ -1161,22 +2199,26 @@ def collect_established_connections():
     try:
         for conn in psutil.net_connections(kind="inet"):
             if conn.status == "ESTABLISHED" and conn.raddr:
-                proc_name = ""
-                try:
-                    if conn.pid:
-                        proc_name = psutil.Process(conn.pid).name()
-                except Exception:
-                    pass
+                owner = process_brief(conn.pid)
                 result.append({
                     "pid": conn.pid,
-                    "process": proc_name,
-                    "localAddr": f"{conn.laddr.ip}:{conn.laddr.port}" if conn.laddr else "",
-                    "remoteAddr": f"{conn.raddr.ip}:{conn.raddr.port}" if conn.raddr else "",
+                    "process": owner.get("process", ""),
+                    "user": owner.get("user", ""),
+                    "cmdline": owner.get("cmdline", ""),
+                    "proto": connection_protocol(conn),
+                    "family": connection_family(conn),
+                    "localIp": connection_ip(conn.laddr),
+                    "localPort": connection_port(conn.laddr),
+                    "remoteIp": connection_ip(conn.raddr),
+                    "remotePort": connection_port(conn.raddr),
+                    "localAddr": format_connection_address(conn.laddr),
+                    "remoteAddr": format_connection_address(conn.raddr),
                     "status": conn.status
                 })
     except Exception:
         pass
-    return result[:50]
+    result.sort(key=lambda item: (str(item.get("process") or ""), int(item.get("pid") or 0), str(item.get("remoteAddr") or "")))
+    return result[:120]
 
 
 def collect_failed_services():
@@ -1208,8 +2250,301 @@ def collect_failed_services():
         return []
 
 
+def service_action_supported():
+    if IS_WINDOWS:
+        return command_exists("powershell", "pwsh")
+    return bool(shutil.which("systemctl"))
+
+
+def normalize_service_name(value):
+    raw = str(value or "").strip()
+    raw = raw.replace("\\\\", "").replace("/", "")
+    return re.sub(r"[^A-Za-z0-9_.@:-]", "", raw)[:160]
+
+
+def collect_windows_service_inventory():
+    ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$serviceEvents = @{}
+try {
+  Get-WinEvent -LogName System -ProviderName 'Service Control Manager' -MaxEvents 160 |
+    Where-Object { $_.Id -in 7000,7001,7009,7011,7023,7024,7031,7034 } |
+    ForEach-Object {
+      $message = $_.Message
+      $name = ''
+      if ($message -match "The (.+?) service") { $name = $Matches[1] }
+      if ($name -and -not $serviceEvents.ContainsKey($name)) {
+        $serviceEvents[$name] = [pscustomobject]@{
+          id = $_.Id
+          timestamp = $_.TimeCreated.ToString('o')
+          message = $message
+        }
+      }
+    }
+} catch { }
+Get-CimInstance Win32_Service |
+  Sort-Object Name |
+  Select-Object -First 260 |
+  ForEach-Object {
+    $recent = $serviceEvents[$_.Name]
+    if (-not $recent) { $recent = $serviceEvents[$_.DisplayName] }
+    [pscustomobject]@{
+      name = $_.Name
+      displayName = $_.DisplayName
+      description = $_.Description
+      activeState = $_.State
+      subState = $_.Status
+      loadState = ''
+      startup = $_.StartMode
+      startName = $_.StartName
+      pid = [int]($_.ProcessId -as [int])
+      exitCode = [int]($_.ExitCode -as [int])
+      canManage = $true
+      recentFailure = $recent
+    }
+  } | ConvertTo-Json -Depth 5 -Compress
+"""
+    services = []
+    for item in as_list(powershell_json(ps, timeout=22)):
+        if not isinstance(item, dict):
+            continue
+        services.append({
+            "name": item.get("name", ""),
+            "displayName": item.get("displayName", "") or item.get("name", ""),
+            "description": item.get("description", ""),
+            "activeState": item.get("activeState", ""),
+            "subState": item.get("subState", ""),
+            "loadState": item.get("loadState", ""),
+            "startup": item.get("startup", ""),
+            "startName": item.get("startName", ""),
+            "pid": to_int(item.get("pid"), 0),
+            "exitCode": to_int(item.get("exitCode"), 0),
+            "canManage": bool(item.get("canManage", True)),
+            "recentFailure": item.get("recentFailure") if isinstance(item.get("recentFailure"), dict) else None
+        })
+    return services
+
+
+def collect_linux_service_inventory():
+    if not shutil.which("systemctl"):
+        return []
+    startup = {}
+    unit_files = run_command_result(["systemctl", "list-unit-files", "--type=service", "--no-pager", "--no-legend"], timeout=14)
+    if unit_files.get("ok"):
+        for line in unit_files.get("stdout", "").splitlines():
+            parts = line.split()
+            if len(parts) >= 2:
+                startup[parts[0]] = parts[1]
+
+    services = []
+    units = run_command_result(["systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend", "--plain"], timeout=16)
+    if units.get("ok"):
+        for line in units.get("stdout", "").splitlines():
+            parts = line.split(None, 4)
+            if not parts:
+                continue
+            name = parts[0]
+            services.append({
+                "name": name,
+                "displayName": name,
+                "description": parts[4] if len(parts) > 4 else "",
+                "loadState": parts[1] if len(parts) > 1 else "",
+                "activeState": parts[2] if len(parts) > 2 else "",
+                "subState": parts[3] if len(parts) > 3 else "",
+                "startup": startup.get(name, ""),
+                "startName": "",
+                "pid": 0,
+                "exitCode": 0,
+                "canManage": True,
+                "recentFailure": None
+            })
+    services.sort(key=lambda item: (item.get("activeState") != "failed", item.get("activeState") != "active", item.get("name", "")))
+    return services[:260]
+
+
+def collect_service_inventory():
+    return collect_windows_service_inventory() if IS_WINDOWS else collect_linux_service_inventory()
+
+
+def execute_service_management_command(command_type, payload):
+    command_type = str(command_type or "").strip()
+    if command_type == "refresh-service-inventory":
+        return {"ok": True, "serviceInventory": collect_service_inventory(), "message": "Inventario de servicios actualizado"}
+
+    service_name = normalize_service_name(payload.get("serviceName") or payload.get("name") or payload.get("service") or "")
+    if not service_name:
+        return {"ok": False, "error": "Servicio requerido"}
+    if command_type not in ["start-service", "stop-service", "restart-service"]:
+        return {"ok": False, "error": f"Comando de servicio no soportado: {command_type}"}
+
+    if IS_WINDOWS:
+        action = {
+            "start-service": "Start-Service",
+            "stop-service": "Stop-Service",
+            "restart-service": "Restart-Service"
+        }[command_type]
+        force = " -Force" if command_type in ["stop-service", "restart-service"] else ""
+        script = f"{action} -Name {ps_quote(service_name)}{force}; Start-Sleep -Seconds 1"
+        result = run_command_result(["powershell", "-NoProfile", "-NonInteractive", "-Command", script], timeout=30)
+    else:
+        systemctl = shutil.which("systemctl")
+        if not systemctl:
+            return {"ok": False, "error": "systemctl no disponible"}
+        result = run_command_result(with_admin([systemctl, command_type.split("-", 1)[0], service_name]), timeout=30)
+
+    success = bool(result.get("ok"))
+    return {
+        "ok": success,
+        "type": command_type,
+        "serviceName": service_name,
+        "stdout": result.get("stdout", ""),
+        "stderr": result.get("stderr", ""),
+        "message": "Operación de servicio ejecutada" if success else (result.get("stderr") or result.get("error") or "No se pudo ejecutar la operación"),
+        "serviceInventory": collect_service_inventory() if success else None
+    }
+
+
+def collect_windows_scheduled_tasks():
+    ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+Get-ScheduledTask |
+  Sort-Object TaskPath,TaskName |
+  Select-Object -First 220 |
+  ForEach-Object {
+    $info = $null
+    try { $info = $_ | Get-ScheduledTaskInfo } catch { }
+    [pscustomobject]@{
+      name = $_.TaskName
+      path = $_.TaskPath
+      state = $_.State.ToString()
+      enabled = ($_.State.ToString() -ne 'Disabled')
+      author = $_.Author
+      description = $_.Description
+      lastRunTime = if ($info -and $info.LastRunTime) { $info.LastRunTime.ToString('o') } else { '' }
+      nextRunTime = if ($info -and $info.NextRunTime) { $info.NextRunTime.ToString('o') } else { '' }
+      lastResult = if ($info) { [int]$info.LastTaskResult } else { $null }
+      source = 'TaskScheduler'
+    }
+  } | ConvertTo-Json -Depth 4 -Compress
+"""
+    tasks = []
+    for item in as_list(powershell_json(ps, timeout=22)):
+        if not isinstance(item, dict):
+            continue
+        tasks.append({
+            "name": item.get("name", ""),
+            "path": item.get("path", ""),
+            "state": item.get("state", ""),
+            "enabled": bool(item.get("enabled", False)),
+            "author": item.get("author", ""),
+            "description": item.get("description", ""),
+            "lastRunTime": item.get("lastRunTime", ""),
+            "nextRunTime": item.get("nextRunTime", ""),
+            "lastResult": item.get("lastResult"),
+            "source": item.get("source", "TaskScheduler")
+        })
+    return tasks
+
+
+def collect_linux_scheduled_tasks():
+    tasks = []
+    if shutil.which("systemctl"):
+        result = run_command_result(["systemctl", "list-timers", "--all", "--no-pager", "--no-legend", "--plain"], timeout=14)
+        if result.get("ok"):
+            for line in result.get("stdout", "").splitlines()[:140]:
+                parts = line.split()
+                if len(parts) >= 5:
+                    unit = parts[-2] if len(parts) >= 2 else ""
+                    activates = parts[-1] if len(parts) >= 1 else ""
+                    tasks.append({
+                        "name": unit,
+                        "path": activates,
+                        "state": "timer",
+                        "enabled": True,
+                        "author": "systemd",
+                        "description": line,
+                        "lastRunTime": "",
+                        "nextRunTime": " ".join(parts[:2]) if len(parts) > 2 else "",
+                        "lastResult": "",
+                        "source": "systemd-timer"
+                    })
+    cron_sources = ["/etc/crontab"]
+    cron_sources.extend(glob.glob("/etc/cron.d/*")[:60])
+    for path in cron_sources:
+        if not os.path.isfile(path):
+            continue
+        for index, line in enumerate(read_tail(path, 80)):
+            text = line.strip()
+            if not text or text.startswith("#"):
+                continue
+            tasks.append({
+                "name": f"{os.path.basename(path)}:{index + 1}",
+                "path": path,
+                "state": "cron",
+                "enabled": True,
+                "author": "root" if path.startswith("/etc") else "",
+                "description": text[:240],
+                "lastRunTime": "",
+                "nextRunTime": "",
+                "lastResult": "",
+                "source": "cron"
+            })
+            if len(tasks) >= 220:
+                return tasks
+    user_cron = run_command_result(["sh", "-c", "crontab -l 2>/dev/null"], timeout=8)
+    if user_cron.get("ok"):
+        for index, line in enumerate(user_cron.get("stdout", "").splitlines()):
+            text = line.strip()
+            if not text or text.startswith("#"):
+                continue
+            tasks.append({
+                "name": f"user-crontab:{index + 1}",
+                "path": "crontab -l",
+                "state": "cron",
+                "enabled": True,
+                "author": INSTALL_USER,
+                "description": text[:240],
+                "lastRunTime": "",
+                "nextRunTime": "",
+                "lastResult": "",
+                "source": "cron"
+            })
+            if len(tasks) >= 220:
+                break
+    return tasks[:220]
+
+
+def collect_scheduled_tasks():
+    return collect_windows_scheduled_tasks() if IS_WINDOWS else collect_linux_scheduled_tasks()
+
+
 def collect_fans():
     if IS_WINDOWS:
+        try:
+            ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+Get-CimInstance Win32_Fan | ForEach-Object {
+  [pscustomobject]@{
+    source = 'Win32_Fan'
+    label = if ($_.Name) { $_.Name } elseif ($_.DeviceID) { $_.DeviceID } else { 'Fan' }
+    rpm = [int]($_.DesiredSpeed -as [int])
+    status = $_.Status
+  }
+} | ConvertTo-Json -Depth 3 -Compress
+"""
+            fans = []
+            for item in as_list(powershell_json(ps, timeout=10)):
+                if not isinstance(item, dict):
+                    continue
+                fans.append({
+                    "source": item.get("source", "Win32_Fan"),
+                    "label": item.get("label", "Fan"),
+                    "rpm": to_int(item.get("rpm"), 0),
+                    "status": item.get("status", "")
+                })
+            return fans
+        except Exception:
+            pass
         return []
     try:
         fans = psutil.sensors_fans()
@@ -1239,7 +2574,82 @@ def collect_battery():
 
 def collect_smart_data():
     if IS_WINDOWS:
-        return []
+        try:
+            ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$physical = @()
+try {
+  $physical = @(Get-PhysicalDisk | ForEach-Object {
+    [pscustomobject]@{
+      device = $_.FriendlyName
+      model = $_.FriendlyName
+      serialNumber = $_.SerialNumber
+      sizeBytes = [int64]$_.Size
+      mediaType = $_.MediaType
+      healthStatus = $_.HealthStatus.ToString()
+      operationalStatus = ($_.OperationalStatus -join ', ')
+      canPool = $_.CanPool
+    }
+  })
+} catch { }
+$drives = @(Get-CimInstance Win32_DiskDrive | ForEach-Object {
+  [pscustomobject]@{
+    device = $_.DeviceID
+    model = $_.Model
+    serialNumber = ($_.SerialNumber -as [string]).Trim()
+    sizeBytes = [int64]$_.Size
+    mediaType = $_.MediaType
+    healthStatus = $_.Status
+    operationalStatus = ''
+    canPool = $null
+  }
+})
+$predict = @()
+try {
+  $predict = @(Get-CimInstance -Namespace root/wmi -ClassName MSStorageDriver_FailurePredictStatus | ForEach-Object {
+    [pscustomobject]@{
+      instanceName = $_.InstanceName
+      predictFailure = [bool]$_.PredictFailure
+      reason = [int]($_.Reason -as [int])
+    }
+  })
+} catch { }
+[pscustomobject]@{
+  physical = $physical
+  drives = $drives
+  predict = $predict
+} | ConvertTo-Json -Depth 5 -Compress
+"""
+            raw = powershell_json(ps, timeout=18)
+            if not isinstance(raw, dict):
+                return []
+            prediction = as_list(raw.get("predict"))
+            rows = as_list(raw.get("physical")) or as_list(raw.get("drives"))
+            disks = []
+            for index, item in enumerate(rows):
+                if not isinstance(item, dict):
+                    continue
+                pred = prediction[index] if index < len(prediction) and isinstance(prediction[index], dict) else {}
+                predict_failure = pred.get("predictFailure") if pred else None
+                attrs = {
+                    "HealthStatus": item.get("healthStatus", ""),
+                    "OperationalStatus": item.get("operationalStatus", ""),
+                    "PredictFailure": predict_failure,
+                    "FailureReason": pred.get("reason", "") if pred else ""
+                }
+                disks.append({
+                    "device": item.get("device", "") or item.get("model", ""),
+                    "model": item.get("model", ""),
+                    "serialNumber": item.get("serialNumber", ""),
+                    "sizeBytes": to_int(item.get("sizeBytes"), 0),
+                    "mediaType": item.get("mediaType", ""),
+                    "healthStatus": item.get("healthStatus", ""),
+                    "predictFailure": bool(predict_failure) if predict_failure is not None else False,
+                    "attributes": attrs
+                })
+            return disks
+        except Exception:
+            return []
     smartctl_binary = shutil.which("smartctl")
     if not smartctl_binary:
         return []
@@ -1254,6 +2664,11 @@ def collect_smart_data():
                 out = result["stdout"] if result["ok"] else ""
                 try:
                     data = json.loads(out)
+                    device_info = data.get("device", {}) if isinstance(data, dict) else {}
+                    model = data.get("model_name") or data.get("model_family") or ""
+                    serial = data.get("serial_number") or ""
+                    smart_status = data.get("smart_status", {}) if isinstance(data, dict) else {}
+                    passed = smart_status.get("passed")
                     attrs = data.get("ata_smart_attributes", {}).get("table", [])
                     useful = {}
                     for attr in attrs:
@@ -1261,7 +2676,15 @@ def collect_smart_data():
                         if name in ("Reallocated_Sector_Ct", "Pending_Sector_Count",
                                     "Uncorrectable_Sector_Count", "Temperature_Celsius", "Power_On_Hours"):
                             useful[name] = attr.get("raw", {}).get("value", 0)
-                    disks.append({"device": dev, "attributes": useful})
+                    disks.append({
+                        "device": dev,
+                        "model": model,
+                        "serialNumber": serial,
+                        "type": device_info.get("type", ""),
+                        "healthStatus": "OK" if passed is True else ("FAIL" if passed is False else ""),
+                        "predictFailure": passed is False,
+                        "attributes": useful
+                    })
                 except Exception:
                     disks.append({"device": dev, "attributes": {}})
         return disks
@@ -1271,7 +2694,33 @@ def collect_smart_data():
 
 def collect_login_history():
     if IS_WINDOWS:
-        return []
+        try:
+            ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+Get-WinEvent -LogName Security -MaxEvents 40 -FilterXPath '*[System[EventID=4624 or EventID=4625]]' 2>$null |
+  ForEach-Object {
+    [pscustomobject]@{
+      id=$_.Id
+      ts=$_.TimeCreated.ToString('o')
+      msg=$_.Message
+      props=@($_.Properties | ForEach-Object { $_.Value })
+    }
+  } | ConvertTo-Json -Depth 4 -Compress
+"""
+            rows = []
+            for event in as_list(powershell_json(ps, timeout=15)):
+                if not isinstance(event, dict):
+                    continue
+                eid = to_int(event.get("id"), 0)
+                msg = str(event.get("msg", ""))
+                username = windows_event_prop(event, 5) or windows_event_account(msg)
+                source_ip = windows_event_prop(event, 18 if eid == 4624 else 19) or windows_event_source_ip(msg, "local")
+                logon_type = windows_event_prop(event, 8)
+                state = "OK" if eid == 4624 else "FAIL"
+                rows.append(f"[{event.get('ts', '')}] {state} user={username} source={source_ip} logonType={logon_type}")
+            return rows[:30]
+        except Exception:
+            return []
     try:
         out = run_command(["last", "-n", "30", "-F"])
         lines = [line for line in out.splitlines()
@@ -1282,56 +2731,719 @@ def collect_login_history():
 
 
 def collect_pending_updates():
+    checked_at = now_iso()
     if IS_WINDOWS:
         try:
-            ps = "(New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher().Search('IsInstalled=0').Updates | ForEach-Object {$_.Title} | ConvertTo-Json -Compress"
-            result = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], capture_output=True, text=True, timeout=30)
-            if result.returncode == 0 and result.stdout.strip():
-                raw = json.loads(result.stdout)
-                if isinstance(raw, str):
-                    raw = [raw]
-                return {"count": len(raw), "updates": raw[:10]}
+            ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$updates = @()
+try {
+  $updates = @((New-Object -ComObject Microsoft.Update.Session).CreateUpdateSearcher().Search('IsInstalled=0').Updates | ForEach-Object { $_.Title })
+} catch { }
+$rebootPaths = @(
+  'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\Component Based Servicing\RebootPending',
+  'HKLM:\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired',
+  'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'
+)
+$reboot = $false
+foreach ($path in $rebootPaths) {
+  if (Test-Path $path) {
+    if ($path -like '*Session Manager') {
+      try {
+        $value = (Get-ItemProperty -Path $path -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations
+        if ($value) { $reboot = $true }
+      } catch { }
+    } else {
+      $reboot = $true
+    }
+  }
+}
+$os = Get-CimInstance Win32_OperatingSystem
+[pscustomobject]@{
+  manager = 'Windows Update'
+  count = $updates.Count
+  updates = $updates
+  rebootRequired = $reboot
+  lastBootTime = if ($os.LastBootUpTime) { $os.LastBootUpTime.ToString('o') } else { '' }
+  installDate = if ($os.InstallDate) { $os.InstallDate.ToString('o') } else { '' }
+} | ConvertTo-Json -Depth 4 -Compress
+"""
+            raw = powershell_json(ps, timeout=35)
+            if isinstance(raw, dict):
+                updates = as_list(raw.get("updates"))
+                return {
+                    "checkedAt": checked_at,
+                    "manager": raw.get("manager", "Windows Update"),
+                    "count": to_int(raw.get("count"), len(updates)),
+                    "updates": [str(item) for item in updates[:25]],
+                    "rebootRequired": bool(raw.get("rebootRequired", False)),
+                    "lastBootTime": raw.get("lastBootTime", ""),
+                    "installDate": raw.get("installDate", "")
+                }
         except Exception:
             pass
-        return {"count": 0, "updates": []}
+        return {"checkedAt": checked_at, "manager": "Windows Update", "count": 0, "updates": [], "rebootRequired": False, "lastBootTime": "", "installDate": ""}
     try:
+        manager = ""
+        lines = []
         if shutil.which("apt"):
+            manager = "apt"
             out = run_command(["apt", "list", "--upgradable", "-qq"])
             lines = [line for line in out.splitlines() if line.strip() and line != "Listing..."]
-            return {"count": len(lines), "updates": lines[:10]}
-        if shutil.which("dnf"):
-            out = run_command(["dnf", "check-update", "-q"])
-            lines = [line for line in out.splitlines() if line.strip()]
-            return {"count": len(lines), "updates": lines[:10]}
-        if shutil.which("pacman"):
+        elif shutil.which("dnf"):
+            manager = "dnf"
+            result = run_command_result(["dnf", "check-update", "-q"], timeout=30)
+            if result.get("ok") or result.get("exitCode") == 100:
+                lines = [line for line in result.get("stdout", "").splitlines() if line.strip() and not line.startswith("Last metadata")]
+        elif shutil.which("yum"):
+            manager = "yum"
+            result = run_command_result(["yum", "check-update", "-q"], timeout=30)
+            if result.get("ok") or result.get("exitCode") == 100:
+                lines = [line for line in result.get("stdout", "").splitlines() if line.strip()]
+        elif shutil.which("zypper"):
+            manager = "zypper"
+            result = run_command_result(["zypper", "--non-interactive", "list-updates"], timeout=30)
+            if result.get("ok") or result.get("exitCode") in (100, 101, 102):
+                lines = [line for line in result.get("stdout", "").splitlines() if "|" in line and not line.lower().startswith("repository")]
+        elif shutil.which("checkupdates"):
+            manager = "pacman"
             out = run_command(["checkupdates"])
             lines = [line for line in out.splitlines() if line.strip()]
-            return {"count": len(lines), "updates": lines[:10]}
+        return {
+            "checkedAt": checked_at,
+            "manager": manager or "desconocido",
+            "count": len(lines),
+            "updates": lines[:25],
+            "rebootRequired": os.path.exists("/var/run/reboot-required"),
+            "lastBootTime": datetime.fromtimestamp(psutil.boot_time(), timezone.utc).isoformat().replace("+00:00", "Z"),
+            "installDate": ""
+        }
     except Exception:
         pass
-    return {"count": 0, "updates": []}
+    return {"checkedAt": checked_at, "manager": "desconocido", "count": 0, "updates": [], "rebootRequired": False, "lastBootTime": "", "installDate": ""}
+
+
+def firewall_rule_managed_by_thorondor(name):
+    return "thorondor block" in str(name or "").lower() or "THORONDOR_BLOCK" in str(name or "")
+
+
+def firewall_rule_ip(name):
+    match = re.search(r"\\b(?:\\d{1,3}\\.){3}\\d{1,3}\\b", str(name or ""))
+    return match.group(0) if match else ""
+
+
+def firewall_rule_record(name, direction="", action="", profile="", enabled=True, provider="firewall"):
+    text = str(name or "").strip()
+    managed = firewall_rule_managed_by_thorondor(text)
+    return {
+        "name": text[:220],
+        "direction": direction,
+        "action": action,
+        "profile": profile,
+        "enabled": enabled,
+        "provider": provider,
+        "managedByThorondor": managed,
+        "scope": "thorondor" if managed else "system",
+        "ip": firewall_rule_ip(text),
+        "canManage": managed
+    }
+
+
+def firewall_summary_from_rules(rules):
+    own = [rule for rule in as_list(rules) if isinstance(rule, dict) and rule.get("managedByThorondor")]
+    system = [rule for rule in as_list(rules) if isinstance(rule, dict) and not rule.get("managedByThorondor")]
+    providers = {}
+    for rule in as_list(rules):
+        if isinstance(rule, dict):
+            provider = str(rule.get("provider") or "firewall")
+            providers[provider] = providers.get(provider, 0) + 1
+    return {
+        "total": len(as_list(rules)),
+        "thorondor": len(own),
+        "system": len(system),
+        "blockedIps": sorted({rule.get("ip") for rule in own if rule.get("ip")}),
+        "providers": counter_rows(providers, 10)
+    }
+
+
+def collect_firewall_rules():
+    if IS_WINDOWS:
+        ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+Get-NetFirewallRule -PolicyStore ActiveStore -Enabled True |
+  Sort-Object DisplayName |
+  Select-Object -First 180 |
+  ForEach-Object {
+    [pscustomobject]@{
+      name = $_.DisplayName
+      direction = $_.Direction.ToString()
+      action = $_.Action.ToString()
+      profile = $_.Profile.ToString()
+      enabled = $_.Enabled.ToString()
+      provider = 'windows-firewall'
+    }
+  } | ConvertTo-Json -Depth 3 -Compress
+"""
+        rules = []
+        for item in as_list(powershell_json(ps, timeout=18)):
+            if not isinstance(item, dict):
+                continue
+            rules.append(firewall_rule_record(
+                item.get("name", ""),
+                item.get("direction", ""),
+                item.get("action", ""),
+                item.get("profile", ""),
+                item.get("enabled", ""),
+                item.get("provider", "windows-firewall")
+            ))
+        return rules
+
+    rules = []
+    for binary_name in ["iptables", "ip6tables"]:
+        binary = shutil.which(binary_name)
+        if not binary:
+            continue
+        result = run_command_result(with_admin([binary, "-S"]), timeout=12)
+        if result.get("ok"):
+            for line in result.get("stdout", "").splitlines()[:120]:
+                if line.strip():
+                    rules.append(firewall_rule_record(
+                        line.strip(),
+                        "INPUT" if " INPUT" in line else "",
+                        "DROP" if " DROP" in line else ("REJECT" if " REJECT" in line else ("ACCEPT" if " ACCEPT" in line else "")),
+                        "",
+                        True,
+                        binary_name
+                    ))
+    ufw = shutil.which("ufw")
+    if ufw:
+        result = run_command_result(with_admin([ufw, "status", "numbered"]), timeout=10)
+        if result.get("ok"):
+            for line in result.get("stdout", "").splitlines()[:80]:
+                text = line.strip()
+                if text and not text.lower().startswith("status:"):
+                    rules.append(firewall_rule_record(text, "", "", "", True, "ufw"))
+    firewalld = firewalld_binary()
+    if firewalld:
+        result = run_command_result(with_admin([firewalld, "--list-all"]), timeout=10)
+        if result.get("ok"):
+            for line in result.get("stdout", "").splitlines()[:80]:
+                text = line.strip()
+                if text:
+                    rules.append(firewall_rule_record(text, "", "", "", True, "firewalld"))
+    return rules[:220]
+
+
+def load_inventory_baseline():
+    if not os.path.exists(INVENTORY_BASELINE_PATH):
+        return {}
+    try:
+        with open(INVENTORY_BASELINE_PATH, "r", encoding="utf-8") as handler:
+            data = json.load(handler)
+            return data if isinstance(data, dict) else {}
+    except Exception:
+        return {}
+
+
+def save_inventory_baseline(data):
+    try:
+        with open(INVENTORY_BASELINE_PATH, "w", encoding="utf-8") as handler:
+            json.dump(data, handler, indent=2, ensure_ascii=False)
+    except Exception:
+        pass
+
+
+def change_items(kind, previous, current, label):
+    events = []
+    previous = previous if isinstance(previous, dict) else {}
+    current = current if isinstance(current, dict) else {}
+    for key in sorted(set(current.keys()) - set(previous.keys()))[:40]:
+        events.append({"kind": kind, "action": "added", "key": key, "label": label, "current": current.get(key), "timestamp": now_iso()})
+    for key in sorted(set(previous.keys()) - set(current.keys()))[:40]:
+        events.append({"kind": kind, "action": "removed", "key": key, "label": label, "previous": previous.get(key), "timestamp": now_iso()})
+    for key in sorted(set(previous.keys()) & set(current.keys()))[:260]:
+        if previous.get(key) != current.get(key):
+            events.append({"kind": kind, "action": "changed", "key": key, "label": label, "previous": previous.get(key), "current": current.get(key), "timestamp": now_iso()})
+            if len(events) >= 80:
+                break
+    return events
+
+
+def suspicious_startup_text(value):
+    text = json.dumps(value, sort_keys=True).lower() if isinstance(value, (dict, list)) else str(value or "").lower()
+    suspicious_markers = [
+        "/tmp/",
+        "/dev/shm/",
+        "appdata\\\\local\\\\temp",
+        "powershell -enc",
+        "frombase64string",
+        "curl ",
+        "wget ",
+        "certutil",
+        "bitsadmin",
+        " rundll32 ",
+        " regsvr32 "
+    ]
+    return any(marker in text for marker in suspicious_markers)
+
+
+def enrich_inventory_events(events):
+    enriched = []
+    for event in as_list(events):
+        if not isinstance(event, dict):
+            continue
+        current = event.get("current") if isinstance(event.get("current"), dict) else {}
+        key = str(event.get("key") or "")
+        kind = str(event.get("kind") or "")
+        action = str(event.get("action") or "")
+        severity = "info"
+        important = False
+        recommendation = "Revisar el cambio y marcar nuevo baseline si corresponde a operación autorizada."
+
+        if kind == "open_port_change" and action == "added":
+            severity = "warning"
+            important = True
+            recommendation = "Validar el proceso que abrió el puerto y cerrarlo o documentarlo si es esperado."
+        elif kind == "service_inventory_change" and action == "added":
+            severity = "warning"
+            important = True
+            recommendation = "Revisar el servicio nuevo y confirmar binario, usuario de ejecución y modo de arranque."
+        elif kind == "user_inventory_change" and action in ["added", "changed"] and current.get("privileged"):
+            severity = "danger"
+            important = True
+            event["kind"] = "privileged_user_change"
+            recommendation = "Verificar inmediatamente el usuario admin y retirar privilegios si no estaba autorizado."
+        elif kind == "group_inventory_change" and current.get("privileged"):
+            severity = "danger"
+            important = True
+            recommendation = "Revisar miembros del grupo privilegiado y retirar accesos no aprobados."
+        elif kind == "scheduled_task_change" and (action == "added" or suspicious_startup_text(current) or suspicious_startup_text(key)):
+            severity = "danger" if suspicious_startup_text(current) or suspicious_startup_text(key) else "warning"
+            important = True
+            event["kind"] = "startup_binary_change"
+            recommendation = "Revisar la tarea de arranque y el binario ejecutado antes de aceptar el baseline."
+        elif kind == "firewall_rule_change" and action in ["added", "removed", "changed"]:
+            severity = "warning"
+            important = True
+            recommendation = "Confirmar que el cambio de firewall es deliberado. Thorondor sólo gestionará sus reglas propias."
+
+        event["severity"] = severity
+        event["important"] = important
+        event["recommendation"] = recommendation
+        enriched.append(event)
+    return enriched
+
+
+def summarize_inventory_for_changes(user_inventory, open_ports, services, scheduled_tasks, firewall_rules):
+    users = {}
+    groups = {}
+    for user in as_list(user_inventory.get("users") if isinstance(user_inventory, dict) else []):
+        if isinstance(user, dict) and user.get("name"):
+            users[user["name"]] = {
+                "enabled": bool(user.get("enabled", True)),
+                "privileged": bool(user.get("privileged", False)),
+                "groups": sorted(as_list(user.get("groups")))
+            }
+    for group in as_list(user_inventory.get("groups") if isinstance(user_inventory, dict) else []):
+        if isinstance(group, dict) and group.get("name"):
+            groups[group["name"]] = {
+                "privileged": bool(group.get("privileged", False)),
+                "members": sorted(as_list(group.get("members")))
+            }
+    ports = {}
+    for port in as_list(open_ports):
+        if isinstance(port, dict):
+            key = f"{port.get('proto', '')}:{port.get('ip', '')}:{port.get('port', '')}"
+            ports[key] = {"process": port.get("process", ""), "pid": port.get("pid", 0), "user": port.get("user", "")}
+    service_map = {}
+    for service in as_list(services):
+        if isinstance(service, dict) and service.get("name"):
+            service_map[service["name"]] = {
+                "activeState": service.get("activeState", ""),
+                "subState": service.get("subState", ""),
+                "startup": service.get("startup", "")
+            }
+    task_map = {}
+    for task in as_list(scheduled_tasks):
+        if isinstance(task, dict) and task.get("name"):
+            key = f"{task.get('source', '')}:{task.get('path', '')}:{task.get('name', '')}"
+            task_map[key] = {"state": task.get("state", ""), "enabled": bool(task.get("enabled", False))}
+    firewall_map = {}
+    for rule in as_list(firewall_rules):
+        if isinstance(rule, dict) and rule.get("name"):
+            key = f"{rule.get('provider', '')}:{rule.get('name', '')}"
+            firewall_map[key] = {"action": rule.get("action", ""), "direction": rule.get("direction", ""), "enabled": rule.get("enabled", "")}
+    return {
+        "users": users,
+        "groups": groups,
+        "ports": ports,
+        "services": service_map,
+        "scheduledTasks": task_map,
+        "firewallRules": firewall_map
+    }
+
+
+def save_current_inventory_baseline(user_inventory, open_ports, services, scheduled_tasks, firewall_rules):
+    current = summarize_inventory_for_changes(user_inventory, open_ports, services, scheduled_tasks, firewall_rules)
+    current["createdAt"] = now_iso()
+    current["updatedAt"] = current["createdAt"]
+    save_inventory_baseline(current)
+    return current
+
+
+def collect_inventory_changes(user_inventory, open_ports, services, scheduled_tasks, firewall_rules):
+    current = summarize_inventory_for_changes(user_inventory, open_ports, services, scheduled_tasks, firewall_rules)
+    baseline = load_inventory_baseline()
+    initialized = not bool(baseline)
+    events = []
+    if not initialized:
+        events.extend(change_items("user_inventory_change", baseline.get("users", {}), current.get("users", {}), "Usuarios"))
+        events.extend(change_items("group_inventory_change", baseline.get("groups", {}), current.get("groups", {}), "Grupos"))
+        events.extend(change_items("open_port_change", baseline.get("ports", {}), current.get("ports", {}), "Puertos abiertos"))
+        events.extend(change_items("service_inventory_change", baseline.get("services", {}), current.get("services", {}), "Servicios"))
+        events.extend(change_items("scheduled_task_change", baseline.get("scheduledTasks", {}), current.get("scheduledTasks", {}), "Tareas programadas"))
+        events.extend(change_items("firewall_rule_change", baseline.get("firewallRules", {}), current.get("firewallRules", {}), "Firewall"))
+    else:
+        current["createdAt"] = now_iso()
+        current["updatedAt"] = current["createdAt"]
+        save_inventory_baseline(current)
+    events = enrich_inventory_events(events)
+    current["updatedAt"] = now_iso()
+    important = [event for event in events if event.get("important")]
+    return {
+        "initialized": initialized,
+        "events": events[:160],
+        "importantEvents": important[:80],
+        "counts": {key: len(value) for key, value in current.items() if isinstance(value, dict)},
+        "baselinePath": INVENTORY_BASELINE_PATH,
+        "baselineCreatedAt": baseline.get("createdAt", current.get("createdAt", "")),
+        "baselineUpdatedAt": baseline.get("updatedAt", current.get("updatedAt", "")),
+        "currentCounts": {key: len(value) for key, value in current.items() if isinstance(value, dict)}
+    }
+
+
+def create_host_baseline_payload():
+    user_inventory = collect_user_inventory()
+    open_ports = collect_open_ports()
+    services = collect_service_inventory()
+    scheduled_tasks = collect_scheduled_tasks()
+    firewall_rules = collect_firewall_rules()
+    baseline = save_current_inventory_baseline(user_inventory, open_ports, services, scheduled_tasks, firewall_rules)
+    return {
+        "ok": True,
+        "message": "Baseline del host actualizado",
+        "baselinePath": INVENTORY_BASELINE_PATH,
+        "baseline": {
+            "createdAt": baseline.get("createdAt", ""),
+            "updatedAt": baseline.get("updatedAt", ""),
+            "counts": {key: len(value) for key, value in baseline.items() if isinstance(value, dict)}
+        }
+    }
+
+
+def collect_agent_operational_status(collection_errors):
+    endpoint = f"http://{find_local_ip()}:{LISTEN_PORT}"
+    commands = [
+        "collect-telemetry",
+        "collect-logs",
+        "refresh-user-inventory",
+        "refresh-service-inventory",
+        "start-service",
+        "stop-service",
+        "restart-service",
+        "set-host-baseline",
+        "check-host-health",
+        "list-connected-users",
+        "terminate-user-session",
+        "block-ip",
+        "unblock-ip"
+    ]
+    permission_hints = []
+    if not IS_WINDOWS and shutil.which("systemctl") and not (hasattr(os, "geteuid") and os.geteuid() == 0) and not shutil.which("sudo"):
+        permission_hints.append("systemctl puede requerir sudo para operar servicios.")
+    return {
+        "version": AGENT_VERSION,
+        "hostLabel": HOST_LABEL,
+        "systemName": SYSTEM_NAME,
+        "targetOs": "windows" if IS_WINDOWS else "linux",
+        "listenHost": LISTEN_HOST,
+        "listenPort": LISTEN_PORT,
+        "endpoint": endpoint,
+        "centralApiConfigured": bool(central_api_root()),
+        "persistenceMode": PERSISTENCE_MODE,
+        "keyAgentsPresent": bool(KEY_AGENTS),
+        "keyAgentsFingerprint": sha256(KEY_AGENTS.encode("utf-8")).hexdigest()[:12] if KEY_AGENTS else "",
+        "commandsAccepted": commands,
+        "serviceManagementAvailable": service_action_supported(),
+        "scheduledTasksAvailable": True,
+        "updateMonitorAvailable": update_monitoring_available(),
+        "collectionErrors": len(collection_errors or []),
+        "permissionHints": permission_hints
+    }
+
+
+def bytes_from_capacity_text(value):
+    text = str(value or "").strip()
+    if not text or "no module" in text.lower():
+        return 0
+    match = re.search(r"([0-9]+(?:[.,][0-9]+)?)\\s*([KMGTPE]?B)", text, re.IGNORECASE)
+    if not match:
+        return to_int(text, 0)
+    amount = to_number(match.group(1), 0)
+    unit = match.group(2).upper()
+    factor = {
+        "KB": 1024,
+        "MB": 1024 ** 2,
+        "GB": 1024 ** 3,
+        "TB": 1024 ** 4,
+        "PB": 1024 ** 5,
+        "EB": 1024 ** 6
+    }.get(unit, 1)
+    return int(amount * factor)
+
+
+def read_sys_dmi_file(name):
+    path = os.path.join("/sys/class/dmi/id", name)
+    try:
+        if os.path.exists(path):
+            return read_tail(path, 1)[0].strip()
+    except Exception:
+        pass
+    return ""
+
+
+def parse_dmidecode_blocks(output, block_header):
+    blocks = []
+    current = None
+    for line in str(output or "").splitlines():
+        if line and not line.startswith("\\t") and not line.startswith(" "):
+            if current:
+                blocks.append(current)
+            current = {"_header": line.strip()} if line.strip().startswith(block_header) else None
+            continue
+        if current is None:
+            continue
+        match = re.match(r"\\s*([^:]+):\\s*(.*)$", line)
+        if match:
+            current[match.group(1).strip()] = match.group(2).strip()
+    if current:
+        blocks.append(current)
+    return blocks
+
+
+def collect_linux_memory_modules():
+    dmidecode_binary = shutil.which("dmidecode")
+    if not dmidecode_binary:
+        return []
+    result = run_command_result(with_admin([dmidecode_binary, "-t", "memory"]), timeout=15)
+    if not result.get("ok"):
+        return []
+    modules = []
+    for block in parse_dmidecode_blocks(result.get("stdout", ""), "Memory Device"):
+        size_text = block.get("Size", "")
+        capacity = bytes_from_capacity_text(size_text)
+        if capacity <= 0:
+            continue
+        modules.append({
+            "locator": block.get("Locator", "") or block.get("Bank Locator", ""),
+            "capacityBytes": capacity,
+            "capacityLabel": size_text,
+            "speedMhz": to_int(block.get("Configured Memory Speed") or block.get("Speed"), 0),
+            "manufacturer": block.get("Manufacturer", ""),
+            "partNumber": block.get("Part Number", ""),
+            "serialNumber": block.get("Serial Number", ""),
+            "type": block.get("Type", "")
+        })
+    return modules
+
+
+def collect_linux_physical_disks():
+    lsblk_binary = shutil.which("lsblk")
+    if not lsblk_binary:
+        return []
+    result = run_command_result([lsblk_binary, "-J", "-b", "-o", "NAME,MODEL,SERIAL,SIZE,TYPE,TRAN,ROTA,VENDOR,STATE"], timeout=10)
+    if not result.get("ok"):
+        return []
+    raw = parse_json_output(result.get("stdout"), {})
+    disks = []
+    for item in raw.get("blockdevices", []) if isinstance(raw, dict) else []:
+        if item.get("type") != "disk":
+            continue
+        disks.append({
+            "name": item.get("name", ""),
+            "device": f"/dev/{item.get('name', '')}" if item.get("name") else "",
+            "model": str(item.get("model") or "").strip(),
+            "serialNumber": str(item.get("serial") or "").strip(),
+            "sizeBytes": to_int(item.get("size"), 0),
+            "mediaType": "HDD" if str(item.get("rota")) == "1" else "SSD/NVMe",
+            "interfaceType": str(item.get("tran") or "").strip(),
+            "vendor": str(item.get("vendor") or "").strip(),
+            "healthStatus": str(item.get("state") or "").strip()
+        })
+    return disks
+
+
+def collect_windows_hardware_info():
+    ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$cpu = Get-CimInstance Win32_Processor | Select-Object -First 1 Name,Manufacturer,SocketDesignation,NumberOfCores,NumberOfLogicalProcessors,MaxClockSpeed,CurrentClockSpeed
+$system = Get-CimInstance Win32_ComputerSystem | Select-Object Manufacturer,Model,SystemType,TotalPhysicalMemory
+$os = Get-CimInstance Win32_OperatingSystem | Select-Object OSArchitecture,Caption,Version
+$board = Get-CimInstance Win32_BaseBoard | Select-Object Manufacturer,Product,SerialNumber,Version
+$bios = Get-CimInstance Win32_BIOS | Select-Object Manufacturer,SMBIOSBIOSVersion,ReleaseDate,SerialNumber
+$memory = @(Get-CimInstance Win32_PhysicalMemory | ForEach-Object {
+  [pscustomobject]@{
+    locator = $_.DeviceLocator
+    bank = $_.BankLabel
+    capacityBytes = [int64]$_.Capacity
+    capacityLabel = if ($_.Capacity) { ('{0:N1} GB' -f ($_.Capacity / 1GB)) } else { '' }
+    speedMhz = [int]($_.ConfiguredClockSpeed -as [int])
+    manufacturer = $_.Manufacturer
+    partNumber = ($_.PartNumber -as [string]).Trim()
+    serialNumber = ($_.SerialNumber -as [string]).Trim()
+    type = $_.SMBIOSMemoryType
+  }
+})
+$disks = @(Get-CimInstance Win32_DiskDrive | ForEach-Object {
+  [pscustomobject]@{
+    name = $_.DeviceID
+    device = $_.DeviceID
+    model = $_.Model
+    serialNumber = ($_.SerialNumber -as [string]).Trim()
+    sizeBytes = [int64]$_.Size
+    mediaType = $_.MediaType
+    interfaceType = $_.InterfaceType
+    firmware = $_.FirmwareRevision
+    healthStatus = $_.Status
+  }
+})
+[pscustomobject]@{
+  cpu = $cpu
+  system = $system
+  os = $os
+  board = $board
+  bios = $bios
+  memoryModules = $memory
+  physicalDisks = $disks
+} | ConvertTo-Json -Depth 5 -Compress
+"""
+    raw = powershell_json(ps, timeout=18)
+    if not isinstance(raw, dict):
+        return {}
+    cpu = raw.get("cpu") or {}
+    system = raw.get("system") or {}
+    os_info = raw.get("os") or {}
+    board = raw.get("board") or {}
+    bios = raw.get("bios") or {}
+    return {
+        "cpuModel": str(cpu.get("Name") or "").strip(),
+        "cpuVendor": str(cpu.get("Manufacturer") or "").strip(),
+        "cpuSocket": str(cpu.get("SocketDesignation") or "").strip(),
+        "cpuCoresPhysical": to_int(cpu.get("NumberOfCores"), psutil.cpu_count(logical=False) or 0),
+        "cpuCoresLogical": to_int(cpu.get("NumberOfLogicalProcessors"), psutil.cpu_count(logical=True) or 0),
+        "cpuFreqMhz": to_int(cpu.get("CurrentClockSpeed"), 0),
+        "cpuMaxFreqMhz": to_int(cpu.get("MaxClockSpeed"), 0),
+        "totalRamGb": round(to_number(system.get("TotalPhysicalMemory"), psutil.virtual_memory().total) / 1024 ** 3, 2),
+        "systemManufacturer": str(system.get("Manufacturer") or "").strip(),
+        "systemModel": str(system.get("Model") or "").strip(),
+        "systemType": str(system.get("SystemType") or "").strip(),
+        "osCaption": str(os_info.get("Caption") or "").strip(),
+        "osVersion": str(os_info.get("Version") or "").strip(),
+        "osArchitecture": str(os_info.get("OSArchitecture") or platform.machine()).strip(),
+        "baseboard": {
+            "manufacturer": str(board.get("Manufacturer") or "").strip(),
+            "product": str(board.get("Product") or "").strip(),
+            "serialNumber": str(board.get("SerialNumber") or "").strip(),
+            "version": str(board.get("Version") or "").strip()
+        },
+        "bios": {
+            "manufacturer": str(bios.get("Manufacturer") or "").strip(),
+            "version": str(bios.get("SMBIOSBIOSVersion") or "").strip(),
+            "releaseDate": str(bios.get("ReleaseDate") or "").strip(),
+            "serialNumber": str(bios.get("SerialNumber") or "").strip()
+        },
+        "memoryModules": as_list(raw.get("memoryModules")),
+        "physicalDisks": as_list(raw.get("physicalDisks"))
+    }
+
+
+def collect_linux_hardware_info():
+    vm = psutil.virtual_memory()
+    freq = None
+    try:
+        freq = psutil.cpu_freq()
+    except Exception:
+        pass
+
+    cpu_model = ""
+    cpu_vendor = ""
+    try:
+        for line in read_tail("/proc/cpuinfo", 500):
+            if not cpu_model and line.lower().startswith("model name"):
+                cpu_model = line.split(":", 1)[1].strip()
+            if not cpu_vendor and line.lower().startswith("vendor_id"):
+                cpu_vendor = line.split(":", 1)[1].strip()
+            if cpu_model and cpu_vendor:
+                break
+    except Exception:
+        pass
+
+    if not cpu_model and shutil.which("lscpu"):
+        out = run_command(["lscpu"])
+        for line in out.splitlines():
+            if line.lower().startswith("model name"):
+                cpu_model = line.split(":", 1)[1].strip()
+            elif line.lower().startswith("vendor id"):
+                cpu_vendor = line.split(":", 1)[1].strip()
+
+    return {
+        "cpuModel": cpu_model,
+        "cpuVendor": cpu_vendor,
+        "cpuSocket": "",
+        "cpuCoresPhysical": psutil.cpu_count(logical=False),
+        "cpuCoresLogical": psutil.cpu_count(logical=True),
+        "cpuFreqMhz": round(freq.current, 0) if freq else 0,
+        "cpuMaxFreqMhz": round(freq.max, 0) if freq and freq.max else 0,
+        "totalRamGb": round(vm.total / 1024 ** 3, 2),
+        "systemManufacturer": read_sys_dmi_file("sys_vendor"),
+        "systemModel": read_sys_dmi_file("product_name"),
+        "systemType": platform.machine(),
+        "osCaption": DISTRO,
+        "osVersion": OS_VERSION or platform.release(),
+        "osArchitecture": platform.machine(),
+        "baseboard": {
+            "manufacturer": read_sys_dmi_file("board_vendor"),
+            "product": read_sys_dmi_file("board_name"),
+            "serialNumber": read_sys_dmi_file("board_serial"),
+            "version": read_sys_dmi_file("board_version")
+        },
+        "bios": {
+            "manufacturer": read_sys_dmi_file("bios_vendor"),
+            "version": read_sys_dmi_file("bios_version"),
+            "releaseDate": read_sys_dmi_file("bios_date"),
+            "serialNumber": read_sys_dmi_file("product_serial")
+        },
+        "memoryModules": collect_linux_memory_modules(),
+        "physicalDisks": collect_linux_physical_disks()
+    }
 
 
 def collect_hardware_info():
-    info = {
-        "cpuModel": "",
-        "cpuCoresPhysical": psutil.cpu_count(logical=False),
-        "cpuCoresLogical": psutil.cpu_count(logical=True),
-        "cpuFreqMhz": 0,
-        "totalRamGb": round(psutil.virtual_memory().total / 1024 ** 3, 2)
-    }
-    try:
-        freq = psutil.cpu_freq()
-        if freq:
-            info["cpuFreqMhz"] = round(freq.current, 0)
-    except Exception:
-        pass
-    if IS_WINDOWS:
-        out = run_command(["powershell", "-NoProfile", "-NonInteractive", "-Command", "(Get-CimInstance Win32_Processor).Name"])
-        info["cpuModel"] = out.strip()
-    else:
-        out = run_command(["sh", "-c", "grep 'model name' /proc/cpuinfo 2>/dev/null | head -1 | cut -d: -f2"])
-        info["cpuModel"] = out.strip()
+    info = collect_windows_hardware_info() if IS_WINDOWS else collect_linux_hardware_info()
+    if not info:
+        vm = psutil.virtual_memory()
+        info = {
+            "cpuModel": platform.processor(),
+            "cpuVendor": "",
+            "cpuCoresPhysical": psutil.cpu_count(logical=False),
+            "cpuCoresLogical": psutil.cpu_count(logical=True),
+            "cpuFreqMhz": 0,
+            "cpuMaxFreqMhz": 0,
+            "totalRamGb": round(vm.total / 1024 ** 3, 2),
+            "memoryModules": [],
+            "physicalDisks": []
+        }
+    info["collectedAt"] = now_iso()
     return info
 
 
@@ -1357,30 +3469,119 @@ def collect_docker_containers():
 
 
 def collect_gpu_info():
-    if IS_WINDOWS:
-        try:
-            ps = "Get-CimInstance Win32_VideoController | Select-Object Name,AdapterRAM,DriverVersion | ConvertTo-Json -Compress"
-            result = subprocess.run(["powershell", "-NoProfile", "-NonInteractive", "-Command", ps], capture_output=True, text=True, timeout=10)
-            if result.returncode == 0 and result.stdout.strip():
-                raw = json.loads(result.stdout)
-                if isinstance(raw, dict):
-                    raw = [raw]
-                return [{"name": g.get("Name", ""), "vramBytes": g.get("AdapterRAM", 0), "driver": g.get("DriverVersion", "")} for g in raw]
-        except Exception:
-            pass
-        return []
     if shutil.which("nvidia-smi"):
         try:
-            out = run_command(["nvidia-smi", "--query-gpu=name,memory.total,temperature.gpu,utilization.gpu", "--format=csv,noheader,nounits"])
+            out = run_command([
+                "nvidia-smi",
+                "--query-gpu=name,uuid,driver_version,memory.total,memory.used,temperature.gpu,utilization.gpu,power.draw",
+                "--format=csv,noheader,nounits"
+            ])
             gpus = []
             for line in out.splitlines():
                 parts = [p.strip() for p in line.split(",")]
-                if len(parts) >= 4:
+                if len(parts) >= 7:
+                    vram_total = to_int(parts[3], 0)
+                    vram_used = to_int(parts[4], 0)
                     gpus.append({
                         "name": parts[0],
-                        "vramMb": int(parts[1]) if parts[1].isdigit() else 0,
-                        "tempC": int(parts[2]) if parts[2].isdigit() else 0,
-                        "utilPercent": int(parts[3]) if parts[3].isdigit() else 0
+                        "uuid": parts[1],
+                        "driver": parts[2],
+                        "vramMb": vram_total,
+                        "vramUsedMb": vram_used,
+                        "vramPercent": round((vram_used / vram_total) * 100, 1) if vram_total else 0,
+                        "tempC": to_int(parts[5], 0),
+                        "utilPercent": to_int(parts[6], 0),
+                        "powerDrawW": to_number(parts[7], 0) if len(parts) >= 8 else 0,
+                        "provider": "nvidia-smi"
+                    })
+            if gpus:
+                return gpus
+        except Exception:
+            pass
+
+    if IS_WINDOWS:
+        try:
+            ps = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$gpuUtil = $null
+try {
+  $samples = (Get-Counter '\GPU Engine(*)\Utilization Percentage' -ErrorAction Stop).CounterSamples |
+    Where-Object { $_.InstanceName -match 'engtype_3D|engtype_Copy|engtype_VideoDecode|engtype_VideoEncode' }
+  $sum = ($samples | Measure-Object CookedValue -Sum).Sum
+  if ($null -ne $sum) { $gpuUtil = [math]::Round([math]::Min($sum, 100), 1) }
+} catch { }
+Get-CimInstance Win32_VideoController | ForEach-Object {
+  [pscustomobject]@{
+    name = $_.Name
+    vramBytes = [int64]$_.AdapterRAM
+    driver = $_.DriverVersion
+    adapterCompatibility = $_.AdapterCompatibility
+    videoProcessor = $_.VideoProcessor
+    currentMode = (($_.CurrentHorizontalResolution), ($_.CurrentVerticalResolution) -join 'x')
+    status = $_.Status
+    utilPercent = $gpuUtil
+    provider = 'Win32_VideoController'
+  }
+} | ConvertTo-Json -Depth 3 -Compress
+"""
+            gpus = []
+            for item in as_list(powershell_json(ps, timeout=15)):
+                vram_bytes = to_int(item.get("vramBytes"), 0)
+                gpus.append({
+                    "name": item.get("name", ""),
+                    "vramBytes": vram_bytes,
+                    "vramMb": round(vram_bytes / 1024 ** 2) if vram_bytes else 0,
+                    "driver": item.get("driver", ""),
+                    "adapterCompatibility": item.get("adapterCompatibility", ""),
+                    "videoProcessor": item.get("videoProcessor", ""),
+                    "currentMode": item.get("currentMode", ""),
+                    "status": item.get("status", ""),
+                    "utilPercent": item.get("utilPercent"),
+                    "provider": item.get("provider", "windows")
+                })
+            return gpus
+        except Exception:
+            pass
+        return []
+
+    if shutil.which("rocm-smi"):
+        try:
+            out = run_command(["rocm-smi", "--showproductname", "--showuse", "--showmemuse", "--showtemp", "--json"])
+            raw = parse_json_output(out, {})
+            gpus = []
+            if isinstance(raw, dict):
+                for key, item in raw.items():
+                    if not isinstance(item, dict):
+                        continue
+                    name = item.get("Card series") or item.get("GPU ID") or key
+                    temp = next((value for label, value in item.items() if "Temperature" in str(label)), 0)
+                    util = item.get("GPU use (%)") or item.get("GPU use")
+                    mem = item.get("GPU Memory Allocated (VRAM%)") or item.get("VRAM Total Memory (B)")
+                    gpus.append({
+                        "name": str(name),
+                        "tempC": to_number(temp, 0),
+                        "utilPercent": to_number(util, 0),
+                        "vramPercent": to_number(mem, 0),
+                        "provider": "rocm-smi"
+                    })
+            if gpus:
+                return gpus
+        except Exception:
+            pass
+
+    if shutil.which("lspci"):
+        try:
+            out = run_command(["sh", "-c", "lspci -mm | grep -Ei 'VGA|3D|Display' || true"])
+            gpus = []
+            for line in out.splitlines():
+                parts = [part.strip('"') for part in shlex.split(line)]
+                if len(parts) >= 4:
+                    gpus.append({
+                        "name": " ".join(parts[2:]).strip(),
+                        "provider": "lspci",
+                        "utilPercent": None,
+                        "tempC": None,
+                        "vramMb": 0
                     })
             return gpus
         except Exception:
@@ -1400,6 +3601,14 @@ def collect_dns_check():
     return result
 
 
+def safe_collect(name, fallback, callback, errors):
+    try:
+        return callback()
+    except Exception as exc:
+        errors.append({"name": name, "error": str(exc), "timestamp": now_iso()})
+        return fallback
+
+
 VIRTUAL_FSTYPES = {
     "tmpfs", "squashfs", "devtmpfs", "proc", "sysfs", "cgroup", "cgroup2",
     "pstore", "debugfs", "tracefs", "securityfs", "binfmt_misc", "overlay",
@@ -1409,6 +3618,7 @@ VIRTUAL_FSTYPES = {
 
 
 def collect_payload():
+    collection_errors = []
     vm = psutil.virtual_memory()
     swap = psutil.swap_memory()
     partitions = []
@@ -1422,7 +3632,10 @@ def collect_payload():
                 "mountpoint": partition.mountpoint,
                 "fstype": partition.fstype,
                 "percent": usage.percent,
+                "usedPercent": usage.percent,
+                "freePercent": round(100 - usage.percent, 1),
                 "used": usage.used,
+                "free": usage.free,
                 "total": usage.total
             })
         except Exception:
@@ -1433,8 +3646,49 @@ def collect_payload():
     boot_seconds = time.time() - psutil.boot_time()
     loadavg = os.getloadavg() if hasattr(os, "getloadavg") else (0, 0, 0)
 
-    security = collect_security() if MODULES["securityLogs"] or MODULES["sudoCommands"] or MODULES["fileIntegrity"] else {"events": [], "authTail": [], "authLogPath": ""}
-    logs = collect_logs()
+    security = safe_collect("security", {"events": [], "authTail": [], "authLogPath": ""}, collect_security, collection_errors) if MODULES["securityLogs"] or MODULES["sudoCommands"] or MODULES["fileIntegrity"] else {"events": [], "authTail": [], "authLogPath": ""}
+    logs = safe_collect("logs", {
+        "syslogPath": "",
+        "syslogTail": [],
+        "journalTail": [],
+        "kernelErrors": [],
+        "customLogs": []
+    }, collect_logs, collection_errors) if MODULES["applicationLogs"] else {
+        "syslogPath": "",
+        "syslogTail": [],
+        "journalTail": [],
+        "kernelErrors": [],
+        "customLogs": []
+    }
+    processes = safe_collect("processes", [], collect_processes, collection_errors)
+    interfaces = safe_collect("interfaces", [], collect_network_interfaces, collection_errors)
+    temperatures = safe_collect("temperatures", [], collect_temperatures, collection_errors)
+    open_ports = safe_collect("openPorts", [], collect_open_ports, collection_errors)
+    network_rates = safe_collect("networkRates", [], collect_network_rates, collection_errors) if MODULES.get("networkRates") else []
+    established_connections = safe_collect("establishedConnections", [], collect_established_connections, collection_errors) if MODULES.get("establishedConnections") else []
+    failed_services = safe_collect("failedServices", [], collect_failed_services, collection_errors)
+    service_inventory = safe_collect("serviceInventory", [], collect_service_inventory, collection_errors)
+    scheduled_tasks = safe_collect("scheduledTasks", [], collect_scheduled_tasks, collection_errors)
+    fans = safe_collect("fans", [], collect_fans, collection_errors) if MODULES.get("hardwareMonitor") else []
+    battery = safe_collect("battery", None, collect_battery, collection_errors) if MODULES.get("hardwareMonitor") else None
+    gpu = safe_collect("gpu", [], collect_gpu_info, collection_errors) if MODULES.get("hardwareMonitor") else []
+    hardware = safe_collect("hardware", {}, collect_hardware_info, collection_errors)
+    user_inventory = safe_collect("userInventory", {"collectedAt": now_iso(), "os": "windows" if IS_WINDOWS else "linux", "users": [], "groups": [], "privilegedGroups": []}, collect_user_inventory, collection_errors)
+    docker = safe_collect("docker", [], collect_docker_containers, collection_errors) if MODULES.get("dockerMonitor") else []
+    dns = safe_collect("dns", [], collect_dns_check, collection_errors)
+    firewall_rules = safe_collect("firewallRules", [], collect_firewall_rules, collection_errors)
+    firewall_summary = firewall_summary_from_rules(firewall_rules)
+    smart_data = safe_collect("smartData", [], collect_smart_data, collection_errors) if MODULES.get("smartMonitor") else []
+    login_history = safe_collect("loginHistory", [], collect_login_history, collection_errors) if MODULES.get("loginHistory") else []
+    pending_updates = safe_collect("pendingUpdates", {"count": 0, "updates": []}, collect_pending_updates, collection_errors) if MODULES.get("updateMonitor") else {"count": 0, "updates": []}
+    inventory_changes = safe_collect(
+        "inventoryChanges",
+        {"initialized": True, "events": [], "counts": {}},
+        lambda: collect_inventory_changes(user_inventory, open_ports, service_inventory, scheduled_tasks, firewall_rules),
+        collection_errors
+    )
+    security_access = build_security_access_summary(security, list_blocked_ips())
+    agent_status = collect_agent_operational_status(collection_errors)
 
     payload = {
         "agent": {
@@ -1449,6 +3703,8 @@ def collect_payload():
             "listenPort": LISTEN_PORT,
             "networkScope": NETWORK_SCOPE,
             "modules": MODULES,
+            "persistenceMode": PERSISTENCE_MODE,
+            "centralSyncEnabled": bool(CENTRAL_API_BASE_URL),
             "generatedAt": now_iso()
         },
         "heartbeat": now_iso(),
@@ -1467,27 +3723,61 @@ def collect_payload():
             "cpuPerCore": cpu_per_core,
             "memoryPercent": vm.percent,
             "memoryUsed": vm.used,
+            "memoryAvailable": vm.available,
+            "memoryFree": vm.free,
             "memoryTotal": vm.total,
             "swapPercent": swap.percent,
             "swapUsed": swap.used,
             "swapTotal": swap.total,
             "disks": partitions,
-            "processes": collect_processes(),
-            "interfaces": collect_network_interfaces(),
-            "temperatures": collect_temperatures(),
-            "openPorts": collect_open_ports(),
-            "networkRates": collect_network_rates() if MODULES.get("networkRates") else [],
-            "establishedConnections": collect_established_connections() if MODULES.get("establishedConnections") else [],
-            "failedServices": collect_failed_services(),
-            "fans": collect_fans() if MODULES.get("hardwareMonitor") else [],
-            "battery": collect_battery() if MODULES.get("hardwareMonitor") else None,
-            "gpu": collect_gpu_info() if MODULES.get("hardwareMonitor") else [],
-            "hardware": collect_hardware_info(),
-            "docker": collect_docker_containers() if MODULES.get("dockerMonitor") else [],
-            "dns": collect_dns_check(),
-            "smartData": collect_smart_data() if MODULES.get("smartMonitor") else [],
-            "loginHistory": collect_login_history() if MODULES.get("loginHistory") else [],
-            "pendingUpdates": collect_pending_updates() if MODULES.get("updateMonitor") else {"count": 0, "updates": []}
+            "processes": processes,
+            "processCount": len(psutil.pids()),
+            "processSampleLimit": len(processes),
+            "interfaces": interfaces,
+            "temperatures": temperatures,
+            "openPorts": open_ports,
+            "networkRates": network_rates,
+            "establishedConnections": established_connections,
+            "failedServices": failed_services,
+            "serviceInventory": service_inventory,
+            "scheduledTasks": scheduled_tasks,
+            "fans": fans,
+            "battery": battery,
+            "gpu": gpu,
+            "hardware": hardware,
+            "userInventory": user_inventory,
+            "docker": docker,
+            "dns": dns,
+            "firewallRules": firewall_rules,
+            "firewallSummary": firewall_summary,
+            "smartData": smart_data,
+            "loginHistory": login_history,
+            "pendingUpdates": pending_updates,
+            "inventoryChanges": inventory_changes,
+            "hostBaseline": inventory_changes,
+            "securityAccess": security_access,
+            "agentStatus": agent_status,
+            "collectionStatus": {
+                "os": "windows" if IS_WINDOWS else "linux",
+                "modules": MODULES,
+                "errors": collection_errors,
+                "counts": {
+                    "processes": len(processes),
+                    "openPorts": len(open_ports),
+                    "establishedConnections": len(established_connections),
+                    "services": len(service_inventory),
+                    "scheduledTasks": len(scheduled_tasks),
+                    "inventoryChanges": len(inventory_changes.get("events", [])) if isinstance(inventory_changes, dict) else 0,
+                    "interfaces": len(interfaces),
+                    "temperatures": len(temperatures),
+                    "fans": len(fans),
+                    "gpu": len(gpu),
+                    "smartData": len(smart_data),
+                    "loginHistory": len(login_history),
+                    "firewallRules": len(firewall_rules),
+                    "failedServices": len(failed_services)
+                }
+            }
         },
         "security": security,
         "logs": logs,
@@ -1524,7 +3814,37 @@ def execute_central_command(command):
         return {"ok": True, "telemetry": collect_payload(), "message": "Telemetría recogida"}
 
     if command_type == "collect-logs":
+        if not MODULES["applicationLogs"]:
+            return {"ok": False, "error": "El módulo de logs de aplicación está desactivado en este agente"}
         return {"ok": True, "logs": collect_logs(), "message": "Logs recogidos"}
+
+    if command_type == "check-host-health":
+        return {"ok": True, "health": collect_host_health_summary(), "message": "Salud del host comprobada"}
+
+    if command_type == "set-host-baseline":
+        return create_host_baseline_payload()
+
+    if command_type in ["list-connected-users", "terminate-user-session"]:
+        return execute_session_management_command(command_type, payload)
+
+    if command_type in [
+        "refresh-user-inventory",
+        "disable-user",
+        "enable-user",
+        "lock-user",
+        "unlock-user",
+        "add-user-to-group",
+        "remove-user-from-group",
+    ]:
+        return execute_user_management_command(command_type, payload)
+
+    if command_type in [
+        "refresh-service-inventory",
+        "start-service",
+        "stop-service",
+        "restart-service",
+    ]:
+        return execute_service_management_command(command_type, payload)
 
     return {"ok": False, "error": f"Comando no soportado por el agente: {command_type}"}
 
@@ -1551,11 +3871,14 @@ def central_agent_loop():
 
     while True:
         try:
-            register_with_central()
+            registration = register_with_central()
+            if central_response_paused(registration):
+                time.sleep(max(10, POLL_INTERVAL_SECONDS))
+                continue
             central_request("POST", f"/agents/{AGENT_ID}/telemetry", collect_payload())
             process_central_commands()
         except Exception as exc:
-            print(f"[thorondor] aviso: no se pudo sincronizar con API central: {exc}", file=sys.stderr)
+            log_central_warning(exc)
         time.sleep(max(10, POLL_INTERVAL_SECONDS))
 
 
@@ -1578,6 +3901,9 @@ class ThorondorHandler(BaseHTTPRequestHandler):
         return json.loads(raw) if raw.strip() else {}
 
     def _request_token(self):
+        token = str(self.headers.get("X-Thorondor-Key-Agents", "") or "").strip()
+        if token:
+            return token
         token = str(self.headers.get("X-Thorondor-Agent-Token", "") or "").strip()
         if token:
             return token
@@ -1590,7 +3916,7 @@ class ThorondorHandler(BaseHTTPRequestHandler):
         return bool(AGENT_TOKEN) and hmac.compare_digest(self._request_token(), AGENT_TOKEN)
 
     def _write_unauthorized(self):
-        self._write_json(401, {"ok": False, "error": "agent_token_required"})
+        self._write_json(401, {"ok": False, "error": "key_agents_required"})
 
     def do_OPTIONS(self):
         self.send_response(204)
@@ -1606,8 +3932,10 @@ class ThorondorHandler(BaseHTTPRequestHandler):
                 "status": "ok",
                 "service": SYSTEM_NAME,
                 "heartbeat": now_iso(),
+                "version": AGENT_VERSION,
                 "port": LISTEN_PORT,
-                "networkScope": NETWORK_SCOPE
+                "networkScope": NETWORK_SCOPE,
+                "commandsAccepted": collect_agent_operational_status([]).get("commandsAccepted", [])
             })
             return
 
@@ -1638,7 +3966,7 @@ class ThorondorHandler(BaseHTTPRequestHandler):
         parsed = urlparse(self.path)
 
         try:
-            if parsed.path in ["/response/block-ip", "/response/unblock-ip"] and not self._is_local_authorized():
+            if parsed.path in ["/response/block-ip", "/response/unblock-ip", "/response/user-management", "/response/service-management", "/response/safe-action"] and not self._is_local_authorized():
                 self._write_unauthorized()
                 return
             body = self._read_json_body()
@@ -1647,6 +3975,15 @@ class ThorondorHandler(BaseHTTPRequestHandler):
                 return
             if parsed.path == "/response/unblock-ip":
                 self._write_json(200, unblock_ip(body.get("ip")))
+                return
+            if parsed.path == "/response/user-management":
+                self._write_json(200, execute_user_management_command(body.get("type"), body))
+                return
+            if parsed.path == "/response/service-management":
+                self._write_json(200, execute_service_management_command(body.get("type"), body))
+                return
+            if parsed.path == "/response/safe-action":
+                self._write_json(200, execute_central_command({"type": body.get("type"), "payload": body, "reason": body.get("reason", "manual")}))
                 return
         except ValueError as exc:
             self._write_json(400, {"ok": False, "error": str(exc)})
@@ -1668,6 +4005,15 @@ class ThorondorHTTPServer(ThreadingHTTPServer):
 
 
 def main():
+    if "--detect-logs" in sys.argv:
+        run_log_detection_cli()
+        return
+
+    if "--detect-modules" in sys.argv:
+        run_module_detection_cli()
+        return
+
+    refresh_active_modules()
     print(f"[thorondor] iniciando agente {SYSTEM_NAME} en {LISTEN_HOST}:{LISTEN_PORT}")
     if central_api_root():
         print(f"[thorondor] modo central activo: {central_api_root()}")
@@ -1706,14 +4052,60 @@ WantedBy=multi-user.target
 `;
 }
 
+function buildThorondorLinuxUninstallScript(config) {
+  const serviceFileName = buildServiceFileName(config);
+  const installUser = config.installUser || "thorondor";
+
+  return `#!/usr/bin/env bash
+set -euo pipefail
+
+INSTALL_DIR="/opt/thorondor-agent"
+SERVICE_FILE="${serviceFileName}"
+INSTALL_USER="${installUser}"
+SUDO=""
+
+if [ "$(id -u)" -ne 0 ]; then
+  if ! command -v sudo >/dev/null 2>&1; then
+    echo "ERROR: ejecuta este desinstalador como root o instala sudo." >&2
+    exit 1
+  fi
+  SUDO="sudo"
+fi
+
+echo "=== Thorondor Agent Uninstaller para Linux ==="
+
+if command -v systemctl >/dev/null 2>&1; then
+  for unit in "$SERVICE_FILE" "thorondor-siem-agent.service" "thorondor-agent.service"; do
+    $SUDO systemctl stop "$unit" 2>/dev/null || true
+    $SUDO systemctl disable "$unit" 2>/dev/null || true
+    $SUDO rm -f "/etc/systemd/system/$unit"
+  done
+  $SUDO systemctl daemon-reload || true
+  $SUDO systemctl reset-failed || true
+fi
+
+$SUDO pkill -f "$INSTALL_DIR/thorondor-agent.py" 2>/dev/null || true
+$SUDO pkill -f "thorondor-agent.py" 2>/dev/null || true
+$SUDO rm -f "/etc/sudoers.d/thorondor-agent-firewall"
+
+if [ -f "$INSTALL_DIR/.created-install-user" ]; then
+  CREATED_USER="$(head -n 1 "$INSTALL_DIR/.created-install-user" | tr -cd 'a-zA-Z0-9_-')"
+  if [ -n "$CREATED_USER" ] && [ "$CREATED_USER" = "$INSTALL_USER" ] && id "$CREATED_USER" >/dev/null 2>&1; then
+    $SUDO userdel "$CREATED_USER" 2>/dev/null || true
+  fi
+fi
+
+$SUDO rm -rf "$INSTALL_DIR"
+
+echo "Desinstalación completada."
+`;
+}
+
 export function buildThorondorInstallScript(config) {
   const pythonAgent = buildThorondorPythonAgent(config);
-  const autoStart = config.autoStart !== false && config.generateSystemd;
   const serviceFileName = buildServiceFileName(config);
-  const networkScope = normalizeThorondorNetworkScope(config.networkScope);
-  const shouldPrepareFirewall = networkScope !== "local";
-  const systemdBlock = autoStart
-    ? `
+  const uninstallScript = buildThorondorLinuxUninstallScript(config);
+  const systemdBlock = `
 cat > "/tmp/$SERVICE_FILE" <<'UNIT'
 ${buildThorondorSystemdUnit(config)}
 UNIT
@@ -1721,13 +4113,9 @@ UNIT
 $SUDO cp "/tmp/$SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE"
 $SUDO systemctl daemon-reload
 $SUDO systemctl enable --now "$SERVICE_FILE"
-`
-    : "";
-  const completionMessage = autoStart
-    ? `echo "Instalación completada. Comprueba el servicio con:"
-echo "sudo systemctl status $SERVICE_FILE"`
-    : `echo "Instalación completada. Prueba el agente manualmente con:"
-echo "sudo $INSTALL_DIR/venv/bin/python $INSTALL_DIR/thorondor-agent.py"`;
+`;
+  const completionMessage = `echo "Instalación completada. Comprueba el servicio con:"
+echo "sudo systemctl status $SERVICE_FILE"`;
 
   return `#!/usr/bin/env bash
 set -euo pipefail
@@ -1735,9 +4123,12 @@ set -euo pipefail
 INSTALL_DIR="/opt/thorondor-agent"
 INSTALL_USER="${config.installUser || "thorondor"}"
 SERVICE_FILE="${serviceFileName}"
-PORT="${Number(config.port) || 8765}"
+UNINSTALL_FILE="thorondor-uninstaller.sh"
+PORT="${Number(config.port) || THORONDOR_AGENT_FIXED_PORT}"
 TMP_AGENT="$(mktemp)"
+TMP_UNINSTALL="$(mktemp)"
 SUDO=""
+USER_CREATED="0"
 
 if [ "$(id -u)" -ne 0 ]; then
   if ! command -v sudo >/dev/null 2>&1; then
@@ -1752,11 +4143,11 @@ echo "[1/6] Preparando dependencias del sistema..."
 
 if command -v apt >/dev/null 2>&1; then
   $SUDO apt update
-  $SUDO apt install -y python3 python3-venv python3-pip lm-sensors smartmontools
+  $SUDO apt install -y python3 python3-venv python3-pip lm-sensors smartmontools dmidecode pciutils
 elif command -v dnf >/dev/null 2>&1; then
-  $SUDO dnf install -y python3 python3-pip python3-virtualenv lm_sensors smartmontools
+  $SUDO dnf install -y python3 python3-pip python3-virtualenv lm_sensors smartmontools dmidecode pciutils
 elif command -v pacman >/dev/null 2>&1; then
-  $SUDO pacman -Sy --noconfirm python python-pip python-virtualenv lm_sensors smartmontools
+  $SUDO pacman -Sy --noconfirm python python-pip python-virtualenv lm_sensors smartmontools dmidecode pciutils
 else
   echo "Aviso: no se ha detectado apt, dnf ni pacman. Se intentará usar el Python disponible."
 fi
@@ -1770,11 +4161,21 @@ if ! id "$INSTALL_USER" >/dev/null 2>&1; then
   NOLOGIN_SHELL="$(command -v nologin || true)"
   [ -n "$NOLOGIN_SHELL" ] || NOLOGIN_SHELL="/usr/sbin/nologin"
   $SUDO useradd --system --create-home --shell "$NOLOGIN_SHELL" "$INSTALL_USER"
+  USER_CREATED="1"
 fi
 
 $SUDO mkdir -p "$INSTALL_DIR"
 $SUDO cp "$TMP_AGENT" "$INSTALL_DIR/thorondor-agent.py"
 rm -f "$TMP_AGENT"
+cat > "$TMP_UNINSTALL" <<'UNINSTALL'
+${uninstallScript}
+UNINSTALL
+$SUDO cp "$TMP_UNINSTALL" "$INSTALL_DIR/$UNINSTALL_FILE"
+rm -f "$TMP_UNINSTALL"
+$SUDO chmod 750 "$INSTALL_DIR/$UNINSTALL_FILE"
+if [ "$USER_CREATED" = "1" ]; then
+  echo "$INSTALL_USER" | $SUDO tee "$INSTALL_DIR/.created-install-user" >/dev/null
+fi
 
 echo "[3/6] Creando entorno Python aislado..."
 $SUDO python3 -m venv "$INSTALL_DIR/venv"
@@ -1790,31 +4191,36 @@ $SUDO usermod -aG systemd-journal "$INSTALL_USER" || true
 getent group docker >/dev/null 2>&1 && $SUDO usermod -aG docker "$INSTALL_USER" || true
 $SUDO tee "/etc/sudoers.d/thorondor-agent-firewall" >/dev/null <<SUDOERS
 Cmnd_Alias THORONDOR_FIREWALL = /usr/sbin/iptables, /sbin/iptables, /usr/sbin/ip6tables, /sbin/ip6tables, /usr/sbin/ufw, /usr/bin/ufw, /usr/bin/firewall-cmd, /bin/firewall-cmd
-Cmnd_Alias THORONDOR_DIAGNOSTICS = /usr/sbin/smartctl, /usr/bin/smartctl, /bin/dmesg, /usr/bin/dmesg
-$INSTALL_USER ALL=(root) NOPASSWD: THORONDOR_FIREWALL, THORONDOR_DIAGNOSTICS
+Cmnd_Alias THORONDOR_DIAGNOSTICS = /usr/sbin/smartctl, /usr/bin/smartctl, /bin/dmesg, /usr/bin/dmesg, /usr/sbin/dmidecode, /usr/bin/dmidecode
+Cmnd_Alias THORONDOR_SERVICES = /usr/bin/systemctl, /bin/systemctl
+Cmnd_Alias THORONDOR_SESSIONS = /usr/bin/loginctl, /bin/loginctl
+$INSTALL_USER ALL=(root) NOPASSWD: THORONDOR_FIREWALL, THORONDOR_DIAGNOSTICS, THORONDOR_SERVICES, THORONDOR_SESSIONS
 SUDOERS
 $SUDO chmod 440 "/etc/sudoers.d/thorondor-agent-firewall"
 $SUDO visudo -cf "/etc/sudoers.d/thorondor-agent-firewall" >/dev/null
 
+echo "    Detectando fuentes de logs disponibles..."
+$SUDO "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/thorondor-agent.py" --detect-logs || true
+$SUDO chown "$INSTALL_USER:$INSTALL_USER" "$INSTALL_DIR/.thorondor-log-sources.json" 2>/dev/null || true
+echo "    Detectando módulos disponibles en este host..."
+$SUDO "$INSTALL_DIR/venv/bin/python" "$INSTALL_DIR/thorondor-agent.py" --detect-modules || true
+$SUDO chown "$INSTALL_USER:$INSTALL_USER" "$INSTALL_DIR/.thorondor-modules.json" 2>/dev/null || true
+
 ${systemdBlock}
 
-if ${shouldPrepareFirewall ? "true" : "false"}; then
-  echo "[5/6] Firewall sin apertura amplia automática."
-  echo "Abre el puerto solo desde el cliente, VPN o red de administración. Ejemplo UFW:"
-  echo "sudo ufw allow from <IP_CLIENTE_O_CIDR> to any port $PORT proto tcp"
-else
-  echo "[5/6] Modo local: firewall sin cambios."
-fi
+echo "[5/6] Red sin configuración manual desde el instalador."
+echo "El agente queda listo; la operación real se realiza con token y API central cuando esté configurada."
 
 echo "[6/6] Validación local:"
 echo "curl http://127.0.0.1:$PORT/health"
+echo "Desinstalador: sudo $INSTALL_DIR/$UNINSTALL_FILE"
 ${completionMessage}
 `;
 }
 
 export function buildThorondorWixSource(config) {
   const packageName = normalizeWindowsPackageName(config);
-  const installFileName = "install-thorondor-agent.ps1";
+  const installFileName = "thorondor-agent-install.ps1";
   const upgradeCode = deterministicGuid(`thorondor-upgrade-${packageName}`);
   const componentGuid = deterministicGuid(`thorondor-component-${packageName}`);
 
@@ -1860,7 +4266,7 @@ export function buildThorondorWixSource(config) {
 
 export function buildThorondorMsiBuildScript(config) {
   const packageName = normalizeWindowsPackageName(config);
-  const msiFileName = "ThorondorAgent.msi";
+  const msiFileName = "thorondor-agent.msi";
 
   return `Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
@@ -1870,7 +4276,7 @@ Set-Location $root
 
 $requiredFiles = @(
   "thorondor-agent.wxs",
-  "install-thorondor-agent.ps1"
+  "thorondor-agent-install.ps1"
 )
 
 foreach ($file in $requiredFiles) {
@@ -1900,7 +4306,7 @@ Write-Host "Ejecútalo como administrador en el host Windows que quieras monitor
 
 export function buildThorondorWindowsMsiBootstrapperScript(config) {
   const packageName = normalizeWindowsPackageName(config);
-  const msiFileName = "ThorondorAgent.msi";
+  const msiFileName = "thorondor-agent.msi";
   const installScriptB64 = base64Utf8(buildThorondorWindowsInstallScript(config));
   const wixSourceB64 = base64Utf8(buildThorondorWixSource(config));
 
@@ -1920,7 +4326,7 @@ $ErrorActionPreference = "Stop"
 $PACKAGE_NAME = "${packageName.replace(/"/g, "`\"")}"
 $MSI_FILE = "${msiFileName}"
 $BUILD_ROOT = Join-Path $env:ProgramData "Thorondor-Agent\\msi-build"
-$INSTALL_SCRIPT = Join-Path $BUILD_ROOT "install-thorondor-agent.ps1"
+$INSTALL_SCRIPT = Join-Path $BUILD_ROOT "thorondor-agent-install.ps1"
 $WIX_SOURCE = Join-Path $BUILD_ROOT "thorondor-agent.wxs"
 $MSI_PATH = Join-Path $BUILD_ROOT $MSI_FILE
 
@@ -2030,250 +4436,176 @@ Write-Host "MSI generado: $MSI_PATH" -ForegroundColor Green
 if ($desktop) {
     Write-Host "Copia reutilizable: $(Join-Path $desktop $MSI_FILE)" -ForegroundColor Green
 }
-Write-Host "Valida el agente con: Invoke-RestMethod http://127.0.0.1:${Number(config.port) || 8765}/health"
+Write-Host "Valida el agente con: Invoke-RestMethod http://127.0.0.1:${Number(config.port) || THORONDOR_AGENT_FIXED_PORT}/health"
 `;
 }
 
 export function buildThorondorInstallInstructions(config) {
   const isWindows = config.targetOs === "windows";
   const baseUrl = normalizeReceiverBaseUrl(config);
-  const port = Number(config.port) || 8765;
-  const agentToken = String(config.agentToken || "");
-  const networkScope = normalizeThorondorNetworkScope(config.networkScope);
-  const installerName = isWindows ? "crear-e-instalar-thorondor-agent-msi.ps1" : "install-thorondor-agent.sh";
-  const serviceFileName = buildServiceFileName(config);
-  const autoStart = config.autoStart !== false;
+  const port = Number(config.port) || THORONDOR_AGENT_FIXED_PORT;
+  const keyAgents = String(config.keyAgents || config.agentToken || "");
+  const installerName = isWindows ? "thorondor-installer.ps1" : "thorondor-installer.sh";
   const targetLabel = isWindows ? "Windows" : "Linux";
   const installFence = isWindows ? "powershell" : "bash";
+  const persistenceMode = config.persistenceMode === "cloud" ? "cloud" : "local";
+  const persistenceNote = persistenceMode === "cloud"
+    ? "Persistencia en servidor Thorondor: el agente sincroniza telemetría con la API central y la consola lee la BBDD autorizada."
+    : "Persistencia local: la consola guarda logs, eventos y alertas en IndexedDB. El agente no sincroniza telemetría con la API central.";
+  const permissionNote = isWindows
+    ? "Ejecuta el instalador desde PowerShell abierto como administrador. El script incluye #Requires -RunAsAdministrator y se detiene si no está elevado."
+    : "Ejecuta el instalador como root o con sudo. Si no hay sudo y no eres root, el script se detiene.";
+  const dependencyNote = isWindows
+    ? "Requiere PowerShell 5.1+. Si faltan .NET SDK 8, WiX Toolset o Python 3 y existe winget, el instalador intenta instalarlos."
+    : "Con apt, dnf o pacman instala Python, venv/pip, lm-sensors, smartmontools, dmidecode y pciutils. Si no detecta gestor, intenta usar el Python disponible.";
+  const serviceNote = isWindows
+    ? "Instala un MSI real con msiexec y registra la tarea programada ThorondorAgent como SYSTEM, RunLevel Highest, al inicio del sistema."
+    : `Crea /opt/thorondor-agent, usuario de sistema, entorno venv, ${buildServiceFileName(config)} en systemd y lo habilita con enable --now.`;
+  const networkNote = "El agente queda escuchando en el puerto configurado. Si necesitas acceso remoto, expón ese puerto con túnel, proxy o redirección controlada.";
+  const uninstallPermissionNote = isWindows
+    ? "Abre PowerShell como administrador para desinstalar."
+    : "Ejecuta el desinstalador con sudo o como root.";
+  const installFolder = isWindows ? "C:\\Thorondor-Agent-Installer" : "~/thorondor-agent-installer";
+  const generatedUninstaller = isWindows
+    ? "C:\\ProgramData\\Thorondor-Agent\\thorondor-uninstaller.ps1"
+    : "/opt/thorondor-agent/thorondor-uninstaller.sh";
   const runCommand = isWindows
-    ? `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-cd <CARPETA_DONDE_DESCARGASTE_EL_INSTALADOR>
+    ? `# Abre PowerShell como administrador antes de ejecutar estos comandos.
+New-Item -ItemType Directory -Force "${installFolder}" | Out-Null
+# Deja ${installerName} en esa carpeta.
+cd "${installFolder}"
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
 .\\${installerName}`
-    : `chmod +x ./${installerName}
+    : `# Ejecuta con un usuario que tenga sudo.
+mkdir -p ${installFolder}
+# Deja ${installerName} en esa carpeta.
+cd ${installFolder}
+chmod +x ./${installerName}
 sudo ./${installerName}`;
-  const preflightCommand = isWindows
-    ? `([Security.Principal.WindowsPrincipal] [Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
-Get-NetTCPConnection -LocalPort ${port} -ErrorAction SilentlyContinue
-Get-Command winget,dotnet,powershell -ErrorAction SilentlyContinue
-Get-Service EventLog
-Get-WinEvent -LogName Security -MaxEvents 1 -ErrorAction SilentlyContinue`
-    : `hostname -I
-ip route get 1.1.1.1 2>/dev/null || true
-sudo -v
-command -v python3 || true
-command -v sudo || true
-command -v systemctl || true
-command -v journalctl || true
-command -v smartctl || true
-ss -ltnp 2>/dev/null | grep ':${port}' || true`;
-  const artifactCheck = isWindows
-    ? `Get-ChildItem 'C:\\ProgramData\\Thorondor-Agent'
-Test-Path "$env:USERPROFILE\\Desktop\\ThorondorAgent.msi"
-Get-ScheduledTask -TaskName ThorondorAgent -ErrorAction SilentlyContinue`
-    : `sudo ls -la /opt/thorondor-agent
-sudo test -x /opt/thorondor-agent/venv/bin/python && echo 'venv ok'
-id ${config.installUser || "thorondor"}
-sudo -l -U ${config.installUser || "thorondor"} | grep -E 'THORONDOR_(FIREWALL|DIAGNOSTICS)' || true
-sudo find /etc/systemd/system -maxdepth 1 \\( -iname '*thorondor*.service' -o -iname '*-agent.service' \\) -print`;
-  const localValidation = isWindows
-    ? `$thorondorHeaders = @{ 'X-Thorondor-Agent-Token' = '${agentToken}' }
+  const validationCommand = isWindows
+    ? `$thorondorHeaders = @{ 'X-Thorondor-Key-Agents' = '${keyAgents}' }
 Invoke-RestMethod http://127.0.0.1:${port}/health
 Invoke-RestMethod -Headers $thorondorHeaders http://127.0.0.1:${port}/telemetry | ConvertTo-Json -Depth 4`
     : `curl -s http://127.0.0.1:${port}/health
-curl -s -H 'X-Thorondor-Agent-Token: ${agentToken}' http://127.0.0.1:${port}/telemetry | python3 -m json.tool | head -60`;
-  const serviceCheck = isWindows
-    ? `Get-ScheduledTask -TaskName ThorondorAgent -ErrorAction SilentlyContinue | Select-Object TaskName,State
-Get-ScheduledTaskInfo -TaskName ThorondorAgent -ErrorAction SilentlyContinue`
-    : `sudo systemctl status ${serviceFileName} --no-pager
-sudo systemctl show ${serviceFileName} -p ActiveState,NRestarts,ExecMainStatus --value
-sudo journalctl -u ${serviceFileName} -n 80 --no-pager`;
-  const remoteValidationCommand = networkScope === "local"
-    ? null
-    : `curl -v --connect-timeout 5 ${baseUrl}/health
-curl -s -H 'X-Thorondor-Agent-Token: ${agentToken}' ${baseUrl}/telemetry`;
-  const networkNote = networkScope === "local"
-    ? "Este host está en modo local: no abras firewall. El agente debe responder solo en 127.0.0.1 desde la misma máquina."
-    : networkScope === "lan"
-      ? "Este host está en modo LAN/VPN: permite el puerto solo desde la máquina que abre Thorondor, la VPN o la subred de administración."
-      : "Este host está en modo remoto: usa origen restringido, DNS/IP correcta y HTTPS o proxy TLS si la consola se sirve por HTTPS.";
-  const installerDoes = isWindows
-    ? `- Genera artefactos internos temporales desde este único archivo.
-- Compila \`ThorondorAgent.msi\`.
-- Copia el MSI al Escritorio para poder reutilizarlo.
-- Instala el agente en \`C:\\ProgramData\\Thorondor-Agent\`.
-- Instala o prepara dependencias Python necesarias.
-- En LAN abre firewall solo para LocalSubnet; en remoto te deja el comando para crear una regla restringida.
-- Crea la tarea \`ThorondorAgent\` solo si activaste autoarranque.`
-    : `- Crea \`/opt/thorondor-agent\`.
-- Genera un entorno Python aislado en \`/opt/thorondor-agent/venv\`.
-- Escribe \`thorondor-agent.py\` con la configuración del formulario.
-- Instala \`psutil\`, sensores y smartmontools cuando el gestor de paquetes lo permite.
-- Prepara grupos de lectura (\`adm\`, \`systemd-journal\`, \`docker\` si existe) y sudoers limitado para firewall, \`smartctl\` y \`dmesg\`.
-- No abre firewall de forma amplia; muestra el comando restrictivo que debes ajustar a tu cliente, VPN o subred.
-- Crea y arranca \`${serviceFileName}\` solo si activaste autoarranque.`;
-  const autoStartNote = autoStart
-    ? `Autoarranque activado: revisa el estado de ${isWindows ? "Task Scheduler" : serviceFileName} después de instalar.`
-    : "Autoarranque desactivado: el instalador deja el agente preparado, pero tendrás que arrancarlo manualmente.";
+curl -s -H 'X-Thorondor-Key-Agents: ${keyAgents}' http://127.0.0.1:${port}/telemetry | python3 -m json.tool | head -60`;
+  const statusCommand = isWindows
+    ? `Get-ScheduledTask -TaskName ThorondorAgent -ErrorAction SilentlyContinue
+Get-ScheduledTaskInfo -TaskName ThorondorAgent -ErrorAction SilentlyContinue
+Get-ChildItem "C:\\ProgramData\\Thorondor-Agent"`
+    : `sudo systemctl status ${buildServiceFileName(config)} --no-pager
+sudo ls -la /opt/thorondor-agent`;
+  const uninstallCommand = isWindows
+    ? `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${generatedUninstaller}"`
+    : `sudo ${generatedUninstaller}`;
 
-  return `## Instalación guiada para ${config.systemName}
+  return `## Instalación del agente ${targetLabel}
 
-### Resumen del despliegue
-- Sistema objetivo: ${targetLabel}
-- Instalador: \`${installerName}\`
-- URL base que usará Thorondor: \`${baseUrl}\`
-- Puerto del agente: \`${port}\`
-- ${autoStartNote}
-- ${networkNote}
+### Lo que se genera
+- Instalador único: \`${installerName}\`.
+- Carpeta recomendada para ejecutarlo: \`${installFolder}\`.
+- Carpeta real de instalación: \`${isWindows ? "C:\\ProgramData\\Thorondor-Agent" : "/opt/thorondor-agent"}\`.
+- Desinstalador generado automáticamente: \`${generatedUninstaller}\`.
+- Puerto local de salud: \`${port}\`.
+- ${persistenceNote}
 
-### Paso 1 - Preparar el host
-Ejecuta estas comprobaciones en el equipo que vas a monitorizar antes de instalar.
+### Requisitos reales
+- Permisos: ${permissionNote}
+- Dependencias: ${dependencyNote}
+- Servicio: ${serviceNote}
+- Red: ${networkNote}
 
-\`\`\`${installFence}
-${preflightCommand}
-\`\`\`
-
-Para qué sirve:
-- Confirma permisos de administrador o sudo.
-- Detecta si el puerto ya está ocupado.
-- Ayuda a elegir la IP correcta en LAN/VPN.
-- Anticipa si faltan herramientas que el instalador intentará preparar.
-- Verifica acceso a Event Log en Windows o permisos sudo/systemd en Linux.
-
-Resultado esperado:
-- El puerto ${port} no aparece en uso.
-- La consola tiene permisos elevados.
-- En Linux hay Python 3 o gestor de paquetes; en Windows hay winget/dotnet o el asistente intentará prepararlo.
-- Si activas SMART, bloqueo de IPs o lectura de kernel, el instalador dejará permisos sudoers limitados para el usuario del agente.
-
-### Paso 2 - Descargar y llevar el instalador al host
-Descarga únicamente \`${installerName}\` desde Thorondor y colócalo en el host monitorizado.
-
-Para qué sirve:
-- Garantiza que instalas la configuración exacta generada para este host.
-- Evita editar el agente a mano o copiar piezas sueltas.
-- Reduce errores entre formulario, URL, puerto, módulos y fuentes de logs.
-
-Resultado esperado:
-- El archivo está en el host que quieres vigilar, por ejemplo en Descargas o en \`/tmp\`.
-
-### Paso 3 - Ejecutar con permisos elevados
+### 1. Copia el fichero a una carpeta y ejecútalo
 \`\`\`${installFence}
 ${runCommand}
 \`\`\`
 
-Para qué sirve:
-- Escribe el agente Python en la ruta del sistema.
-- Instala dependencias.
-- Aplica módulos y fuentes de logs seleccionados.
-- Prepara persistencia si activaste autoarranque.
-
-El instalador hace:
-${installerDoes}
-
-Resultado esperado:
-- La consola termina con instalación completada.
-- El endpoint local \`/health\` responde.
-- Si es Windows, existe una copia reutilizable de \`ThorondorAgent.msi\` en el Escritorio.
-
-### Paso 4 - Comprobar artefactos instalados
+### 2. Comprueba que quedó instalado
 \`\`\`${installFence}
-${artifactCheck}
+${statusCommand}
 \`\`\`
 
-Para qué sirve:
-- Confirma que el instalador no solo se ejecutó, sino que dejó archivos reales en la ruta de instalación.
-- Comprueba el venv de Linux o el MSI reutilizable de Windows.
-- Verifica si existe servicio/tarea cuando el autoarranque está activado.
-- En Linux confirma usuario dedicado, grupos de lectura y sudoers limitado.
-
-Resultado esperado:
-- Aparece \`thorondor-agent.py\`.
-- La ruta de instalación existe.
-- El servicio o tarea aparece si activaste autoarranque.
-
-### Paso 5 - Revisar servicio o tarea programada
-${autoStart ? `\`\`\`${installFence}
-${serviceCheck}
-\`\`\`` : "Autoarranque está desactivado en este paquete. Omite este paso salvo que arranques el agente manualmente."}
-
-Para qué sirve:
-- Comprueba que el agente queda persistente tras reinicio.
-- Detecta errores de permisos, puerto ocupado o dependencias.
-- Permite ver logs recientes del arranque.
-
-Resultado esperado:
-- Linux: \`ActiveState=active\`, \`NRestarts=0\` y \`ExecMainStatus=0\`.
-- Windows: tarea \`ThorondorAgent\` en estado Ready o Running y \`LastTaskResult=0\` tras ejecutarse.
-
-### Paso 6 - Validar HTTP local
+### 3. Valida el agente
 \`\`\`${installFence}
-${localValidation}
+${validationCommand}
 \`\`\`
 
-Para qué sirve:
-- Aísla problemas del agente antes de mirar firewall, NAT, DNS o CORS.
-- Comprueba que \`/health\` responde y que \`/telemetry\` devuelve JSON útil.
-
-Resultado esperado:
-- \`/health\` devuelve \`status: ok\`.
-- \`/telemetry\` contiene bloques como \`system\`, \`metrics\`, \`security\`, \`logs\` y \`heartbeat\`.
-
-### Paso 7 - Validar desde la URL real
-${remoteValidationCommand ? `\`\`\`bash
-${remoteValidationCommand}
-\`\`\`` : "Modo local: la URL real debe ser el propio localhost del equipo que abre Thorondor."}
-
-Para qué sirve:
-- Comprueba la ruta completa que usará el navegador.
-- En LAN/VPN valida firewall y direccionamiento privado.
-- En remoto valida DNS/IP pública, NAT, proxy, TLS y mixed content.
-
-Resultado esperado:
-- HTTP 200 en \`/health\`.
-- Si hay timeout, revisa red o firewall.
-- Si hay connection refused, revisa puerto o proceso.
-- Si hay error TLS o mixed content, corrige HTTPS/proxy antes de registrar el host.
-
-### Paso 8 - Registrar y operar
-Registra este host en el dashboard con esta URL base:
+### 4. Registrar en Thorondor
+Usa esta URL base para registrar el host:
 
 \`\`\`text
 ${baseUrl}
 \`\`\`
 
-Para qué sirve:
-- Evita registrar hosts que todavía fallan por instalación o red.
-- Permite que dashboard, logs, reglas, alertas y bloqueo de IP trabajen sobre un endpoint validado.
+### Desinstalar
+El instalador deja preparado un fichero de desinstalación. ${uninstallPermissionNote} Para retirar el agente completo:
 
-Resultado esperado:
-- El host aparece online.
-- La última conexión se actualiza.
-- La telemetría y los logs entran sin duplicidades visibles.
+\`\`\`${installFence}
+${uninstallCommand}
+\`\`\`
+`;
+}
+
+function buildThorondorWindowsUninstallScript(config) {
+  const installDir = "C:\\ProgramData\\Thorondor-Agent";
+  const packageName = normalizeWindowsPackageName(config).replace(/"/g, "`\"");
+
+  return `#Requires -RunAsAdministrator
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+
+$InstallDir = "${installDir}"
+$TaskName = "ThorondorAgent"
+$PackageName = "Thorondor Agent - ${packageName}"
+
+Write-Host "=== Thorondor Agent Uninstaller para Windows ===" -ForegroundColor Cyan
+
+Stop-ScheduledTask -TaskName $TaskName -ErrorAction SilentlyContinue
+Unregister-ScheduledTask -TaskName $TaskName -Confirm:$false -ErrorAction SilentlyContinue
+
+Get-CimInstance Win32_Process |
+    Where-Object { $_.CommandLine -like "*thorondor-agent.py*" -and $_.CommandLine -like "*Thorondor-Agent*" } |
+    ForEach-Object {
+        try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch { }
+    }
+
+Get-NetFirewallRule -DisplayName "Thorondor Agent HTTP" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName "Thorondor Agent" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName "Thorondor Block *" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+
+$registryRoots = @(
+    "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
+    "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
+)
+
+foreach ($root in $registryRoots) {
+    if (-not (Test-Path $root)) { continue }
+    Get-ChildItem $root -ErrorAction SilentlyContinue |
+        Get-ItemProperty -ErrorAction SilentlyContinue |
+        Where-Object { $_.DisplayName -eq $PackageName -or $_.DisplayName -like "Thorondor Agent*" } |
+        ForEach-Object {
+            if ($_.PSChildName -match "^\\{[0-9A-Fa-f-]+\\}$") {
+                Start-Process -FilePath "msiexec.exe" -ArgumentList @("/x", $_.PSChildName, "/passive", "/norestart") -Wait
+            }
+        }
+}
+
+Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
+Remove-Item -Recurse -Force "C:\\Program Files\\Thorondor Agent" -ErrorAction SilentlyContinue
+
+Write-Host "Desinstalación completada." -ForegroundColor Green
 `;
 }
 
 export function buildThorondorWindowsInstallScript(config) {
-  const port = Number(config.port) || 8765;
+  const port = Number(config.port) || THORONDOR_AGENT_FIXED_PORT;
   const installDir = "C:\\ProgramData\\Thorondor-Agent";
   const pythonAgent = buildThorondorPythonAgent(config);
-  const autoStart = config.autoStart !== false;
-  const networkScope = normalizeThorondorNetworkScope(config.networkScope);
-  const shouldPrepareFirewall = networkScope !== "local";
+  const uninstallScriptB64 = base64Utf8(buildThorondorWindowsUninstallScript(config));
   const verifyCommand = `Invoke-RestMethod http://127.0.0.1:$PORT/health | ConvertTo-Json -Depth 3`;
-  const firewallBlock = shouldPrepareFirewall
-    ? networkScope === "lan"
-      ? `# 4. Regla de firewall LAN
-Write-Host "[4/6] Abriendo puerto $PORT solo para LocalSubnet en Windows Firewall..." -ForegroundColor Yellow
-New-NetFirewallRule -DisplayName "Thorondor Agent HTTP" -Direction Inbound -Protocol TCP -LocalPort $PORT -Action Allow -Profile Private -RemoteAddress LocalSubnet -ErrorAction SilentlyContinue | Out-Null
-Write-Host "    Regla LAN creada. Si usas VPN o una IP concreta, ajusta RemoteAddress manualmente." -ForegroundColor Green`
-      : `# 4. Firewall remoto
-Write-Host "[4/6] Modo remoto: no se abre firewall de forma amplia." -ForegroundColor Yellow
-Write-Host "    Crea una regla restringida a tu IP, VPN o bastión:" -ForegroundColor Yellow
-Write-Host "    New-NetFirewallRule -DisplayName 'Thorondor Agent HTTP' -Direction Inbound -Protocol TCP -LocalPort $PORT -Action Allow -Profile Any -RemoteAddress <IP_CLIENTE_O_CIDR>" -ForegroundColor Yellow`
-    : `# 4. Firewall local
-Write-Host "[4/6] Monitorización local: no se abre firewall." -ForegroundColor Yellow`;
-  const taskBlock = autoStart
-    ? `
+  const firewallBlock = `# 4. Red
+Write-Host "[4/6] Red sin configuración manual desde el instalador." -ForegroundColor Yellow
+Write-Host "    El agente queda listo; la operación real se realiza con token y API central cuando esté configurada." -ForegroundColor Gray`;
+  const taskBlock = `
 # 5. Crear tarea programada
 Write-Host "[5/6] Registrando tarea programada '$TASK_NAME'..." -ForegroundColor Yellow
 $runnerPath = Join-Path $INSTALL_DIR $RUNNER_FILE
@@ -2291,14 +4623,6 @@ Start-ScheduledTask -TaskName $TASK_NAME
 Start-Sleep -Seconds 3
 $state = (Get-ScheduledTask -TaskName $TASK_NAME).State
 Write-Host "    Estado de la tarea: $state" -ForegroundColor $(if ($state -eq "Running") { "Green" } else { "Yellow" })
-`
-    : `
-# 5. Arranque manual
-Write-Host "[5/6] Autoarranque desactivado por configuración." -ForegroundColor Yellow
-Write-Host "    Para iniciar manualmente: powershell.exe -NoProfile -ExecutionPolicy Bypass -File '$INSTALL_DIR\\$RUNNER_FILE'" -ForegroundColor Yellow
-
-# 6. No se inicia el agente automáticamente
-Write-Host "[6/6] Instalación preparada sin iniciar tarea programada." -ForegroundColor Yellow
 `;
 
   return `#Requires -RunAsAdministrator
@@ -2317,6 +4641,7 @@ $ErrorActionPreference = "Stop"
 $INSTALL_DIR  = "${installDir}"
 $AGENT_FILE   = "thorondor-agent.py"
 $RUNNER_FILE  = "run-thorondor-agent.ps1"
+$UNINSTALL_FILE = "thorondor-uninstaller.ps1"
 $TASK_NAME    = "ThorondorAgent"
 $PORT         = ${port}
 
@@ -2334,6 +4659,9 @@ $agentSource = @'
 ${pythonAgent}
 '@
 Set-Content -Path "$INSTALL_DIR\\$AGENT_FILE" -Value $agentSource -Encoding UTF8
+[System.IO.File]::WriteAllBytes((Join-Path $INSTALL_DIR $UNINSTALL_FILE), [System.Convert]::FromBase64String(@'
+${uninstallScriptB64}
+'@))
 
 # 2. Verificar Python
 Write-Host "[2/6] Verificando Python..." -ForegroundColor Yellow
@@ -2397,6 +4725,25 @@ Write-Host "[3/6] Instalando dependencias Python..." -ForegroundColor Yellow
 & $python @pythonArgs -m pip install psutil --quiet
 Write-Host "    psutil instalado correctamente." -ForegroundColor Green
 
+Write-Host "    Detectando fuentes de logs disponibles..." -ForegroundColor Yellow
+$detectLogArgs = @()
+$detectLogArgs += $pythonArgs
+$detectLogArgs += (Join-Path $INSTALL_DIR $AGENT_FILE)
+$detectLogArgs += "--detect-logs"
+& $python @detectLogArgs 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "    La deteccion inicial de logs no se completo. El agente volvera a comprobarlo al arrancar." -ForegroundColor DarkYellow
+}
+Write-Host "    Detectando módulos disponibles en este host..." -ForegroundColor Yellow
+$detectModuleArgs = @()
+$detectModuleArgs += $pythonArgs
+$detectModuleArgs += (Join-Path $INSTALL_DIR $AGENT_FILE)
+$detectModuleArgs += "--detect-modules"
+& $python @detectModuleArgs 2>$null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "    La deteccion inicial de modulos no se completo. El agente volvera a comprobarlo al arrancar." -ForegroundColor DarkYellow
+}
+
 $runnerArguments = @()
 $runnerArguments += $pythonArgs
 $runnerArguments += (Join-Path $INSTALL_DIR $AGENT_FILE)
@@ -2417,6 +4764,8 @@ Write-Host ""
 Write-Host "=== Instalación completada ===" -ForegroundColor Green
 Write-Host "Verifica el agente con:"
 Write-Host "  ${verifyCommand}"
+Write-Host "Desinstalador:"
+Write-Host ('  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $INSTALL_DIR $UNINSTALL_FILE) + '"')
 Write-Host ""
 Write-Host "Diagnóstico de arranque:"
 Write-Host "  Get-ScheduledTaskInfo -TaskName ThorondorAgent"

@@ -121,23 +121,69 @@
           <span class="section-kicker">Notificaciones</span>
           <h2 class="module-title">Alertas por email</h2>
           <p class="module-copy">
-            SMTP operativo para autenticación. Las notificaciones de alertas quedan pendientes de configuración.
+            Envía incidencias reales del SIEM por SMTP a los operadores autorizados.
           </p>
         </div>
         <div class="phase-badge-block">
-          <span class="phase-badge">Auth activo</span>
-          <small>Registro y recuperación por email disponibles.</small>
+          <span class="phase-badge">SMTP SIEM</span>
+          <small>{{ emailAlertStatusCopy }}</small>
+        </div>
+      </div>
+
+      <div class="mail-status" :class="{ 'mail-status--blocked': !canUseCloudPersistence }">
+        <strong>{{ emailAlertStatusTitle }}</strong>
+        <span>{{ emailAlertStatusCopy }}</span>
+      </div>
+
+      <div class="mail-config-grid">
+        <label class="mail-rule mail-rule--primary">
+          <input v-model="emailAlertSettings.enabled" type="checkbox" :disabled="!canUseCloudPersistence || emailAlertLoading" />
+          <span>
+            <strong>Enviar alertas por email</strong>
+            <small>Thorondor enviará un correo cuando la API registre una alerta de las severidades seleccionadas.</small>
+          </span>
+        </label>
+
+        <div class="control-grid compact-grid mail-recipient-grid">
+          <div class="control-field">
+            <label class="field-label" for="siem-alert-email">Email de destino</label>
+            <input
+              id="siem-alert-email"
+              v-model.trim="emailAlertSettings.recipientEmail"
+              class="form-control input-dark"
+              type="email"
+              :disabled="!canUseCloudPersistence || emailAlertLoading"
+              :placeholder="emailAlertSettings.effectiveRecipientEmail || currentSessionUser?.email || 'operador@thorondor.app'"
+            />
+          </div>
         </div>
       </div>
 
       <div class="mail-grid">
-        <label v-for="rule in mailRules" :key="rule.id" class="mail-rule mail-rule--disabled">
-          <input v-model="rule.enabled" type="checkbox" disabled />
+        <label v-for="rule in mailRules" :key="rule.id" class="mail-rule">
+          <input v-model="emailAlertSettings[rule.id]" type="checkbox" :disabled="!canUseCloudPersistence || emailAlertLoading" />
           <span>
             <strong>{{ rule.label }}</strong>
             <small>{{ rule.copy }}</small>
           </span>
         </label>
+      </div>
+
+      <div class="mail-actions">
+        <p v-if="emailAlertFeedback" class="settings-feedback" :class="`settings-feedback--${emailAlertFeedback.type}`">
+          {{ emailAlertFeedback.message }}
+        </p>
+        <div>
+          <button class="btn btn-secondary" type="button" :disabled="!canUseCloudPersistence || emailAlertLoading || emailAlertSaving" @click="loadEmailAlertSettings()">
+            {{ emailAlertLoading ? "Consultando..." : "Actualizar" }}
+          </button>
+          <button class="btn btn-secondary" type="button" :disabled="!canUseCloudPersistence || emailAlertTesting" @click="sendEmailAlertTest()">
+            {{ emailAlertTesting ? "Enviando..." : "Enviar prueba" }}
+          </button>
+          <button class="btn btn-main" type="button" :disabled="!canUseCloudPersistence || emailAlertSaving || emailAlertLoading" @click="saveEmailAlertSettings()">
+            {{ emailAlertSaving ? "Guardando..." : "Guardar alertas" }}
+          </button>
+        </div>
       </div>
     </section>
 
@@ -288,7 +334,23 @@ import {
   fetchThorondorAdminUsers,
   updateThorondorAdminUserAuthorization
 } from "@/features/thorondor/services/thorondorAuth";
+import {
+  fetchThorondorEmailAlertSettings,
+  sendThorondorEmailAlertTest,
+  updateThorondorEmailAlertSettings
+} from "@/features/thorondor/services/thorondorCentralApi";
 import thorondorLogo from "@/assets/images/brand/logo_thorondor.png";
+
+function buildDefaultEmailAlertSettings() {
+  return {
+    enabled: false,
+    recipientEmail: "",
+    effectiveRecipientEmail: "",
+    notifyCritical: true,
+    notifyDanger: true,
+    notifyWarning: false,
+  };
+}
 
 export default {
   name: "ThorondorAjustesUsuarioView",
@@ -310,6 +372,12 @@ export default {
         digestCadence: "Tiempo real",
         density: "Equilibrada"
       },
+      emailAlertSettings: buildDefaultEmailAlertSettings(),
+      emailAlertLoading: false,
+      emailAlertSaving: false,
+      emailAlertTesting: false,
+      emailAlertLoaded: false,
+      emailAlertFeedback: null,
       securityOptions: [
         {
           id: "confirm-actions",
@@ -332,28 +400,19 @@ export default {
       ],
       mailRules: [
         {
-          id: "critical-alerts",
-          label: "Alertas críticas",
-          copy: "CPU, memoria, disco, heartbeat caido y reglas marcadas como críticas.",
-          enabled: true
+          id: "notifyCritical",
+          label: "Críticas",
+          copy: "Disco casi lleno y cualquier regla marcada como crítica."
         },
         {
-          id: "auth-failures",
-          label: "Intentos fallidos",
-          copy: "Picos de autenticación fallida y orígenes repetidos por sistema.",
-          enabled: true
+          id: "notifyDanger",
+          label: "Altas",
+          copy: "CPU, RAM, servicios caídos y fuerza bruta probable."
         },
         {
-          id: "command-audit",
-          label: "Comandos sensibles",
-          copy: "Actividad de sudo, comandos administrativos y cambios relevantes.",
-          enabled: false
-        },
-        {
-          id: "daily-digest",
-          label: "Resumen diario",
-          copy: "Estado agregado de sistemas, alertas y eventos recientes.",
-          enabled: false
+          id: "notifyWarning",
+          label: "Medias",
+          copy: "Eventos relevantes que conviene revisar sin urgencia crítica."
         }
       ],
       adminUsers: [],
@@ -384,6 +443,29 @@ export default {
           this.currentSessionUser?.usuarioAutorizado ||
           this.currentSessionUser?.usuario_autorizado
       );
+    },
+
+    emailAlertStatusTitle() {
+      if (!this.canUseCloudPersistence) {
+        return "Alertas por email bloqueadas";
+      }
+      if (this.emailAlertLoading) {
+        return "Consultando configuración";
+      }
+      return this.emailAlertSettings.enabled ? "Alertas por email activas" : "Alertas por email desactivadas";
+    },
+
+    emailAlertStatusCopy() {
+      if (!this.canUseCloudPersistence) {
+        return "Requiere usuario autorizado.";
+      }
+      if (this.emailAlertLoading) {
+        return "Leyendo preferencias desde la API.";
+      }
+      const email = this.emailAlertSettings.recipientEmail || this.emailAlertSettings.effectiveRecipientEmail;
+      return email
+        ? `Destino: ${email}. Se enviará un correo por cada alerta nueva que coincida con tus filtros.`
+        : "Usará el email verificado de la cuenta si no defines otro destino.";
     },
 
     settingsSections() {
@@ -461,6 +543,15 @@ export default {
   },
 
   watch: {
+    canUseCloudPersistence: {
+      immediate: true,
+      handler(value) {
+        if (value && !this.emailAlertLoaded && !this.emailAlertLoading) {
+          this.loadEmailAlertSettings({ silent: true });
+        }
+      }
+    },
+
     isSessionAdmin: {
       immediate: true,
       handler(value) {
@@ -472,6 +563,95 @@ export default {
   },
 
   methods: {
+    normalizeEmailAlertSettings(value = {}) {
+      return {
+        ...buildDefaultEmailAlertSettings(),
+        ...value,
+        enabled: Boolean(value.enabled),
+        recipientEmail: String(value.recipientEmail || "").trim(),
+        effectiveRecipientEmail: String(value.effectiveRecipientEmail || "").trim(),
+        notifyCritical: value.notifyCritical !== false,
+        notifyDanger: value.notifyDanger !== false,
+        notifyWarning: Boolean(value.notifyWarning)
+      };
+    },
+
+    async loadEmailAlertSettings(options = {}) {
+      if (!this.canUseCloudPersistence || this.emailAlertLoading) return;
+
+      try {
+        this.emailAlertLoading = true;
+        if (!options.silent) this.emailAlertFeedback = null;
+        const payload = await fetchThorondorEmailAlertSettings();
+        this.emailAlertSettings = this.normalizeEmailAlertSettings(payload);
+        this.emailAlertLoaded = true;
+        if (!options.silent) {
+          this.emailAlertFeedback = { type: "success", message: "Configuración de alertas actualizada." };
+        }
+      } catch (error) {
+        this.emailAlertFeedback = {
+          type: "error",
+          message: error.message || "No se pudo consultar la configuración de alertas por email."
+        };
+      } finally {
+        this.emailAlertLoading = false;
+      }
+    },
+
+    async saveEmailAlertSettings() {
+      if (!this.canUseCloudPersistence || this.emailAlertSaving) return;
+
+      try {
+        this.emailAlertSaving = true;
+        this.emailAlertFeedback = null;
+        const payload = await updateThorondorEmailAlertSettings({
+          enabled: this.emailAlertSettings.enabled,
+          recipientEmail: this.emailAlertSettings.recipientEmail,
+          notifyCritical: this.emailAlertSettings.notifyCritical,
+          notifyDanger: this.emailAlertSettings.notifyDanger,
+          notifyWarning: this.emailAlertSettings.notifyWarning
+        });
+        this.emailAlertSettings = this.normalizeEmailAlertSettings(payload);
+        this.emailAlertLoaded = true;
+        this.emailAlertFeedback = { type: "success", message: "Alertas por email guardadas en la API." };
+      } catch (error) {
+        this.emailAlertFeedback = {
+          type: "error",
+          message: error.message || "No se pudieron guardar las alertas por email."
+        };
+      } finally {
+        this.emailAlertSaving = false;
+      }
+    },
+
+    async sendEmailAlertTest() {
+      if (!this.canUseCloudPersistence || this.emailAlertTesting) return;
+
+      try {
+        this.emailAlertTesting = true;
+        this.emailAlertFeedback = null;
+        const savedSettings = await updateThorondorEmailAlertSettings({
+          enabled: this.emailAlertSettings.enabled,
+          recipientEmail: this.emailAlertSettings.recipientEmail,
+          notifyCritical: this.emailAlertSettings.notifyCritical,
+          notifyDanger: this.emailAlertSettings.notifyDanger,
+          notifyWarning: this.emailAlertSettings.notifyWarning
+        });
+        this.emailAlertSettings = this.normalizeEmailAlertSettings(savedSettings);
+        const payload = await sendThorondorEmailAlertTest();
+        this.emailAlertSettings = this.normalizeEmailAlertSettings(payload);
+        this.emailAlertLoaded = true;
+        this.emailAlertFeedback = { type: "success", message: payload?.message || "Correo de prueba enviado." };
+      } catch (error) {
+        this.emailAlertFeedback = {
+          type: "error",
+          message: error.message || "No se pudo enviar el correo de prueba."
+        };
+      } finally {
+        this.emailAlertTesting = false;
+      }
+    },
+
     async loadAdminUsers(options = {}) {
       if (!this.isSessionAdmin || this.adminLoading) return;
 
@@ -668,6 +848,68 @@ export default {
 
 .mail-rule--disabled input {
   cursor: not-allowed;
+}
+
+.mail-config-grid {
+  display: grid;
+  grid-template-columns: minmax(260px, 0.9fr) minmax(0, 1.1fr);
+  gap: 14px;
+  align-items: stretch;
+}
+
+.mail-recipient-grid {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.mail-status {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding: 12px 14px;
+  border: 1px solid rgba(74, 222, 128, 0.22);
+  border-radius: 4px;
+  background: rgba(18, 83, 49, 0.16);
+}
+
+.mail-status strong {
+  color: #bbf7d0;
+  font-size: 0.9rem;
+}
+
+.mail-status span {
+  color: #a7b7c9;
+  font-size: 0.84rem;
+  line-height: 1.45;
+  text-align: right;
+}
+
+.mail-status--blocked {
+  border-color: rgba(248, 113, 113, 0.26);
+  background: rgba(69, 24, 27, 0.24);
+}
+
+.mail-status--blocked strong {
+  color: #fecaca;
+}
+
+.mail-rule--primary {
+  min-height: 100%;
+}
+
+.mail-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+}
+
+.mail-actions div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-left: auto;
 }
 
 .security-row input,
@@ -871,9 +1113,30 @@ export default {
   .settings-hero,
   .settings-grid,
   .settings-tabs,
+  .mail-config-grid,
   .mail-grid,
   .admin-stat-grid {
     grid-template-columns: 1fr;
+  }
+
+  .mail-status,
+  .mail-actions {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .mail-status span {
+    text-align: left;
+  }
+
+  .mail-actions div,
+  .mail-actions .settings-feedback {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .mail-actions div {
+    justify-content: flex-start;
   }
 
   .settings-user-summary {

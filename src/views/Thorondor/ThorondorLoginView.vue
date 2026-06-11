@@ -42,14 +42,12 @@
             class="social-login-button"
             :class="{
               'is-loading': socialAuthBusyProvider === provider.id,
-              'is-unavailable': provider.checked && !provider.configured,
+              'is-unavailable': !provider.configured,
             }"
             type="button"
-            :disabled="Boolean(socialAuthBusyProvider) || (provider.checked && !provider.configured)"
+            :disabled="Boolean(socialAuthBusyProvider) || !provider.configured"
             :aria-label="`Continuar con ${provider.label}`"
-            :title="provider.checked && !provider.configured
-              ? `${provider.label} pendiente de configurar en la API`
-              : provider.description"
+            :title="provider.configured ? provider.description : provider.disabledReason"
             @click="startSocialLogin(provider)"
           >
             <img :src="provider.icon" alt="" aria-hidden="true" />
@@ -156,6 +154,29 @@
               </div>
             </label>
 
+            <label class="login-field" for="signup-password-confirmation">
+              <span>Repetir contraseña</span>
+              <div class="password-control">
+                <input
+                  id="signup-password-confirmation"
+                  v-model="signupForm.passwordConfirmation"
+                  :type="showPassword ? 'text' : 'password'"
+                  autocomplete="new-password"
+                  placeholder="Vuelve a introducirla"
+                />
+                <button
+                  type="button"
+                  :aria-label="showPassword ? 'Ocultar contraseña' : 'Mostrar contraseña'"
+                  @click="showPassword = !showPassword"
+                >
+                  <svg viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M2.5 12s3.5-6 9.5-6 9.5 6 9.5 6-3.5 6-9.5 6-9.5-6-9.5-6Z" />
+                    <path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z" />
+                  </svg>
+                </button>
+              </div>
+            </label>
+
             <button class="login-submit" type="submit" :disabled="localAuthBusy">
               <span>Enviar código</span>
             </button>
@@ -242,13 +263,72 @@
           <p v-if="feedbackMessage" class="login-feedback" role="status">{{ feedbackMessage }}</p>
         </form>
 
+        <footer class="login-legal-links" aria-label="Información legal">
+          <RouterLink :to="{ name: 'thorondor-privacy' }">Privacidad</RouterLink>
+          <span aria-hidden="true">/</span>
+          <RouterLink :to="{ name: 'thorondor-terms' }">Términos y condiciones</RouterLink>
+          <span aria-hidden="true">/</span>
+          <RouterLink :to="{ name: 'thorondor-contact' }">Contacto</RouterLink>
+        </footer>
       </section>
+    </section>
+
+    <section
+      v-if="showCookieNotice"
+      class="cookie-modal-backdrop"
+      aria-labelledby="cookie-modal-title"
+      aria-modal="true"
+      role="dialog"
+    >
+      <article class="cookie-modal">
+        <header class="cookie-modal-header">
+          <span class="section-kicker">Privacidad y cookies</span>
+          <small>Configuración esencial</small>
+        </header>
+
+        <div class="cookie-modal-body">
+          <h2 id="cookie-modal-title">Uso de cookies en Thorondor</h2>
+          <p>
+            Utilizamos cookies técnicas para mantener la sesión, proteger el acceso y recordar
+            preferencias básicas de la plataforma. También guardamos esta aceptación en IndexedDB
+            para no volver a mostrar este aviso en este navegador.
+          </p>
+
+          <ul class="cookie-purpose-list">
+            <li>
+              <strong>Sesión y seguridad</strong>
+              <p>Cookies necesarias para iniciar sesión, validar credenciales y proteger las peticiones a la API.</p>
+            </li>
+            <li>
+              <strong>Preferencias locales</strong>
+              <p>IndexedDB conserva el consentimiento, ajustes de uso y caché local de la consola cuando procede.</p>
+            </li>
+            <li>
+              <strong>Sin publicidad</strong>
+              <p>No se usan cookies publicitarias ni seguimiento comercial de terceros desde esta pantalla.</p>
+            </li>
+          </ul>
+        </div>
+
+        <footer class="cookie-modal-actions">
+          <RouterLink :to="{ name: 'thorondor-privacy' }">Consultar política de privacidad</RouterLink>
+          <button
+            ref="cookieModalPrimary"
+            class="cookie-modal-primary"
+            type="button"
+            @click="acceptCookieNotice"
+          >
+            Aceptar y continuar
+          </button>
+        </footer>
+      </article>
     </section>
   </main>
 </template>
 
 <script>
 import loginBanner from '@/assets/images/brand/banner_login.png'
+import { getMeta, setMeta } from '@/features/thorondor/services/thorondorIndexedDb'
 import {
   THORONDOR_SOCIAL_AUTH_PROVIDERS,
   confirmThorondorEmailSignup,
@@ -260,6 +340,9 @@ import {
   requestThorondorPasswordRecovery,
   startThorondorSocialAuth,
 } from '@/features/thorondor/services/thorondorAuth'
+
+const COOKIE_CONSENT_META_KEY = 'thorondorCookieConsent:v1'
+const EXTERNAL_OAUTH_ENABLED = false
 
 export default {
   name: 'ThorondorLoginView',
@@ -273,6 +356,7 @@ export default {
       socialAuthBusyProvider: '',
       localAuthBusy: false,
       showPassword: false,
+      showCookieNotice: false,
       feedbackMessage: '',
       signupStep: 'request',
       recoveryStep: 'request',
@@ -285,6 +369,7 @@ export default {
         displayName: '',
         email: '',
         password: '',
+        passwordConfirmation: '',
         code: '',
       },
       recoveryForm: {
@@ -313,7 +398,10 @@ export default {
       return THORONDOR_SOCIAL_AUTH_PROVIDERS.map((provider) => ({
         ...provider,
         checked: this.providersLoaded,
-        configured: this.providerAvailability[provider.id] !== false,
+        configured: EXTERNAL_OAUTH_ENABLED && this.providerAvailability[provider.id] === true,
+        disabledReason: EXTERNAL_OAUTH_ENABLED
+          ? `${provider.label} pendiente de configurar en la API`
+          : `${provider.label} estará disponible cuando activemos OAuth`,
       }))
     },
   },
@@ -321,9 +409,43 @@ export default {
   mounted() {
     this.bootstrapRecoveryFromQuery()
     this.loadProviderConfiguration()
+    this.loadCookieNoticeConsent()
   },
 
   methods: {
+    focusCookieNotice() {
+      if (!this.showCookieNotice) return
+
+      this.$nextTick(() => {
+        this.$refs.cookieModalPrimary?.focus?.()
+      })
+    },
+
+    async loadCookieNoticeConsent() {
+      try {
+        const consent = await getMeta(COOKIE_CONSENT_META_KEY, null)
+        this.showCookieNotice = consent?.accepted !== true
+      } catch {
+        this.showCookieNotice = true
+      }
+
+      this.focusCookieNotice()
+    },
+
+    async acceptCookieNotice() {
+      this.showCookieNotice = false
+
+      try {
+        await setMeta(COOKIE_CONSENT_META_KEY, {
+          accepted: true,
+          version: 1,
+          acceptedAt: new Date().toISOString(),
+        })
+      } catch {
+        // Si IndexedDB no está disponible, el aviso se cerrará solo para esta sesión.
+      }
+    },
+
     setAuthMode(mode) {
       this.authMode = mode
       this.feedbackMessage = ''
@@ -368,8 +490,8 @@ export default {
     },
 
     startSocialLogin(provider) {
-      if (provider.checked && !provider.configured) {
-        this.feedbackMessage = `${provider.label} está pendiente de configurar en el backend.`
+      if (!provider.configured) {
+        this.feedbackMessage = 'El acceso con Google, Microsoft, GitHub y Apple está pendiente de activar.'
         return
       }
 
@@ -404,6 +526,8 @@ export default {
 
     async submitSignup() {
       if (this.localAuthBusy) return
+      if (this.signupStep === 'request' && !this.validateSignupPasswordConfirmation()) return
+
       this.localAuthBusy = true
       this.feedbackMessage = ''
 
@@ -422,6 +546,20 @@ export default {
       } finally {
         this.localAuthBusy = false
       }
+    },
+
+    validateSignupPasswordConfirmation() {
+      if (!this.signupForm.passwordConfirmation) {
+        this.feedbackMessage = 'Repite la contraseña para continuar.'
+        return false
+      }
+
+      if (this.signupForm.password !== this.signupForm.passwordConfirmation) {
+        this.feedbackMessage = 'Las contraseñas no coinciden.'
+        return false
+      }
+
+      return true
     },
 
     async submitRecovery() {
@@ -815,6 +953,164 @@ export default {
   font-size: 0.82rem;
 }
 
+.login-legal-links {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: min(100%, 380px);
+  color: #72859a;
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.login-legal-links a {
+  color: #aab7c7;
+  text-decoration: none;
+}
+
+.login-legal-links a:hover {
+  color: #f3cf8c;
+}
+
+.cookie-modal-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 1000;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  background:
+    linear-gradient(120deg, rgba(214, 161, 92, 0.08), transparent 34%),
+    rgba(3, 6, 10, 0.74);
+  backdrop-filter: blur(10px);
+}
+
+.cookie-modal {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(100%, 540px);
+  max-height: min(100%, 680px);
+  overflow: hidden;
+  border: 1px solid rgba(176, 184, 194, 0.24);
+  border-radius: 6px;
+  background:
+    linear-gradient(145deg, rgba(236, 194, 119, 0.025), transparent 46%),
+    linear-gradient(180deg, #141920, #0b0f15);
+  box-shadow:
+    0 28px 80px rgba(0, 0, 0, 0.5),
+    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.cookie-modal-header,
+.cookie-modal-actions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.cookie-modal-header {
+  padding: 20px 22px 0;
+}
+
+.cookie-modal-header small {
+  padding: 4px 8px;
+  border: 1px solid rgba(176, 184, 194, 0.18);
+  border-radius: 999px;
+  color: #9fb0c3;
+  font-size: 0.68rem;
+  font-weight: 820;
+  white-space: nowrap;
+}
+
+.cookie-modal-body {
+  display: grid;
+  gap: 14px;
+  overflow: auto;
+  padding: 18px 22px 20px;
+}
+
+.cookie-modal-body h2 {
+  margin: 0;
+  color: #f8fafc;
+  font-size: clamp(1.35rem, 2.4vw, 1.72rem);
+  font-weight: 900;
+  line-height: 1.14;
+}
+
+.cookie-modal-body > p {
+  margin: 0;
+  color: #c7d0dc;
+  font-size: 0.93rem;
+  line-height: 1.58;
+}
+
+.cookie-purpose-list {
+  display: grid;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cookie-purpose-list li {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid rgba(176, 184, 194, 0.14);
+  border-radius: 4px;
+  background: rgba(8, 12, 17, 0.42);
+}
+
+.cookie-purpose-list strong {
+  color: #f3cf8c;
+  font-size: 0.75rem;
+  font-weight: 900;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.cookie-purpose-list p {
+  margin: 0;
+  color: #c6d0dc;
+  font-size: 0.86rem;
+  line-height: 1.48;
+}
+
+.cookie-modal-actions {
+  justify-content: flex-end;
+  padding: 16px 22px 20px;
+  border-top: 1px solid rgba(176, 184, 194, 0.16);
+  background: rgba(3, 6, 10, 0.2);
+}
+
+.cookie-modal-actions a {
+  color: #aab7c7;
+  font-size: 0.8rem;
+  font-weight: 780;
+  text-decoration: none;
+}
+
+.cookie-modal-actions a:hover {
+  color: #f3cf8c;
+}
+
+.cookie-modal-primary {
+  min-height: 42px;
+  min-width: 158px;
+  padding: 0 20px;
+  border-radius: 4px;
+  font-weight: 900;
+  border: 1px solid rgba(236, 194, 119, 0.78);
+  background: linear-gradient(180deg, #f4d08f, #c88935);
+  color: #10100d;
+}
+
+.cookie-modal-primary:hover {
+  transform: translateY(-1px);
+}
+
 @media (max-width: 980px) {
   .login-layout {
     grid-template-columns: 1fr;
@@ -865,6 +1161,49 @@ export default {
     padding: 18px;
   }
 
+  .cookie-modal-backdrop {
+    padding: 14px;
+  }
+
+  .cookie-modal {
+    max-height: calc(100svh - 28px);
+  }
+
+  .cookie-modal-header {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 8px;
+    padding: 18px 18px 0;
+  }
+
+  .cookie-modal-body {
+    gap: 12px;
+    padding: 16px 18px;
+  }
+
+  .cookie-modal-body h2 {
+    font-size: 1.35rem;
+  }
+
+  .cookie-modal-body > p,
+  .cookie-purpose-list p {
+    font-size: 0.85rem;
+  }
+
+  .cookie-purpose-list li {
+    padding: 10px 12px;
+  }
+
+  .cookie-modal-actions {
+    align-items: stretch;
+    flex-direction: column-reverse;
+    gap: 10px;
+    padding: 14px 18px 18px;
+  }
+
+  .cookie-modal-primary {
+    width: 100%;
+  }
 }
 
 @media (max-width: 360px) {

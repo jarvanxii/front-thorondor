@@ -51,9 +51,10 @@
               }}</span>
             </header>
             <p>{{ alert.description }}</p>
-            <small
-              >{{ agentNameById(alert.agentId) }} - {{ formatDateTime(alert.createdAt) }}</small
-            >
+            <small class="alert-meta">
+              <span>{{ agentNameById(alert.agentId) }} - {{ formatDateTime(alert.createdAt) }}</span>
+              <span v-if="alert.lastNotifiedAt">Email: {{ formatDateTime(alert.lastNotifiedAt) }}</span>
+            </small>
           </article>
           <nav class="table-actions" aria-label="Acciones de alerta">
             <button class="btn btn-quiet" type="button" @click="setAlertStatus(alert, 'reviewed')">
@@ -266,6 +267,12 @@ export default {
 .alert-item small {
   margin: 0;
   color: #aebed0;
+}
+
+.alert-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
 }
 
 @media (max-width: 1100px) {

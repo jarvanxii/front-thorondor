@@ -8,11 +8,11 @@
                     <h1 id="thorondor-home-title" class="sr-only">Thorondor</h1>
                 </div>
                 <div class="hero-message">
-                    <span class="section-kicker">SIEM para infraestructura propia</span>
-                    <h2>Modelo operativo</h2>
+                    <span class="section-kicker">Consola SIEM para equipos autorizados</span>
+                    <h2>Qué hace Thorondor por ti</h2>
                     <p class="hero-summary">
-                        Monitoriza hosts Linux y Windows, centraliza eventos y opera agentes con persistencia local o
-                        API centralizada.
+                        Thorondor te ayuda a saber qué está pasando en tus servidores, ver señales importantes en una
+                        sola consola y actuar con control cuando algo necesita atención.
                     </p>
                 </div>
                 <dl class="hero-status-bar" aria-label="Estado de Thorondor">
@@ -23,28 +23,30 @@
                 </dl>
             </div>
             <p class="home-overview-note">
-                Despliegue directo: laboratorio con IndexedDB, producción con API y base de datos.
+                Puedes probar la plataforma en modo local. Cuando tu cuenta esté autorizada, también podrás conservar
+                el histórico en Thorondor para trabajar de forma continuada.
             </p>
         </section>
 
-        <section class="section-box architecture-section">
+        <section class="section-box agent-capabilities-section">
             <div class="section-topline">
                 <div class="module-header">
-                    <span class="section-kicker">Arquitectura</span>
-                    <h2 class="module-title">Flujo operativo del agente</h2>
+                    <span class="section-kicker">Cómo funciona</span>
+                    <h2 class="module-title">Un agente por cada equipo que quieras vigilar</h2>
                     <p class="module-copy">
-                        Agente Python en el host, polling HTTP desde el navegador y persistencia local o remota según
-                        autorización del usuario.
+                        Instalas un agente ligero en cada equipo autorizado. El agente recoge el estado del sistema, los
+                        eventos relevantes y las señales de seguridad disponibles. Thorondor ordena esa información para
+                        que puedas revisarla sin saltar entre herramientas.
                     </p>
                 </div>
                 <div class="phase-badge-block">
-                    <span class="phase-badge">HTTPS</span>
-                    <small>Cloudflare Tunnel recomendado.</small>
+                    <span class="phase-badge">Linux y Windows</span>
+                    <small>La misma forma de trabajar en ambos sistemas.</small>
                 </div>
             </div>
 
-            <div class="card-grid architecture-grid">
-                <article class="tool-card" v-for="item in architectureCards" :key="item.label">
+            <div class="card-grid capabilities-grid">
+                <article class="tool-card capability-card" v-for="item in agentCapabilities" :key="item.label">
                     <div class="card-head">
                         <h5>{{ item.label }}</h5>
                         <span class="mini-badge">{{ item.badge }}</span>
@@ -57,10 +59,12 @@
         <section class="section-box">
             <div class="section-topline">
                 <div class="module-header">
-                    <span class="section-kicker">Persistencia</span>
-                    <h2 class="module-title">Persistencia y limpieza</h2>
+                    <span class="section-kicker">Datos de trabajo</span>
+                    <h2 class="module-title">Dónde se conserva la información</h2>
                     <p class="module-copy">
-                        Vuex escribe en IndexedDB o en la API. El histórico se purga por ventana de retención.
+                        Si todavía no tienes autorización, los datos se quedan en este navegador para que puedas probar
+                        la consola. Con una cuenta autorizada, Thorondor puede guardar el histórico para mantener el
+                        seguimiento entre sesiones.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -81,15 +85,16 @@
         <section class="section-box">
             <div class="section-topline">
                 <div class="module-header">
-                    <span class="section-kicker">Primeros pasos</span>
-                    <h2 class="module-title">Secuencia de puesta en marcha</h2>
+                    <span class="section-kicker">Forma de uso</span>
+                    <h2 class="module-title">Del primer agente a la operación diaria</h2>
                     <p class="module-copy">
-                        Orden operativo para instalar agente, registrar host, validar telemetría y ajustar reglas.
+                        El objetivo es que puedas añadir un equipo, confirmar que envía información y empezar a trabajar
+                        sobre alertas, eventos y acciones desde una interfaz clara.
                     </p>
                 </div>
                 <div class="phase-badge-block">
-                    <span class="phase-badge">Runbook</span>
-                    <small>Una vista por paso.</small>
+                    <span class="phase-badge">Guía sencilla</span>
+                    <small>Todo queda separado por tareas.</small>
                 </div>
             </div>
 
@@ -121,17 +126,17 @@ export default {
         heroStats() {
             return [
                 {
-                    label: "Hosts",
+                    label: "Equipos",
                     value: String(this.dashboardCards.length),
                     tone: "tone-blue"
                 },
                 {
-                    label: "Alertas",
+                    label: "Alertas abiertas",
                     value: String(this.activeAlerts.length),
                     tone: this.activeAlerts.length ? "tone-warning" : "tone-success"
                 },
                 {
-                    label: "Eventos 24h",
+                    label: "Eventos recientes",
                     value: String(this.eventsLast24h.length),
                     tone: "tone-neutral"
                 }
@@ -141,73 +146,73 @@ export default {
         storageCards() {
             return [
                 {
-                    label: "Retención",
+                    label: "Histórico conservado",
                     value: `${this.thorondorState.retentionDays} días`,
                     tone: "tone-success",
                     note: this.persistenceWindowNote
                 },
                 {
-                    label: "Snapshots",
+                    label: "Lecturas recibidas",
                     value: String(Object.values(this.thorondorSnapshots).flat().length),
                     tone: "tone-blue",
-                    note: "Resumen por host monitorizado."
+                    note: "Últimos estados recibidos de los equipos."
                 },
                 {
-                    label: "Última limpieza",
+                    label: "Limpieza automática",
                     value: this.thorondorState.lastSweepAt ? this.formatRelativeTime(this.thorondorState.lastSweepAt) : "Pendiente",
                     tone: "tone-neutral",
-                    note: "Purgado automático según retención."
+                    note: "Thorondor evita acumular datos antiguos sin control."
                 }
             ];
         },
 
         persistenceBadge() {
-            return this.thorondorState.persistence?.effectiveMode === "cloud" ? "Cloud DB" : "IndexedDB";
+            return this.thorondorState.persistence?.effectiveMode === "cloud" ? "Servidor Thorondor" : "Modo local";
         },
 
         persistenceNote() {
             return this.thorondorState.persistence?.effectiveMode === "cloud"
-                ? "Sincronización por workspace."
-                : "Persistencia local del navegador.";
+                ? "Histórico disponible para la cuenta autorizada."
+                : "Datos guardados solo en este navegador.";
         },
 
         persistenceWindowNote() {
             return this.thorondorState.persistence?.effectiveMode === "cloud"
-                ? "Ventana operativa sincronizada con caché local."
-                : "Ventana local antes del purgado automático.";
+                ? "Ventana de trabajo compartida con tu cuenta."
+                : "Ventana de trabajo local antes de limpiar datos antiguos.";
         },
 
-        architectureCards() {
+        agentCapabilities() {
             return [
                 {
-                    label: "1. Genera el agente",
-                    badge: "Frontend",
-                    copy: "Define sistema, URL y puerto. Linux genera un .sh; Windows prepara e instala el MSI."
+                    label: "Estado del equipo",
+                    badge: "Equipo",
+                    copy: "Thorondor muestra si el agente está activo, cuándo fue la última señal y qué sistema está vigilando."
                 },
                 {
-                    label: "2. Despliega en el host",
-                    badge: "Host",
-                    copy: "Linux usa systemd y venv propio. Windows usa ProgramData, psutil y Task Scheduler."
+                    label: "Rendimiento y hardware",
+                    badge: "Uso",
+                    copy: "Puedes ver uso de CPU, memoria, discos, temperaturas y otros sensores cuando el equipo los ofrece."
                 },
                 {
-                    label: "3. Polling de telemetría",
-                    badge: "Polling",
-                    copy: "GET /telemetry por intervalo. Respuesta JSON con sistema, métricas, seguridad y logs."
+                    label: "Procesos",
+                    badge: "Proc",
+                    copy: "La consola ayuda a entender qué se está ejecutando, cuánto consume y con qué usuario está funcionando."
                 },
                 {
-                    label: "4. Persistencia de datos",
-                    badge: "Storage",
-                    copy: "Vuex normaliza el payload. IndexedDB guarda local; la API sincroniza usuarios autorizados."
+                    label: "Red",
+                    badge: "Net",
+                    copy: "Revisa puertos abiertos, conexiones activas e interfaces para detectar exposición o actividad inesperada."
                 },
                 {
-                    label: "5. Correlación y alertas",
-                    badge: "Rules",
-                    copy: "Reglas locales evalúan CPU, RAM, heartbeat, auth, sudo e integridad."
+                    label: "Usuarios y accesos",
+                    badge: "Acceso",
+                    copy: "Consulta usuarios, grupos, inicios de sesión, errores de autenticación y cambios que puedan requerir revisión."
                 },
                 {
-                    label: "6. Exposición remota",
-                    badge: "Network",
-                    copy: "Usa URL resoluble por el navegador. En real: HTTPS, origen restringido y Cloudflare Tunnel."
+                    label: "Alertas y respuesta",
+                    badge: "Acción",
+                    copy: "Cuando aparece un patrón relevante, Thorondor lo convierte en alerta y permite ejecutar acciones autorizadas."
                 }
             ];
         },
@@ -215,20 +220,20 @@ export default {
         startSteps() {
             return [
                 {
-                    label: "1. Instalación",
-                    copy: "Elige Linux o Windows, genera instalador único y valida endpoints."
+                    label: "1. Añade un equipo",
+                    copy: "Indica un nombre claro, la dirección del equipo y el puerto por el que el agente va a responder."
                 },
                 {
-                    label: "2. Agente",
-                    copy: "Define hostname, URL accesible, IP o DNS, alcance y puerto."
+                    label: "2. Instala el agente",
+                    copy: "Descarga el instalador de Linux o Windows y ejecútalo con los permisos necesarios en el equipo destino."
                 },
                 {
-                    label: "3. Validación",
-                    copy: "Ejecuta como administrador, comprueba /health y /telemetry, y revisa autoarranque."
+                    label: "3. Comprueba la señal",
+                    copy: "Cuando el agente responde, Thorondor empieza a mostrar estado, eventos, hardware, red y actividad del sistema."
                 },
                 {
-                    label: "4. Operación",
-                    copy: "Revisa heartbeat, métricas y reglas. Ajusta umbrales por rol del host."
+                    label: "4. Trabaja con criterio",
+                    copy: "Revisa alertas, consulta logs, ajusta reglas y ejecuta respuestas solo cuando la información lo justifique."
                 }
             ];
         }
@@ -378,19 +383,19 @@ export default {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
-.architecture-section .section-topline {
+.agent-capabilities-section .section-topline {
     align-items: end;
 }
 
-.architecture-section .module-copy {
+.agent-capabilities-section .module-copy {
     max-width: 68ch;
 }
 
-.architecture-grid .tool-card {
+.capabilities-grid .tool-card {
     min-height: 0;
 }
 
-.architecture-grid .section-copy {
+.capabilities-grid .section-copy {
     max-width: 58ch;
     font-size: 0.94rem;
     line-height: 1.48;

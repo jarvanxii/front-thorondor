@@ -59,6 +59,7 @@ export default {
   min-height: 100vh;
   background: var(--thorondor-grid-background);
   background-size: var(--thorondor-grid-background-size);
+  background-attachment: fixed;
   color: #e0e6ed;
 }
 

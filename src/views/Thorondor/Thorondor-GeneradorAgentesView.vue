@@ -1,70 +1,80 @@
 <template>
     <ThorondorPageShell>
-        <section class="section-box intro-box generator-hero">
+        <section class="section-box intro-box generator-builder-section">
             <div class="section-topline generator-hero-top">
                 <header class="module-header">
-                    <span class="section-kicker">Generador dinámico</span>
+                    <span class="section-kicker">Instalador de agentes</span>
                     <h1 class="section-name">Generador de agentes</h1>
                     <p class="section-copy">
-                        Genera un instalador por host con endpoints, logs, persistencia y autoarranque opcional.
+                        Completa nombre, IP o DNS, puerto y sistema operativo. Thorondor genera un único instalador con
+                        key agents, detección automática, persistencia y autoarranque.
                     </p>
                 </header>
                 <aside class="generator-hero-summary" aria-label="Resumen del generador">
-                    <span>Build</span>
-                    <strong>Instalador único</strong>
-                    <small>Generar, registrar y validar polling.</small>
+                    <span>Un fichero</span>
+                    <strong>{{ agentDraft.targetOs === 'windows' ? 'thorondor-installer.ps1' : 'thorondor-installer.sh' }}</strong>
+                    <small>{{ persistenceModeTitle }}</small>
                 </aside>
             </div>
 
-            <ul class="generator-flow-list" aria-label="Capacidades del generador">
-                <li v-for="item in generatorHighlights" :key="item.label">
-                    <strong>{{ item.label }}</strong>
-                    <span>{{ item.copy }}</span>
-                </li>
-            </ul>
-        </section>
-
-        <section class="section-box">
-            <div class="deployment-selector-panel">
-                <div class="deployment-selector-copy">
-                    <span class="section-kicker">Tipo de monitorización</span>
-                    <h2 class="module-title">Selecciona la conexión del agente</h2>
-                    <p class="module-copy">{{ selectedNetworkScopeCopy }}</p>
-                </div>
-                <div class="deployment-selector-control">
-                    <label class="field-label" for="network-scope-select">Conexión</label>
-                    <select id="network-scope-select" v-model="agentDraft.networkScope" class="form-select input-dark" @change="handleNetworkScopeChange">
-                        <option v-for="scope in networkScopeOptions" :key="scope.value" :value="scope.value">
-                            {{ scope.shortLabel }}
-                        </option>
-                    </select>
-                </div>
-            </div>
-
-            <div class="os-selector-panel">
-                <div class="os-selector-copy">
-                    <span class="field-label">Sistema operativo objetivo</span>
-                    <p class="os-hint">{{ selectedOsHint }}</p>
-                </div>
-                <label class="control-field os-family-control" for="target-os-family">
-                    <span class="field-label">Sistema operativo</span>
-                    <select id="target-os-family" :value="agentDraft.targetOs" class="form-select input-dark" @change="setTargetOs($event.target.value)">
-                        <option v-for="item in osFamilyOptions" :key="item.value" :value="item.value">
-                            {{ item.label }}
-                        </option>
-                    </select>
-                </label>
-                <div class="os-install-summary">
-                    <div>
-                        <strong>{{ simpleInstallTitle }}</strong>
-                        <p>{{ simpleInstallCopy }}</p>
+            <div class="generator-intake-grid">
+                <div class="generator-setup-panel">
+                    <div class="generator-setup-copy">
+                        <span class="section-kicker">Generación rápida</span>
+                        <h2 class="module-title">Datos del host</h2>
+                        <p class="module-copy">
+                            El instalador incluye la configuración necesaria. No tienes que elegir módulos, rutas de logs
+                            ni servicios internos.
+                        </p>
+                    </div>
+                    <div class="generator-setup-controls">
+                        <label class="control-field" for="target-os-family">
+                            <span class="field-label">Sistema operativo</span>
+                            <select id="target-os-family" :value="agentDraft.targetOs" class="form-select input-dark" @change="setTargetOs($event.target.value)">
+                                <option v-for="item in osFamilyOptions" :key="item.value" :value="item.value">
+                                    {{ item.label }}
+                                </option>
+                            </select>
+                        </label>
                     </div>
                 </div>
-            </div>
 
+                <article class="generator-persistence-panel">
+                    <div class="action-group-copy">
+                        <span>Persistencia</span>
+                        <strong>{{ persistenceModeTitle }}</strong>
+                        <p>{{ persistenceModeDescription }}</p>
+                    </div>
+                    <div class="persistence-mode-grid persistence-mode-grid-compact" role="radiogroup" aria-label="Modo de persistencia de Thorondor">
+                        <label
+                            v-for="option in persistenceOptions"
+                            :key="option.value"
+                            class="persistence-mode-card"
+                            :class="{ 'is-active': selectedPersistenceMode === option.value, 'is-disabled': option.disabled || persistenceModeChanging }"
+                        >
+                            <input
+                                type="radio"
+                                name="thorondor-persistence-mode"
+                                :value="option.value"
+                                :checked="selectedPersistenceMode === option.value"
+                                :disabled="option.disabled || persistenceModeChanging"
+                                @change="setPersistenceMode(option.value)"
+                            />
+                            <span class="mode-card-main">
+                                <strong>{{ option.label }}</strong>
+                                <small>{{ option.copy }}</small>
+                            </span>
+                            <span class="mode-card-status">{{ option.status }}</span>
+                        </label>
+                    </div>
+                </article>
+            </div>
+        </section>
+
+        <section class="section-box generator-form-section">
             <div class="control-grid">
-                <div class="form-section-label full-span"><span>Identidad y sistema</span></div>
-                <div class="control-field">
+                <div class="form-section-label full-span"><span>Datos mínimos</span></div>
+                <div class="control-field wide-field">
                     <div class="field-heading">
                         <label class="field-label" for="host-display-name">Nombre visible del host</label>
                         <div class="context-help">
@@ -79,110 +89,9 @@
                     </div>
                     <input id="host-display-name" v-model="agentDraft.displayName" :placeholder="fieldGuides.displayName.placeholder" class="form-control input-dark" />
                 </div>
-                <div class="control-field">
+                <div class="control-field wide-field">
                     <div class="field-heading">
-                        <label class="field-label" for="system-name">Identificador técnico del sistema</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'systemName' }" aria-label="Ayuda sobre el identificador del sistema" @click.stop="togglePinnedHelp('systemName')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.systemName.title }}</strong>
-                                    {{ fieldGuides.systemName.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="system-name" v-model="agentDraft.systemName" :placeholder="fieldGuides.systemName.placeholder" class="form-control input-dark" />
-                </div>
-                <div v-if="!isWindows" class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="distro">Familia Linux</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'distro' }" aria-label="Ayuda sobre la distribución Linux" @click.stop="togglePinnedHelp('distro')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.distro.title }}</strong>
-                                    {{ fieldGuides.distro.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <select id="distro" v-model="agentDraft.distro" class="form-select input-dark" @change="handleDistroChange">
-                        <option value="" disabled>Selecciona una familia Linux</option>
-                        <option v-for="item in distroOptions" :key="item" :value="item">{{ item }}</option>
-                    </select>
-                </div>
-                <div class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="os-version">{{ isWindows ? 'Modelo de Windows' : 'Modelo Linux' }}</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'osVersion' }" aria-label="Ayuda sobre la versión del sistema" @click.stop="togglePinnedHelp('osVersion')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.osVersion.title }}</strong>
-                                    {{ fieldGuides.osVersion.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <select v-if="isWindows" id="os-version" v-model="agentDraft.osVersion" class="form-select input-dark">
-                        <option value="" disabled>Selecciona versión de Windows</option>
-                        <option v-for="item in windowsVersionOptions" :key="item" :value="item">{{ item }}</option>
-                    </select>
-                    <select v-else id="os-version" v-model="agentDraft.osVersion" class="form-select input-dark">
-                        <option value="" disabled>Selecciona modelo Linux</option>
-                        <option v-for="item in linuxOsModelOptions" :key="item" :value="item">{{ item }}</option>
-                    </select>
-                </div>
-                <div class="form-section-label full-span"><span>Conexión y acceso</span></div>
-                <div class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="receiver-url">{{ receiverUrlLabel }}</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'receiverUrl' }" aria-label="Ayuda sobre la URL accesible del agente" @click.stop="togglePinnedHelp('receiverUrl')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.receiverUrl.title }}</strong>
-                                    {{ fieldGuides.receiverUrl.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="receiver-url" v-model="agentDraft.receiverUrl" :placeholder="receiverUrlPlaceholder" class="form-control input-dark" />
-                </div>
-                <div class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="central-api-base-url">URL publica de la API central</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'centralApiBaseUrl' }" aria-label="Ayuda sobre la API central" @click.stop="togglePinnedHelp('centralApiBaseUrl')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.centralApiBaseUrl.title }}</strong>
-                                    {{ fieldGuides.centralApiBaseUrl.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="central-api-base-url" v-model="agentDraft.centralApiBaseUrl" :placeholder="fieldGuides.centralApiBaseUrl.placeholder" class="form-control input-dark" />
-                </div>
-                <div class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="central-enrollment-token">Token de enrolamiento</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'centralEnrollmentToken' }" aria-label="Ayuda sobre el token de enrolamiento" @click.stop="togglePinnedHelp('centralEnrollmentToken')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.centralEnrollmentToken.title }}</strong>
-                                    {{ fieldGuides.centralEnrollmentToken.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="central-enrollment-token" v-model="centralEnrollmentToken" type="password" autocomplete="off" :placeholder="fieldGuides.centralEnrollmentToken.placeholder" class="form-control input-dark" />
-                </div>
-                <div v-if="!isLocalScope" class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="host-ip">{{ hostAddressLabel }}</label>
+                        <label class="field-label" for="host-ip">IP o DNS del host</label>
                         <div class="context-help">
                             <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'hostIp' }" aria-label="Ayuda sobre la dirección del host" @click.stop="togglePinnedHelp('hostIp')">
                                 ?
@@ -197,7 +106,7 @@
                 </div>
                 <div class="control-field">
                     <div class="field-heading">
-                        <label class="field-label" for="receiver-port">Puerto HTTP del agente</label>
+                        <label class="field-label" for="agent-port">Puerto del agente</label>
                         <div class="context-help">
                             <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'port' }" aria-label="Ayuda sobre el puerto del agente" @click.stop="togglePinnedHelp('port')">
                                 ?
@@ -208,180 +117,16 @@
                             </button>
                         </div>
                     </div>
-                    <input id="receiver-port" v-model.number="agentDraft.port" type="number" min="1" max="65535" :placeholder="fieldGuides.port.placeholder" class="form-control input-dark" />
-                </div>
-                <div class="form-section-label full-span"><span>Ejecución del servicio</span></div>
-                <div class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="poll-interval">Intervalo de polling en segundos</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'intervalSeconds' }" aria-label="Ayuda sobre el intervalo de polling" @click.stop="togglePinnedHelp('intervalSeconds')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.intervalSeconds.title }}</strong>
-                                    {{ fieldGuides.intervalSeconds.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="poll-interval" v-model.number="agentDraft.intervalSeconds" type="number" min="10" class="form-control input-dark" :placeholder="fieldGuides.intervalSeconds.placeholder" />
-                </div>
-                <div v-if="!isWindows" class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="install-user">Usuario del servicio en Linux</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'installUser' }" aria-label="Ayuda sobre el usuario del servicio" @click.stop="togglePinnedHelp('installUser')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.installUser.title }}</strong>
-                                    {{ fieldGuides.installUser.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="install-user" v-model="agentDraft.installUser" :placeholder="fieldGuides.installUser.placeholder" class="form-control input-dark" />
-                </div>
-                <div v-if="!isWindows" class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="service-name">Nombre técnico del servicio</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'serviceName' }" aria-label="Ayuda sobre el nombre del servicio" @click.stop="togglePinnedHelp('serviceName')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.serviceName.title }}</strong>
-                                    {{ fieldGuides.serviceName.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="service-name" v-model="agentDraft.serviceName" :placeholder="fieldGuides.serviceName.placeholder" class="form-control input-dark" />
-                </div>
-                <div class="control-field full-span auto-start-field">
-                    <div class="field-heading">
-                        <label class="field-label mb-0">Arranque automático</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'generateSystemd' }" aria-label="Ayuda sobre la generación del archivo systemd" @click.stop="togglePinnedHelp('generateSystemd')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.generateSystemd.title }}</strong>
-                                    {{ fieldGuides.generateSystemd.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <label class="toggle-line">
-                        <input type="checkbox" v-model="agentDraft.autoStart" />
-                        <span>{{ isWindows ? 'Registrar tarea programada para iniciar el agente al arrancar Windows' : 'Instalar unidad systemd para iniciar el agente al arrancar Linux' }}</span>
-                    </label>
-                </div>
-                <div class="form-section-label full-span"><span>Logs y módulos</span></div>
-                <div class="control-field full-span">
-                    <div class="field-heading">
-                        <span class="field-label">Fuentes de logs diagnósticos</span>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'additionalLogPaths' }" aria-label="Ayuda sobre las rutas de logs adicionales" @click.stop="togglePinnedHelp('additionalLogPaths')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.additionalLogPaths.title }}</strong>
-                                    {{ fieldGuides.additionalLogPaths.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="diagnostic-log-toolbar">
-                        <p>
-                            El agente consultará solo las fuentes marcadas. Cada opción explica qué endpoint, archivo o patrón
-                            se leerá dentro del sistema monitorizado.
-                        </p>
-                        <div class="log-preset-actions">
-                            <button type="button" class="btn btn-quiet" @click="selectAllDiagnosticLogs">Seleccionar todas</button>
-                            <button type="button" class="btn btn-quiet" @click="clearDiagnosticLogs">Limpiar selección</button>
-                        </div>
-                    </div>
-                    <div class="diagnostic-log-grid">
-                        <label
-                            class="diagnostic-log-option"
-                            :class="{ 'is-help-open': pinnedHelpKey === `log:${logOption.path}` }"
-                            v-for="logOption in diagnosticLogOptions"
-                            :key="logOption.path"
-                        >
-                            <input type="checkbox" v-model="selectedDiagnosticLogPaths" :value="logOption.path" />
-                            <span class="diagnostic-log-copy">
-                                <strong>{{ logOption.label }}</strong>
-                                <code>{{ logOption.path }}</code>
-                            </span>
-                            <span class="context-help diagnostic-log-help">
-                                <button
-                                    type="button"
-                                    class="help-trigger"
-                                    :class="{ 'is-pinned': pinnedHelpKey === `log:${logOption.path}` }"
-                                    :aria-label="`Ver qué consulta ${logOption.label}`"
-                                    @click.stop.prevent="togglePinnedHelp(`log:${logOption.path}`)"
-                                >
-                                    ?
-                                    <span class="help-popover log-help-popover" @click.stop>
-                                        <strong>{{ logOption.label }}</strong>
-                                        <span>{{ logOption.description }}</span>
-                                        <code>{{ logOption.path }}</code>
-                                    </span>
-                                </button>
-                            </span>
-                        </label>
-                    </div>
-                </div>
-                <div class="control-field full-span">
-                    <div class="field-heading">
-                        <label class="field-label">Módulos a activar</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'modules' }" aria-label="Ayuda sobre los módulos a activar" @click.stop="togglePinnedHelp('modules')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.modules.title }}</strong>
-                                    {{ fieldGuides.modules.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <div class="diagnostic-log-toolbar module-toolbar">
-                        <p>
-                            El agente activará solo los módulos marcados. Cada opción indica qué bloque de telemetría o
-                            seguridad se recogerá en el host.
-                        </p>
-                        <div class="log-preset-actions">
-                            <button type="button" class="btn btn-quiet" @click="selectAllModules">Seleccionar todos</button>
-                            <button type="button" class="btn btn-quiet" @click="clearModules">Limpiar selección</button>
-                        </div>
-                    </div>
-                    <div class="diagnostic-log-grid module-grid">
-                        <label
-                            class="diagnostic-log-option module-option"
-                            :class="{ 'is-help-open': pinnedHelpKey === `module:${moduleItem.key}` }"
-                            v-for="moduleItem in moduleOptions"
-                            :key="moduleItem.key"
-                        >
-                            <input type="checkbox" v-model="agentDraft.modules[moduleItem.key]" />
-                            <span class="diagnostic-log-copy module-copy">
-                                <strong>{{ moduleItem.label }}</strong>
-                                <code>{{ moduleItem.key }}</code>
-                            </span>
-                            <span class="context-help diagnostic-log-help">
-                                <button
-                                    type="button"
-                                    class="help-trigger"
-                                    :class="{ 'is-pinned': pinnedHelpKey === `module:${moduleItem.key}` }"
-                                    :aria-label="`Ver qué recoge ${moduleItem.label}`"
-                                    @click.stop.prevent="togglePinnedHelp(`module:${moduleItem.key}`)"
-                                >
-                                    ?
-                                    <span class="help-popover log-help-popover" @click.stop>
-                                        <strong>{{ moduleItem.label }}</strong>
-                                        <span>{{ moduleItem.description }}</span>
-                                        <code>{{ moduleItem.key }}</code>
-                                    </span>
-                                </button>
-                            </span>
-                        </label>
-                    </div>
+                    <input
+                        id="agent-port"
+                        v-model.number="agentDraft.port"
+                        :placeholder="fieldGuides.port.placeholder"
+                        class="form-control input-dark"
+                        inputmode="numeric"
+                        min="1"
+                        max="65535"
+                        type="number"
+                    />
                 </div>
             </div>
 
@@ -402,7 +147,7 @@
                     <div class="action-group-copy">
                         <span>Operación</span>
                         <strong>Registro y polling</strong>
-                        <p>Registra el host en el panel cuando ya vayas a consultarlo. El polling solo prueba hosts registrados.</p>
+                        <p>Registra el agente en el panel cuando ya vayas a consultarlo. El polling solo prueba agentes registrados.</p>
                     </div>
                     <div class="action-button-row">
                         <button class="btn btn-subtle" :disabled="!isGenerateReady" @click="registerCurrentDraft">Registrar host</button>
@@ -411,213 +156,85 @@
                     </div>
                 </article>
 
-                <article class="generator-action-group persistence-action-group">
-                    <div class="action-group-copy">
-                        <span>Persistencia</span>
-                        <strong>{{ persistenceModeTitle }}</strong>
-                        <p>{{ persistenceModeDescription }}</p>
-                    </div>
-                    <div class="persistence-mode-grid" role="radiogroup" aria-label="Modo de persistencia de Thorondor">
-                        <label
-                            v-for="option in persistenceOptions"
-                            :key="option.value"
-                            class="persistence-mode-card"
-                            :class="{ 'is-active': selectedPersistenceMode === option.value, 'is-disabled': option.disabled }"
-                        >
-                            <input
-                                type="radio"
-                                name="thorondor-persistence-mode"
-                                :value="option.value"
-                                :checked="selectedPersistenceMode === option.value"
-                                :disabled="option.disabled"
-                                @change="setPersistenceMode(option.value)"
-                            />
-                            <span class="mode-card-main">
-                                <strong>{{ option.label }}</strong>
-                                <small>{{ option.copy }}</small>
-                            </span>
-                            <span class="mode-card-status">{{ option.status }}</span>
-                        </label>
-                    </div>
-                </article>
-            </div>
-            <p v-if="!isGenerateReady" class="form-status-hint">
-                Completa los campos obligatorios para habilitar la generación: {{ missingRequiredFieldLabels.join(" / ") }}.
-            </p>
-
-            <div class="action-guide-grid">
-                <article class="action-guide-card" v-for="item in actionHelpCards" :key="item.title">
-                    <div class="action-guide-icon">?</div>
-                    <div class="action-guide-body">
-                        <strong>{{ item.title }}</strong>
-                        <p>{{ item.copy }}</p>
-                    </div>
-                </article>
             </div>
         </section>
 
-        <section class="section-box">
-            <div class="row g-3">
-                <div class="col-md-6 col-xl-3" v-for="item in storageCards" :key="item.label">
-                    <div class="signal-card">
-                        <label>{{ item.label }}</label>
-                        <span :class="item.tone">{{ item.value }}</span>
-                        <small>{{ item.note }}</small>
-                    </div>
-                </div>
-            </div>
-        </section>
-
-        <section v-if="generatedBundle" class="section-box">
-            <div class="verdict-card verdict-success mb-4">
+        <section v-if="generatedBundle" class="section-box generated-installer-section">
+            <div class="verdict-card verdict-success mb-3">
                 <div class="verdict-icon">
                     <span>OK</span>
                 </div>
                 <div class="verdict-body">
-                    <strong>Paquete generado y listo para desplegar</strong>
+                    <strong>Instalador listo</strong>
                     <p>
-                        El instalador se ha generado sin registrar el host automáticamente. Regístralo después cuando
-                        quieras empezar a consultarlo desde el panel. En Windows se crea e instala un MSI real; en Linux
-                        se ejecuta un único .sh con entorno Python aislado.
+                        Descarga {{ generatedBundle.installFileName }}, cópialo al host y ejecútalo con permisos elevados.
+                        Después registra el agente si quieres empezar a consultarlo desde Thorondor.
                     </p>
                 </div>
             </div>
 
-            <div class="row g-3 mb-3">
-                <div class="col-xl-6">
-                    <div class="tool-card h-100">
-                        <div class="card-head">
-                            <h5>Resumen de despliegue</h5>
-                            <span class="mini-badge">Checklist</span>
-                        </div>
-                        <div class="deployment-summary">
-                            <div class="summary-line">
-                                <label>Host</label>
-                                <span>{{ buildAgentRecordFromDraft(generatedSnapshot).displayName }}</span>
-                            </div>
-                            <div class="summary-line">
-                                <label>Destino</label>
-                                <span>{{ generatedSnapshot.receiverUrl }}</span>
-                            </div>
-                            <div class="summary-line">
-                                <label>Alcance</label>
-                                <span>{{ networkScopeLabel(generatedSnapshot) }}</span>
-                            </div>
-                            <div class="summary-line">
-                                <label>Servicio</label>
-                                <span>{{ generatedSnapshot.autoStart ? (generatedSnapshot.targetOs === 'windows' ? 'ThorondorAgent' : generatedBundle.serviceFileName) : 'Arranque manual' }}</span>
-                            </div>
-                            <div class="summary-line">
-                                <label>Autoarranque</label>
-                                <span>{{ generatedSnapshot.autoStart ? 'Activado' : 'Desactivado' }}</span>
-                            </div>
-                            <div class="summary-line">
-                                <label>Intervalo</label>
-                                <span>{{ generatedSnapshot.intervalSeconds }} segundos</span>
-                            </div>
-                            <div class="summary-line">
-                                <label>Módulos</label>
-                                <span>{{ summarizeModules(generatedSnapshot.modules) }}</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-xl-6">
-                    <div class="tool-card h-100">
-                        <div class="card-head">
-                            <h5>Reglas JS de petición</h5>
-                            <span class="mini-badge">Frontend</span>
-                        </div>
-                        <div class="output-box">
-                            <pre class="result-pre">{{ prettyJson(requestRulePreview) }}</pre>
-                        </div>
-                    </div>
-                </div>
+            <div class="deployment-steps-grid mb-3">
+                <article class="deployment-step-card">
+                    <span>1</span>
+                    <strong>Descarga el instalador</strong>
+                    <small>{{ generatedBundle.installFileName }}</small>
+                </article>
+                <article class="deployment-step-card">
+                    <span>2</span>
+                    <strong>Ejecútalo en el host</strong>
+                    <small>{{ generatedSnapshot.targetOs === 'windows' ? 'PowerShell como administrador' : 'sudo o root' }}</small>
+                </article>
+                <article class="deployment-step-card">
+                    <span>3</span>
+                    <strong>Valida y registra</strong>
+                    <small>{{ generatedSnapshot.receiverUrl }}</small>
+                </article>
             </div>
 
             <div class="tool-card mb-3">
                 <div class="card-head">
-                    <h5>Instrucciones de instalación</h5>
-                    <span class="mini-badge">Markdown</span>
-                </div>
-                <div class="output-box tall-output">
-                    <ThorondorMarkdownArticle :source="generatedBundle.instructions" />
-                </div>
-            </div>
-
-            <div class="single-installer-grid mt-1">
-                <div class="tool-card installer-primary-card">
-                    <div class="card-head">
-                        <h5>{{ generatedSnapshot?.targetOs === 'windows' ? 'Instalador MSI de Windows' : 'Instalador Linux único' }}</h5>
-                        <div class="card-actions">
-                            <span class="mini-badge">{{ generatedSnapshot?.targetOs === 'windows' ? 'MSI' : '.sh' }}</span>
-                            <button class="btn btn-main" @click="downloadTextFile(generatedBundle.installFileName, generatedBundle.installScript)">
-                                {{ generatedSnapshot?.targetOs === 'windows' ? 'Descargar instalador MSI' : 'Descargar instalador Linux' }}
-                            </button>
-                            <button class="btn btn-quiet" @click="copyText(generatedBundle.installScript)">Copiar</button>
-                        </div>
+                    <h5>Instalador</h5>
+                    <div class="card-actions">
+                        <span class="mini-badge">{{ generatedSnapshot?.targetOs === 'windows' ? '.ps1' : '.sh' }}</span>
+                        <button class="btn btn-main" @click="downloadTextFile(generatedBundle.installFileName, generatedBundle.installScript)">
+                            Descargar instalador
+                        </button>
+                        <button class="btn btn-quiet" @click="copyText(generatedBundle.installScript)">Copiar script</button>
                     </div>
-                    <div class="installer-summary-grid">
-                        <div class="summary-line">
-                            <label>Archivo a llevar al host</label>
-                            <span>{{ generatedBundle.installFileName }}</span>
-                        </div>
-                        <div v-if="generatedSnapshot?.targetOs === 'windows'" class="summary-line">
-                            <label>MSI resultante</label>
-                            <span>{{ generatedBundle.msiFileName }} en el Escritorio</span>
-                        </div>
-                        <div class="summary-line">
-                            <label>Agente embebido</label>
-                            <span>{{ generatedBundle.agentFileName }}</span>
-                        </div>
-                        <div class="summary-line">
-                            <label>Autoarranque</label>
-                            <span>{{ generatedSnapshot.autoStart ? (generatedSnapshot.targetOs === 'windows' ? 'Task Scheduler' : generatedBundle.serviceFileName) : 'Manual' }}</span>
-                        </div>
+                </div>
+                <div class="deployment-summary deployment-summary-compact">
+                    <div class="summary-line">
+                        <label>Host</label>
+                        <span>{{ buildAgentRecordFromDraft(generatedSnapshot).displayName }}</span>
                     </div>
+                    <div class="summary-line">
+                        <label>Puerto</label>
+                        <span>{{ generatedSnapshot.port }}</span>
+                    </div>
+                    <div class="summary-line">
+                        <label>Persistencia</label>
+                        <span>{{ generatedSnapshot.persistenceMode === 'cloud' ? 'Servidor Thorondor' : 'IndexedDB local' }}</span>
+                    </div>
+                    <div class="summary-line">
+                        <label>Desinstalar</label>
+                        <span>{{ generatedUninstallPath }}</span>
+                    </div>
+                </div>
+                <details class="script-details">
+                    <summary>Ver script generado</summary>
                     <div class="output-box fixed-output">
                         <pre class="result-pre">{{ generatedBundle.installScript }}</pre>
                     </div>
-                    <article v-if="generatedSnapshot?.targetOs === 'windows'" class="msi-packaging-note">
-                        <strong>Flujo Windows simplificado</strong>
-                        <p>
-                            Descarga un único archivo, ejecútalo como administrador y el propio asistente genera
-                            {{ generatedBundle.msiFileName }}, lo guarda en el Escritorio y lo instala con msiexec.
-                        </p>
-                    </article>
-                </div>
+                </details>
+            </div>
 
-                <div class="tool-card">
-                    <div class="card-head">
-                        <h5>Contenido que genera el instalador</h5>
-                        <span class="mini-badge">Embebido</span>
-                    </div>
-                    <div class="embedded-artifact-list">
-                        <div class="embedded-artifact-row">
-                            <label>Python</label>
-                            <span>Escribe {{ generatedBundle.agentFileName }} en la ruta de instalación del sistema.</span>
-                        </div>
-                        <div class="embedded-artifact-row" v-if="generatedBundle.systemd">
-                            <label>systemd</label>
-                            <span>Crea {{ generatedBundle.serviceFileName }} y lo habilita solo si activaste el arranque automático.</span>
-                        </div>
-                        <div class="embedded-artifact-row" v-else-if="generatedSnapshot?.targetOs === 'windows'">
-                            <label>Windows</label>
-                            <span>Compila un MSI real y crea la tarea programada ThorondorAgent solo si activaste el arranque automático.</span>
-                        </div>
-                        <div class="embedded-artifact-row" v-if="generatedBundle.wixSource">
-                            <label>MSI</label>
-                            <span>El manifiesto WiX y el instalador PowerShell van embebidos dentro del asistente descargado.</span>
-                        </div>
-                        <div class="embedded-artifact-row">
-                            <label>Dependencias</label>
-                            <span>Instala Python/psutil cuando falta y prepara permisos básicos de lectura de logs.</span>
-                        </div>
-                        <div class="embedded-artifact-row">
-                            <label>Validación</label>
-                            <span>Usa las instrucciones generadas para comprobar /health y /telemetry con token tras ejecutar el instalador.</span>
-                        </div>
-                    </div>
+            <div class="tool-card mb-3">
+                <div class="card-head">
+                    <h5>Instrucciones</h5>
+                    <span class="mini-badge">{{ generatedSnapshot?.targetOs === 'windows' ? 'Windows' : 'Linux' }}</span>
+                </div>
+                <div class="output-box tall-output">
+                    <ThorondorMarkdownArticle :source="generatedBundle.instructions" />
                 </div>
             </div>
         </section>
@@ -629,178 +246,21 @@ import ThorondorMarkdownArticle from "@/components/Thorondor/ThorondorMarkdownAr
 import ThorondorPageShell from "@/components/Thorondor/ThorondorPageShell.vue";
 import thorondorBaseMixin from "@/features/thorondor/mixins/thorondorBaseMixin";
 import {
+    THORONDOR_AGENT_FIXED_PORT,
+    THORONDOR_AGENT_FIXED_SERVICE_NAME,
     THORONDOR_DISTRO_OPTIONS,
     THORONDOR_OS_FAMILY_OPTIONS,
     THORONDOR_WINDOWS_VERSION_OPTIONS,
-    THORONDOR_MODULE_KEYS,
-    THORONDOR_NETWORK_SCOPE_OPTIONS,
-    THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS,
-    THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS,
     buildThorondorAgentDraft,
     getThorondorDefaultOsVersionForTarget,
-    getThorondorDefaultLogPathsForOs,
     getThorondorLinuxModelOptions,
-    isThorondorDefaultDiagnosticLogPathList,
-    isLegacyThorondorAgentDraft,
-    normalizeThorondorNetworkScope
+    isLegacyThorondorAgentDraft
 } from "@/features/thorondor/data/thorondorDefaults";
 import { buildThorondorAgentFiles } from "@/features/thorondor/services/thorondorGenerator";
-import { buildThorondorRequestRules } from "@/features/thorondor/services/thorondorApi";
 
 function cloneDraft(value) {
     return JSON.parse(JSON.stringify(value));
 }
-
-function parseDiagnosticLogPaths(value) {
-    return String(value || "")
-        .split(/\r?\n/)
-        .map((line) => line.trim())
-        .filter(Boolean);
-}
-
-function buildDiagnosticLogOptions(paths, guides) {
-    return paths.map((path) => ({
-        path,
-        label: guides[path]?.label || path,
-        description: guides[path]?.description || `El agente leerá las últimas líneas disponibles de ${path}.`
-    }));
-}
-
-const LINUX_DIAGNOSTIC_LOG_GUIDES = {
-    "/var/log/nginx/access.log": {
-        label: "Nginx access",
-        description: "Consulta accesos HTTP servidos por Nginx para detectar tráfico extraño, rutas repetidas, códigos de respuesta y origen de peticiones."
-    },
-    "/var/log/nginx/error.log": {
-        label: "Nginx errores",
-        description: "Consulta errores de Nginx: fallos de upstream, permisos, certificados, timeouts y problemas de configuración."
-    },
-    "/var/log/apache2/access.log": {
-        label: "Apache access",
-        description: "Consulta accesos HTTP servidos por Apache para revisar IPs, rutas, códigos de respuesta y volumen de peticiones."
-    },
-    "/var/log/apache2/error.log": {
-        label: "Apache errores",
-        description: "Consulta errores de Apache: módulos, virtual hosts, permisos, PHP/FastCGI y fallos de servicio."
-    },
-    "/var/log/mysql/error.log": {
-        label: "MySQL errores",
-        description: "Consulta errores de MySQL o MariaDB: arranques, cierres, tablas dañadas, credenciales rechazadas y fallos de motor."
-    },
-    "/var/log/postgresql/postgresql-*-main.log": {
-        label: "PostgreSQL",
-        description: "Consulta logs de PostgreSQL mediante patrón glob para recoger el log activo de la instancia principal."
-    },
-    "/var/log/php/error.log": {
-        label: "PHP errores",
-        description: "Consulta errores de PHP: excepciones, warnings, rutas rotas y problemas de ejecución de aplicaciones web."
-    },
-    "/var/log/syslog": {
-        label: "syslog",
-        description: "Consulta el log general del sistema: servicios, red, kernel, tareas programadas y mensajes operativos."
-    },
-    "/var/log/auth.log": {
-        label: "Autenticación",
-        description: "Consulta autenticación Linux: SSH, sudo, PAM, sesiones abiertas, intentos fallidos y actividad de usuarios."
-    },
-    "/var/log/iptables.log": {
-        label: "iptables",
-        description: "Consulta eventos registrados por iptables para revisar bloqueos, drops y actividad de firewall."
-    },
-    "/var/log/snort/": {
-        label: "Snort",
-        description: "Consulta los archivos más recientes del directorio de Snort para recoger alertas IDS disponibles."
-    }
-};
-
-const WINDOWS_DIAGNOSTIC_LOG_GUIDES = {
-    "winlog://System": {
-        label: "Eventos del sistema",
-        description: "Consulta Get-WinEvent sobre System: servicios, drivers, reinicios, errores de hardware, red y fallos del sistema."
-    },
-    "winlog://Application": {
-        label: "Eventos de aplicaciones",
-        description: "Consulta Get-WinEvent sobre Application: errores de aplicaciones, runtimes, servicios de terceros y fallos de ejecución."
-    },
-    "winlog://Security": {
-        label: "Eventos de seguridad",
-        description: "Consulta Get-WinEvent sobre Security: inicios de sesión, fallos de autenticación, elevaciones y eventos de auditoría."
-    },
-    "C:\\inetpub\\logs\\LogFiles\\W3SVC*\\u_ex*.log": {
-        label: "IIS access",
-        description: "Consulta logs W3C de IIS de todos los sitios W3SVC para revisar accesos, códigos HTTP, rutas e IPs cliente."
-    },
-    "C:\\Windows\\System32\\LogFiles\\HTTPERR\\httperr*.log": {
-        label: "HTTPERR",
-        description: "Consulta errores del stack HTTP de Windows: rechazos, timeouts, errores de cola y peticiones que no llegan a IIS."
-    },
-    "C:\\nginx\\logs\\access.log": {
-        label: "Nginx access",
-        description: "Consulta accesos HTTP de Nginx en Windows: rutas solicitadas, IPs origen, códigos y volumen de tráfico."
-    },
-    "C:\\nginx\\logs\\error.log": {
-        label: "Nginx errores",
-        description: "Consulta errores de Nginx en Windows: upstreams, permisos, certificados, rutas y fallos de configuración."
-    },
-    "C:\\Apache24\\logs\\access.log": {
-        label: "Apache24 access",
-        description: "Consulta accesos HTTP de Apache instalado en C:\\Apache24."
-    },
-    "C:\\Apache24\\logs\\error.log": {
-        label: "Apache24 errores",
-        description: "Consulta errores de Apache instalado en C:\\Apache24: módulos, virtual hosts, permisos y fallos de servicio."
-    },
-    "C:\\xampp\\apache\\logs\\access.log": {
-        label: "XAMPP Apache access",
-        description: "Consulta accesos HTTP del Apache incluido en XAMPP."
-    },
-    "C:\\xampp\\apache\\logs\\error.log": {
-        label: "XAMPP Apache errores",
-        description: "Consulta errores del Apache incluido en XAMPP."
-    },
-    "C:\\ProgramData\\MySQL\\MySQL Server *\\Data\\*.err": {
-        label: "MySQL errores",
-        description: "Consulta archivos .err de MySQL en ProgramData usando glob para cubrir distintas versiones instaladas."
-    },
-    "C:\\Program Files\\PostgreSQL\\*\\data\\log\\postgresql-*.log": {
-        label: "PostgreSQL",
-        description: "Consulta logs de PostgreSQL instalados en Program Files usando patrón por versión."
-    },
-    "C:\\php\\logs\\php_error.log": {
-        label: "PHP errores",
-        description: "Consulta errores de PHP instalados en C:\\php."
-    },
-    "C:\\xampp\\php\\logs\\php_error_log": {
-        label: "XAMPP PHP errores",
-        description: "Consulta errores de PHP dentro de XAMPP."
-    },
-    "C:\\Windows\\Temp\\php_errors.log": {
-        label: "PHP temp errores",
-        description: "Consulta errores PHP escritos en la carpeta temporal de Windows."
-    },
-    "C:\\Windows\\System32\\LogFiles\\Firewall\\pfirewall.log": {
-        label: "Windows Firewall",
-        description: "Consulta el log de Windows Firewall si está activado: conexiones permitidas o bloqueadas y actividad de red filtrada."
-    },
-    "C:\\Snort\\log\\alert.ids": {
-        label: "Snort alert.ids",
-        description: "Consulta alertas IDS generadas por Snort en formato alert.ids."
-    },
-    "C:\\Snort\\log\\alert_fast.txt": {
-        label: "Snort alert_fast",
-        description: "Consulta alertas rápidas de Snort para ver firmas, prioridades, IPs y puertos implicados."
-    }
-};
-
-const LINUX_DIAGNOSTIC_LOG_OPTIONS = buildDiagnosticLogOptions(
-    THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS,
-    LINUX_DIAGNOSTIC_LOG_GUIDES
-);
-
-const WINDOWS_DIAGNOSTIC_LOG_OPTIONS = buildDiagnosticLogOptions(
-    THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS,
-    WINDOWS_DIAGNOSTIC_LOG_GUIDES
-);
 
 const FIELD_GUIDES = {
     displayName: {
@@ -808,138 +268,102 @@ const FIELD_GUIDES = {
         placeholder: "Nombre visible del host",
         copy: "Etiqueta usada en dashboard, detalle, reglas y alertas."
     },
-    systemName: {
-        title: "Identificador interno",
-        placeholder: "Identificador técnico del sistema",
-        copy: "Base para IDs y nombres de archivo. Usa un valor corto y estable."
-    },
-    distro: {
-        title: "Familia Linux real",
-        copy: "Define rutas, paquetes y comandos de instalación. Usa Otra si no encaja."
-    },
-    osVersion: {
-        title: "Modelo del sistema",
-        placeholder: "Modelo del sistema",
-        copy: "Ajusta paquetes, permisos y compatibilidad del instalador."
-    },
-    receiverUrl: {
-        title: "Por qué registrar esta URL",
-        placeholder: "URL accesible del agente",
-        copy: "URL usada para comprobar el servicio del agente. La telemetría operativa viaja por la API central."
-    },
-    centralApiBaseUrl: {
-        title: "API central alcanzable por el agente",
-        placeholder: "https://api.tu-dominio.com",
-        copy: "URL absoluta alcanzable desde el host. No uses /api: esa ruta es del navegador."
-    },
-    centralEnrollmentToken: {
-        title: "Token de alta del agente",
-        placeholder: "Token de enrolamiento",
-        copy: "Autoriza el alta inicial. El agente genera token propio; el back guarda su hash."
-    },
-    networkScope: {
-        title: "Alcance de red",
-        copy: "Local, LAN o Remoto. En Remoto usa HTTPS y origen restringido."
-    },
     hostIp: {
-        title: "Dirección operativa del host",
-        placeholder: "127.0.0.1 o host.tu-dominio.com",
-        copy: "Opcional si la URL ya incluye IP o dominio. Sirve como referencia del host."
+        title: "Host monitorizado",
+        placeholder: "127.0.0.1, 192.168.0.25 o servidor.midominio.com",
+        copy: "IP o DNS del sistema donde se ejecutará el agente. Puedes usar una IP pública, privada o un DNS."
     },
     port: {
-        title: "Puerto HTTP del agente",
-        placeholder: "8765",
-        copy: "Debe coincidir con el agente, firewall y pruebas curl."
-    },
-    intervalSeconds: {
-        title: "Cadencia de muestreo",
-        placeholder: "30",
-        copy: "Intervalo de refresco para telemetría y reglas de petición."
-    },
-    installUser: {
-        title: "Usuario del servicio",
-        placeholder: "thorondor",
-        copy: "Cuenta Linux del agente. Debe acceder a carpeta de trabajo y grupos de lectura."
-    },
-    serviceName: {
-        title: "Nombre técnico del servicio",
-        placeholder: "thorondor-agent",
-        copy: "Nombre base de la unidad systemd creada por el instalador."
-    },
-    additionalLogPaths: {
-        title: "Logs diagnósticos",
-        copy: "Una ruta por línea. Admite globs, directorios y winlog://System, Application o Security."
-    },
-    modules: {
-        title: "Qué bloques recoger",
-        copy: "Activa solo módulos necesarios. Menos lecturas, menos ruido."
-    },
-    generateSystemd: {
-        title: "Despliegue persistente",
-        copy: "Crea autoarranque: systemd en Linux o tarea programada en Windows."
+        title: "Puerto de acceso",
+        placeholder: String(THORONDOR_AGENT_FIXED_PORT),
+        copy: "Puerto HTTP por el que Thorondor consultará /health y /telemetry. Úsalo para diferenciar túneles sobre la misma IP pública."
     }
 };
 
-const ACTION_HELP_CARDS = [
-    {
-        title: "Registro del host",
-        copy: "Guarda ficha, endpoints y reglas de petición en el panel."
-    },
-    {
-        title: "Prueba de polling",
-        copy: "Ejecuta health check y telemetría contra hosts registrados."
-    }
-];
-
 const REQUIRED_GENERATION_FIELDS_LINUX = [
     { key: "displayName", label: "Nombre visible del host", id: "host-display-name" },
-    { key: "systemName", label: "Identificador técnico del sistema", id: "system-name" },
-    { key: "centralApiBaseUrl", label: "URL publica de la API central", id: "central-api-base-url" },
-    { key: "centralEnrollmentToken", label: "Token de enrolamiento", id: "central-enrollment-token" },
-    { key: "receiverUrl", label: "URL accesible del agente", id: "receiver-url" },
-    { key: "port", label: "Puerto HTTP del agente", id: "receiver-port" }
+    { key: "hostIp", label: "IP o DNS del host", id: "host-ip" },
+    { key: "port", label: "Puerto del agente", id: "agent-port" }
 ];
 
 const REQUIRED_GENERATION_FIELDS_WINDOWS = [
     { key: "displayName", label: "Nombre visible del host", id: "host-display-name" },
-    { key: "systemName", label: "Identificador técnico del sistema", id: "system-name" },
-    { key: "centralApiBaseUrl", label: "URL publica de la API central", id: "central-api-base-url" },
-    { key: "centralEnrollmentToken", label: "Token de enrolamiento", id: "central-enrollment-token" },
-    { key: "receiverUrl", label: "URL accesible del agente", id: "receiver-url" },
-    { key: "port", label: "Puerto HTTP del agente", id: "receiver-port" }
+    { key: "hostIp", label: "IP o DNS del host", id: "host-ip" },
+    { key: "port", label: "Puerto del agente", id: "agent-port" }
 ];
 
 function hasTrimmedText(value) {
     return String(value ?? "").trim().length > 0;
 }
 
-function hasValidHttpUrl(value) {
-    if (!hasTrimmedText(value)) return false;
+function normalizeHostAddress(value) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) return "";
 
     try {
-        const parsed = new URL(String(value).trim());
-        return parsed.protocol === "http:" || parsed.protocol === "https:";
+        const parsed = new URL(rawValue.includes("://") ? rawValue : `http://${rawValue}`);
+        return parsed.hostname || rawValue;
     } catch {
-        return false;
+        return rawValue
+            .replace(/^https?:\/\//i, "")
+            .replace(/\/.*$/, "")
+            .replace(/:\d+$/, "")
+            .trim();
     }
 }
 
-function hasValidPort(value) {
-    const parsed = Number(value);
-    return Number.isInteger(parsed) && parsed >= 1 && parsed <= 65535;
+function extractPortFromAddress(value) {
+    const rawValue = String(value || "").trim();
+    if (!rawValue) return 0;
+
+    try {
+        const parsed = new URL(rawValue.includes("://") ? rawValue : `http://${rawValue}`);
+        return normalizeAgentPort(parsed.port, 0);
+    } catch {
+        const match = rawValue.match(/:(\d{1,5})(?:\/.*)?$/);
+        return match ? normalizeAgentPort(match[1], 0) : 0;
+    }
+}
+
+function normalizeAgentPort(value, fallback = THORONDOR_AGENT_FIXED_PORT) {
+    const port = Number.parseInt(String(value ?? "").trim(), 10);
+    if (Number.isInteger(port) && port >= 1 && port <= 65535) {
+        return port;
+    }
+    return fallback;
+}
+
+function isValidAgentPort(value) {
+    const port = Number.parseInt(String(value ?? "").trim(), 10);
+    return Number.isInteger(port) && port >= 1 && port <= 65535;
+}
+
+function isLocalHostAddress(value) {
+    const host = normalizeHostAddress(value).toLowerCase();
+    return host === "127.0.0.1" || host === "localhost" || host === "::1" || host === "[::1]";
+}
+
+function inferNetworkScopeFromHost(value) {
+    return isLocalHostAddress(value) ? "local" : "lan";
+}
+
+function buildReceiverUrlFromHost(value, port = THORONDOR_AGENT_FIXED_PORT) {
+    const host = normalizeHostAddress(value) || "127.0.0.1";
+    const hostForUrl = host.includes(":") && !host.startsWith("[") ? `[${host}]` : host;
+    return `http://${hostForUrl}:${port}`;
 }
 
 function clearTemplateOnlyDraftFields(draft = {}) {
     const copy = { ...draft };
-    const noIdentity = !hasTrimmedText(copy.displayName) && !hasTrimmedText(copy.systemName);
+    const noIdentity = !hasTrimmedText(copy.displayName);
 
     if (!noIdentity) return copy;
 
-    if (String(copy.receiverUrl || "") === "http://127.0.0.1:8765") copy.receiverUrl = "";
+    if (String(copy.receiverUrl || "") === `http://127.0.0.1:${THORONDOR_AGENT_FIXED_PORT}`) copy.receiverUrl = "";
     if (String(copy.hostIp || "") === "127.0.0.1") copy.hostIp = "";
     if (String(copy.installUser || "") === "thorondor") copy.installUser = "";
-    if (String(copy.serviceName || "") === "thorondor-agent") copy.serviceName = "";
-    if (Number(copy.port) === 8765) copy.port = "";
+    if (String(copy.serviceName || "") === THORONDOR_AGENT_FIXED_SERVICE_NAME) copy.serviceName = "";
+    if (Number(copy.port) === THORONDOR_AGENT_FIXED_PORT) copy.port = "";
     if (Number(copy.intervalSeconds) === 30) copy.intervalSeconds = "";
     if (hasTrimmedText(copy.centralApiBaseUrl)) copy.centralApiBaseUrl = "";
 
@@ -973,26 +397,14 @@ export default {
             agentDraft: buildThorondorAgentDraft(),
             generatedBundle: null,
             generatedSnapshot: null,
-            centralEnrollmentToken: "",
-            pinnedHelpKey: null
+            pinnedHelpKey: null,
+            persistenceModeChanging: false
         };
     },
 
     computed: {
         isWindows() {
             return this.agentDraft.targetOs === "windows";
-        },
-
-        normalizedNetworkScope() {
-            return normalizeThorondorNetworkScope(this.agentDraft.networkScope);
-        },
-
-        isLocalScope() {
-            return this.normalizedNetworkScope === "local";
-        },
-
-        isLanScope() {
-            return this.normalizedNetworkScope === "lan";
         },
 
         distroOptions() {
@@ -1011,79 +423,8 @@ export default {
             return THORONDOR_WINDOWS_VERSION_OPTIONS;
         },
 
-        currentOsVersionOptions() {
-            return this.isWindows ? this.windowsVersionOptions : this.linuxOsModelOptions;
-        },
-
-        selectedOsHint() {
-            return this.isWindows
-                ? "Asistente único: genera MSI, lo copia al Escritorio y ejecuta msiexec."
-                : "Shell único: detecta paquetes, crea venv y prepara systemd si aplica.";
-        },
-
-        simpleInstallTitle() {
-            return this.isWindows ? "Windows: MSI generado e instalado" : "Linux: un solo .sh con sudo";
-        },
-
-        simpleInstallCopy() {
-            return this.isWindows
-                ? "Ejecuta como administrador. El MSI se crea e instala en el propio host."
-                : "Ejecuta con sudo. Ajusta distro, usuario, logs, módulos y servicio.";
-        },
-
-        moduleOptions() {
-            return THORONDOR_MODULE_KEYS;
-        },
-
-        diagnosticLogOptions() {
-            return this.isWindows ? WINDOWS_DIAGNOSTIC_LOG_OPTIONS : LINUX_DIAGNOSTIC_LOG_OPTIONS;
-        },
-
-        selectedDiagnosticLogPaths: {
-            get() {
-                return parseDiagnosticLogPaths(this.agentDraft.additionalLogPaths);
-            },
-            set(values) {
-                const selectedPaths = new Set(Array.isArray(values) ? values : []);
-                const orderedPaths = this.diagnosticLogOptions
-                    .filter((item) => selectedPaths.has(item.path))
-                    .map((item) => item.path);
-
-                this.agentDraft.additionalLogPaths = orderedPaths.join("\n");
-            }
-        },
-
-        networkScopeOptions() {
-            return THORONDOR_NETWORK_SCOPE_OPTIONS;
-        },
-
-        selectedNetworkScopeCopy() {
-            return this.networkScopeOptions.find((item) => item.value === this.normalizedNetworkScope)?.copy || "";
-        },
-
-        receiverUrlLabel() {
-            if (this.isLocalScope) return "URL local del agente";
-            if (this.isLanScope) return "URL LAN o VPN accesible desde este navegador";
-            return "URL remota pública o DNS del agente";
-        },
-
-        receiverUrlPlaceholder() {
-            if (this.isLocalScope) return "http://127.0.0.1:8765";
-            if (this.isLanScope) return "http://192.168.0.25:8765";
-            return "https://agente.tu-dominio.com";
-        },
-
-        hostAddressLabel() {
-            if (this.isLanScope) return this.isWindows ? "IP privada o VPN del host Windows (opcional)" : "IP privada o VPN del host Linux (opcional)";
-            return this.isWindows ? "IP pública o DNS del host Windows (opcional)" : "IP pública o DNS del host Linux (opcional)";
-        },
-
         fieldGuides() {
             return FIELD_GUIDES;
-        },
-
-        actionHelpCards() {
-            return ACTION_HELP_CARDS;
         },
 
         requiredFields() {
@@ -1110,8 +451,8 @@ export default {
 
         pollButtonTitle() {
             return this.hasRegisteredHosts
-                ? "Ejecuta ahora el polling contra los hosts registrados."
-                : "Registra al menos un host antes de lanzar polling.";
+                ? "Ejecuta ahora el polling contra los agentes registrados."
+                : "Registra al menos un agente antes de lanzar polling.";
         },
 
         persistenceStatus() {
@@ -1120,6 +461,10 @@ export default {
 
         currentSessionUser() {
             return this.thorondorState.session?.user || null;
+        },
+
+        currentUserKeyAgents() {
+            return String(this.currentSessionUser?.keyAgents || this.currentSessionUser?.key_agents || "").trim();
         },
 
         isCurrentUserAuthorized() {
@@ -1152,7 +497,7 @@ export default {
             }
 
             return this.persistenceEffectiveMode === "cloud"
-                ? "API del back activa"
+                ? "Servidor Thorondor activo"
                 : "IndexedDB local activo";
         },
 
@@ -1166,10 +511,10 @@ export default {
             }
 
             if (this.persistenceEffectiveMode === "cloud") {
-                return "IndexedDB actúa como caché y la API centraliza la persistencia.";
+                return "Logs, eventos, alertas y agentes se guardan en la BBDD del servidor. IndexedDB queda como caché local.";
             }
 
-            return "Hosts, reglas, eventos y borradores se guardan en este navegador.";
+            return "Agentes, reglas, eventos y borradores se guardan en este navegador.";
         },
 
         persistenceOptions() {
@@ -1187,75 +532,27 @@ export default {
                 {
                     value: "local",
                     label: "IndexedDB local",
-                    copy: "Datos guardados en este navegador.",
+                    copy: "Guarda logs y eventos en este navegador. El instalador no sincroniza contra la API central.",
                     status: effectiveMode === "local" ? "Activo" : "Disponible",
                     disabled: false
                 },
                 {
                     value: "cloud",
-                    label: "API del back",
+                    label: "Servidor Thorondor",
                     copy: cloudDisabledReason
                         ? "Requiere usuario autorizado por un admin."
-                        : "Persistencia centralizada en la API, con IndexedDB como caché local.",
+                        : "Guarda logs y eventos en la BBDD del servidor mediante API autenticada.",
                     status: cloudDisabledReason || (effectiveMode === "cloud" ? "Activo" : "Disponible"),
                     disabled: Boolean(cloudDisabledReason)
                 }
             ];
         },
 
-        generatorHighlights() {
-            return [
-                {
-                    label: "Sin piezas sueltas",
-                    copy: "Windows genera MSI y Linux descarga un .sh listo para ejecutar."
-                },
-                {
-                    label: "Conexión clara",
-                    copy: "URL, puerto y alcance definen el acceso."
-                },
-                {
-                    label: "Autoarranque",
-                    copy: "Servicio al iniciar o ejecución manual."
-                },
-                {
-                    label: "Flujo separado",
-                    copy: "Generar, registrar y probar polling son pasos independientes."
-                }
-            ];
-        },
-
-        requestRulePreview() {
-            const source = this.generatedSnapshot || this.agentDraft;
-            return buildThorondorRequestRules(this.buildAgentRecordFromDraft(source));
-        },
-
-        storageCards() {
-            return [
-                {
-                    label: "Hosts registrados",
-                    value: String(this.dashboardCards.length),
-                    tone: "tone-blue",
-                    note: "Agentes persistidos según el modo de datos activo."
-                },
-                {
-                    label: "Último polling",
-                    value: this.thorondorLastPollAt ? this.formatRelativeTime(this.thorondorLastPollAt) : "Pendiente",
-                    tone: "tone-success",
-                    note: "El navegador ya puede probar los hosts guardados."
-                },
-                {
-                    label: "Alertas activas",
-                    value: String(this.activeAlerts.length),
-                    tone: this.activeAlerts.length ? "tone-warning" : "tone-success",
-                    note: "Visibles después de registrar el agente y empezar el polling."
-                },
-                {
-                    label: "Persistencia",
-                    value: this.persistenceEffectiveMode === "cloud" ? "API" : "IndexedDB",
-                    tone: this.persistenceEffectiveMode === "cloud" ? "tone-success" : "tone-neutral",
-                    note: this.persistenceModeDescription
-                }
-            ];
+        generatedUninstallPath() {
+            if (!this.generatedSnapshot) return "";
+            return this.generatedSnapshot.targetOs === "windows"
+                ? "C:\\ProgramData\\Thorondor-Agent\\thorondor-uninstaller.ps1"
+                : "/opt/thorondor-agent/thorondor-uninstaller.sh";
         }
     },
 
@@ -1291,8 +588,6 @@ export default {
     methods: {
         setTargetOs(targetOs) {
             const normalizedTargetOs = targetOs === "windows" ? "windows" : "linux";
-            const shouldReplaceLogPaths = !String(this.agentDraft.additionalLogPaths || "").trim()
-                || isThorondorDefaultDiagnosticLogPathList(this.agentDraft.additionalLogPaths);
             const nextDistro = normalizedTargetOs === "windows"
                 ? "Windows"
                 : (THORONDOR_DISTRO_OPTIONS.includes(this.agentDraft.distro)
@@ -1310,11 +605,8 @@ export default {
                 targetOs: normalizedTargetOs,
                 distro: nextDistro,
                 osVersion: nextOsVersion,
-                autoStart: this.agentDraft.autoStart !== false,
-                generateSystemd: normalizedTargetOs === "windows" ? false : this.agentDraft.autoStart !== false,
-                additionalLogPaths: shouldReplaceLogPaths
-                    ? getThorondorDefaultLogPathsForOs(normalizedTargetOs)
-                    : this.agentDraft.additionalLogPaths
+                autoStart: true,
+                generateSystemd: normalizedTargetOs !== "windows"
             };
         },
 
@@ -1325,40 +617,18 @@ export default {
             }
         },
 
-        selectAllDiagnosticLogs() {
-            this.agentDraft.additionalLogPaths = this.diagnosticLogOptions.map((item) => item.path).join("\n");
-        },
-
-        clearDiagnosticLogs() {
-            this.agentDraft.additionalLogPaths = "";
-        },
-
-        selectAllModules() {
-            THORONDOR_MODULE_KEYS.forEach((item) => {
-                this.agentDraft.modules[item.key] = true;
-            });
-        },
-
-        clearModules() {
-            THORONDOR_MODULE_KEYS.forEach((item) => {
-                this.agentDraft.modules[item.key] = false;
-            });
-        },
-
-        prettyJson(value) {
-            return JSON.stringify(value, null, 2);
-        },
-
         getMissingRequiredFields(source = this.agentDraft) {
             const draft = this.normalizeDraftShape(source);
             const baseFields = draft.targetOs === "windows" ? REQUIRED_GENERATION_FIELDS_WINDOWS : REQUIRED_GENERATION_FIELDS_LINUX;
             const fields = [...baseFields];
 
             return fields.filter(({ key }) => {
-                if (key === "centralEnrollmentToken") return !hasTrimmedText(this.centralEnrollmentToken);
-                if (key === "centralApiBaseUrl") return !hasValidHttpUrl(draft.centralApiBaseUrl);
-                if (key === "receiverUrl") return !hasValidHttpUrl(draft.receiverUrl);
-                if (key === "port") return !hasValidPort(draft.port);
+                if (key === "hostIp") return !hasTrimmedText(normalizeHostAddress(draft.hostIp));
+                if (key === "port") {
+                    const rawPort = source?.port
+                        ?? (extractPortFromAddress(source?.hostIp) || extractPortFromAddress(source?.receiverUrl) || draft.port);
+                    return !isValidAgentPort(rawPort);
+                }
                 return !hasTrimmedText(draft[key]);
             });
         },
@@ -1376,9 +646,6 @@ export default {
             const targetOs = source?.targetOs === "windows" ? "windows" : "linux";
             const base = buildThorondorAgentDraft(targetOs);
             const draft = clearTemplateOnlyDraftFields(cloneDraft(source || {}));
-            const additionalLogPaths = !draft.additionalLogPaths || isThorondorDefaultDiagnosticLogPathList(draft.additionalLogPaths)
-                ? getThorondorDefaultLogPathsForOs(targetOs)
-                : draft.additionalLogPaths;
             const requestedDistro = String(draft.distro ?? base.distro);
             const normalizedDistro = targetOs === "windows"
                 ? "Windows"
@@ -1390,45 +657,51 @@ export default {
             const normalizedOsVersion = versionOptions.includes(requestedOsVersion)
                 ? requestedOsVersion
                 : getThorondorDefaultOsVersionForTarget(targetOs, normalizedDistro);
+            const displayName = String(draft.displayName ?? base.displayName);
+            const hostIp = normalizeHostAddress(draft.hostIp || draft.receiverUrl || base.hostIp);
+            const port = normalizeAgentPort(
+                draft.port || extractPortFromAddress(draft.hostIp) || extractPortFromAddress(draft.receiverUrl) || base.port
+            );
+            const receiverUrl = hostIp ? buildReceiverUrlFromHost(hostIp, port) : "";
 
             return {
                 ...base,
                 targetOs,
-                displayName: String(draft.displayName ?? base.displayName),
-                systemName: String(draft.systemName ?? base.systemName),
+                displayName,
+                systemName: displayName.trim(),
                 distro: normalizedDistro,
                 osVersion: normalizedOsVersion,
-                receiverUrl: String(draft.receiverUrl ?? base.receiverUrl),
+                receiverUrl,
                 centralApiBaseUrl: String(draft.centralApiBaseUrl ?? base.centralApiBaseUrl),
-                networkScope: normalizeThorondorNetworkScope(draft.networkScope ?? base.networkScope),
+                networkScope: hostIp ? inferNetworkScopeFromHost(hostIp) : base.networkScope,
                 corsOrigin: String(draft.corsOrigin ?? base.corsOrigin),
-                hostIp: String(draft.hostIp ?? base.hostIp),
+                hostIp,
                 installUser: String(draft.installUser ?? base.installUser),
-                serviceName: String(draft.serviceName ?? base.serviceName),
+                serviceName: THORONDOR_AGENT_FIXED_SERVICE_NAME,
+                keyAgents: String(draft.keyAgents ?? draft.agentToken ?? base.keyAgents ?? this.currentUserKeyAgents ?? ""),
+                agentToken: String(draft.keyAgents ?? draft.agentToken ?? base.agentToken ?? this.currentUserKeyAgents ?? ""),
+                centralEnrollmentToken: String(draft.centralEnrollmentToken ?? base.centralEnrollmentToken ?? ""),
+                persistenceMode: draft.persistenceMode === "cloud" ? "cloud" : "local",
                 notes: String(draft.notes ?? base.notes),
-                port: draft.port === "" || draft.port === null || draft.port === undefined ? base.port : draft.port,
+                port,
                 intervalSeconds: draft.intervalSeconds === "" || draft.intervalSeconds === null || draft.intervalSeconds === undefined
                     ? base.intervalSeconds
                     : Number(draft.intervalSeconds) || base.intervalSeconds,
-                additionalLogPaths: typeof additionalLogPaths === "string" ? additionalLogPaths : base.additionalLogPaths,
-                modules: {
-                    ...base.modules,
-                    ...draft.modules
-                },
-                autoStart: draft.autoStart === undefined
-                    ? (draft.generateSystemd === undefined ? base.autoStart : !!draft.generateSystemd)
-                    : !!draft.autoStart,
-                generateSystemd: targetOs === "windows"
-                    ? false
-                    : (draft.autoStart === undefined
-                        ? (draft.generateSystemd === undefined ? base.generateSystemd : !!draft.generateSystemd)
-                        : !!draft.autoStart)
+                additionalLogPaths: "",
+                modules: {},
+                autoStart: true,
+                generateSystemd: targetOs !== "windows"
             };
         },
 
         normalizeDraftForOutput(source = this.agentDraft) {
             const draft = this.normalizeDraftShape(source);
             const record = this.buildAgentRecordFromDraft(draft);
+            const persistenceMode = this.canUseDatabasePersistence && this.persistenceEffectiveMode === "cloud"
+                ? "cloud"
+                : "local";
+            const keyAgents = String(draft.keyAgents || draft.agentToken || this.currentUserKeyAgents || generateSecretToken()).trim();
+            const centralEnrollmentToken = "";
 
             return {
                 ...draft,
@@ -1437,59 +710,59 @@ export default {
                 distro: draft.distro || "Otra",
                 osVersion: draft.osVersion.trim(),
                 receiverUrl: record.receiverUrl,
-                centralApiBaseUrl: record.centralApiBaseUrl,
-                centralEnrollmentToken: this.centralEnrollmentToken.trim(),
-                agentToken: generateSecretToken(),
+                centralApiBaseUrl: persistenceMode === "cloud" ? record.centralApiBaseUrl : "",
+                centralEnrollmentToken,
+                keyAgents,
+                agentToken: keyAgents,
+                persistenceMode,
+                centralSyncEnabled: persistenceMode === "cloud",
                 networkScope: record.networkScope,
                 corsOrigin: record.corsOrigin,
                 hostIp: record.hostIp,
                 port: record.port,
                 intervalSeconds: record.intervalSeconds,
                 installUser: record.installUser,
-                serviceName: record.serviceName,
-                modules: { ...draft.modules },
-                autoStart: draft.autoStart !== false,
-                generateSystemd: draft.targetOs !== "windows" && draft.autoStart !== false,
-                additionalLogPaths: String(draft.additionalLogPaths || "")
+                serviceName: THORONDOR_AGENT_FIXED_SERVICE_NAME,
+                modules: {},
+                autoStart: true,
+                generateSystemd: draft.targetOs !== "windows",
+                additionalLogPaths: ""
             };
         },
 
         buildAgentRecordFromDraft(source = this.agentDraft) {
             const normalizedSource = this.normalizeDraftShape(source);
-            const systemName = normalizedSource.systemName.trim() || "thorondor-host";
-            const port = Number(normalizedSource.port) || 8765;
-            const networkScope = normalizeThorondorNetworkScope(normalizedSource.networkScope);
-            const configuredReceiverUrl = normalizedSource.receiverUrl.trim();
-            let receiverUrlHost = "";
-
-            try {
-                receiverUrlHost = configuredReceiverUrl ? new URL(configuredReceiverUrl).hostname : "";
-            } catch {
-                receiverUrlHost = "";
-            }
-
-            const hostIp = networkScope === "local" ? "127.0.0.1" : (normalizedSource.hostIp.trim() || receiverUrlHost || "127.0.0.1");
-            const receiverUrl = configuredReceiverUrl || `http://${hostIp}:${port}`;
+            const displayName = normalizedSource.displayName.trim();
+            const systemName = displayName || "thorondor-host";
+            const port = normalizeAgentPort(normalizedSource.port);
+            const hostIp = normalizeHostAddress(normalizedSource.hostIp) || "127.0.0.1";
+            const networkScope = inferNetworkScopeFromHost(hostIp);
+            const receiverUrl = buildReceiverUrlFromHost(hostIp, port);
             return {
                 id: `${systemName}-${hostIp}-${port}`.toLowerCase().replace(/[^a-z0-9-]+/g, "-"),
-                displayName: normalizedSource.displayName.trim() || systemName,
+                displayName: displayName || systemName,
                 systemName,
                 targetOs: normalizedSource.targetOs === "windows" ? "windows" : "linux",
                 distro: normalizedSource.distro || "Otra",
                 osVersion: normalizedSource.osVersion.trim(),
                 receiverUrl,
-                centralApiBaseUrl: normalizedSource.centralApiBaseUrl.trim(),
+                centralApiBaseUrl: normalizedSource.persistenceMode === "cloud" ? normalizedSource.centralApiBaseUrl.trim() : "",
+                persistenceMode: normalizedSource.persistenceMode === "cloud" ? "cloud" : "local",
+                centralSyncEnabled: normalizedSource.persistenceMode === "cloud",
+                keyAgents: String(normalizedSource.keyAgents || normalizedSource.agentToken || "").trim(),
+                agentToken: String(normalizedSource.keyAgents || normalizedSource.agentToken || "").trim(),
+                centralEnrollmentToken: String(normalizedSource.centralEnrollmentToken || "").trim(),
                 networkScope,
                 corsOrigin: normalizedSource.corsOrigin.trim() || "*",
                 hostIp,
                 port,
                 intervalSeconds: Number(normalizedSource.intervalSeconds) || 30,
-                additionalLogPaths: normalizedSource.additionalLogPaths,
-                modules: { ...normalizedSource.modules },
-                autoStart: normalizedSource.autoStart !== false,
-                generateSystemd: normalizedSource.targetOs !== "windows" && normalizedSource.autoStart !== false,
+                additionalLogPaths: "",
+                modules: {},
+                autoStart: true,
+                generateSystemd: normalizedSource.targetOs !== "windows",
                 installUser: normalizedSource.installUser.trim() || "thorondor",
-                serviceName: normalizedSource.serviceName.trim() || "thorondor-agent",
+                serviceName: THORONDOR_AGENT_FIXED_SERVICE_NAME,
                 createdAt: new Date().toISOString(),
                 updatedAt: new Date().toISOString()
             };
@@ -1501,7 +774,15 @@ export default {
                 return;
             }
 
-            const record = this.buildAgentRecordFromDraft(this.normalizeDraftForOutput());
+            const normalizedDraft = this.normalizeDraftForOutput();
+            this.agentDraft = this.normalizeDraftShape({
+                ...this.agentDraft,
+                keyAgents: normalizedDraft.keyAgents,
+                agentToken: normalizedDraft.keyAgents,
+                centralEnrollmentToken: normalizedDraft.centralEnrollmentToken,
+                persistenceMode: normalizedDraft.persistenceMode
+            });
+            const record = this.buildAgentRecordFromDraft(normalizedDraft);
             await this.$store.dispatch("registerThorondorAgent", record);
             this.$store.commit("setThorondorSelectedAgent", record.id);
         },
@@ -1510,7 +791,16 @@ export default {
             if (mode === this.selectedPersistenceMode) return;
             const option = this.persistenceOptions.find((item) => item.value === mode);
             if (option?.disabled) return;
-            await this.$store.dispatch("setThorondorPersistenceMode", mode);
+            this.persistenceModeChanging = true;
+            try {
+                await this.$store.dispatch("setThorondorPersistenceMode", mode);
+                this.agentDraft = this.normalizeDraftShape({
+                    ...this.agentDraft,
+                    persistenceMode: mode === "cloud" ? "cloud" : "local"
+                });
+            } finally {
+                this.persistenceModeChanging = false;
+            }
         },
 
         async generateAndDownload() {
@@ -1522,6 +812,13 @@ export default {
             const draftSnapshot = cloneDraft(this.agentDraft);
             const normalizedDraft = this.normalizeDraftForOutput(draftSnapshot);
 
+            this.agentDraft = this.normalizeDraftShape({
+                ...this.agentDraft,
+                keyAgents: normalizedDraft.keyAgents,
+                agentToken: normalizedDraft.keyAgents,
+                centralEnrollmentToken: normalizedDraft.centralEnrollmentToken,
+                persistenceMode: normalizedDraft.persistenceMode
+            });
             this.generatedSnapshot = normalizedDraft;
             this.generatedBundle = buildThorondorAgentFiles(normalizedDraft);
 
@@ -1536,35 +833,6 @@ export default {
         async clearFormData() {
             this.agentDraft = buildThorondorAgentDraft(this.agentDraft.targetOs);
             await this.$store.dispatch("clearThorondorGeneratorDraft");
-        },
-
-        handleNetworkScopeChange() {
-            const scope = this.normalizedNetworkScope;
-            const port = Number(this.agentDraft.port) || 8765;
-            const currentReceiverUrl = String(this.agentDraft.receiverUrl || "");
-            const currentHostIp = String(this.agentDraft.hostIp || "");
-            const wasLocal = /^(https?:\/\/)?(127\.0\.0\.1|localhost)(:\d+)?/i.test(currentReceiverUrl)
-                || currentHostIp === "127.0.0.1"
-                || currentHostIp.toLowerCase() === "localhost";
-
-            if (scope === "local") {
-                this.agentDraft.hostIp = "127.0.0.1";
-                this.agentDraft.receiverUrl = `http://127.0.0.1:${port}`;
-                return;
-            }
-
-            if (scope === "lan") {
-                if (wasLocal) {
-                    this.agentDraft.receiverUrl = "";
-                    this.agentDraft.hostIp = "";
-                }
-                return;
-            }
-
-            if (wasLocal) {
-                this.agentDraft.receiverUrl = "";
-                this.agentDraft.hostIp = "";
-            }
         },
 
         togglePinnedHelp(key) {
@@ -1596,9 +864,9 @@ export default {
 </script>
 
 <style scoped>
-.generator-hero {
+.generator-builder-section {
     gap: 1.15rem;
-    padding-bottom: 1.35rem;
+    padding-bottom: 1.05rem;
 }
 
 .generator-hero-top {
@@ -1606,9 +874,17 @@ export default {
     align-items: center;
 }
 
-.generator-hero .section-copy {
+.generator-builder-section .section-copy {
     max-width: 74ch;
     line-height: 1.62;
+}
+
+.generator-intake-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 1.25fr) minmax(330px, 0.75fr);
+    gap: 0.85rem;
+    align-items: stretch;
+    margin-top: 1rem;
 }
 
 .generator-hero-summary {
@@ -1641,157 +917,69 @@ export default {
     line-height: 1.5;
 }
 
-.generator-flow-list {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    gap: 0;
-    padding: 0.95rem 0 0;
-    margin: 0;
-    border-top: 1px solid rgba(176, 184, 194, 0.14);
-    list-style: none;
-}
-
-.generator-flow-list li {
-    display: grid;
-    gap: 0.4rem;
-    min-width: 0;
-    padding: 0 1rem;
-    border-right: 1px solid rgba(176, 184, 194, 0.12);
-}
-
-.generator-flow-list li:first-child {
-    padding-left: 0;
-}
-
-.generator-flow-list li:last-child {
-    padding-right: 0;
-    border-right: 0;
-}
-
-.generator-flow-list strong {
-    color: #f3f7fb;
-    font-size: 0.76rem;
-    font-weight: 850;
-    letter-spacing: 0.06em;
-    line-height: 1.25;
-    text-transform: uppercase;
-}
-
-.generator-flow-list span {
-    color: rgba(203, 213, 225, 0.78);
-    font-size: 0.86rem;
-    line-height: 1.5;
-}
-
-@media (max-width: 980px) {
-    .generator-hero-top {
-        grid-template-columns: 1fr;
-    }
-
-    .generator-hero-summary {
-        padding: 0.85rem 0 0;
-        border-top: 1px solid rgba(176, 184, 194, 0.14);
-        border-left: 0;
-    }
-
-    .generator-flow-list {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        row-gap: 0.9rem;
-    }
-
-    .generator-flow-list li:nth-child(2n) {
-        padding-right: 0;
-        border-right: 0;
-    }
-
-    .generator-flow-list li:nth-child(2n + 1) {
-        padding-left: 0;
-    }
-}
-
-@media (max-width: 540px) {
-    .generator-flow-list {
-        grid-template-columns: 1fr;
-        padding-top: 0.65rem;
-    }
-
-    .generator-flow-list li {
-        padding: 0.72rem 0;
-        border-right: 0;
-        border-bottom: 1px solid rgba(176, 184, 194, 0.11);
-    }
-
-    .generator-flow-list li:last-child {
-        padding-bottom: 0;
-        border-bottom: 0;
-    }
-}
-
 .deployment-summary {
     display: grid;
     gap: 0.85rem;
 }
 
-.single-installer-grid {
+.generator-form-section {
+    overflow: visible;
+}
+
+.deployment-steps-grid {
     display: grid;
-    grid-template-columns: minmax(0, 1.35fr) minmax(300px, 0.65fr);
-    gap: 1rem;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.75rem;
     align-items: stretch;
+}
+
+.deployment-step-card {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 0.2rem 0.75rem;
+    align-content: start;
+    padding: 0.9rem;
+    border: 1px solid rgba(236, 194, 119, 0.2);
+    border-radius: 4px;
+    background: var(--thorondor-nested-background);
+}
+
+.deployment-step-card > span {
+    display: grid;
+    grid-row: 1 / 3;
+    width: 2rem;
+    height: 2rem;
+    place-items: center;
+    border: 1px solid rgba(236, 194, 119, 0.28);
+    border-radius: 4px;
+    background: rgba(236, 194, 119, 0.1);
+    color: #f3cf8c;
+    font-size: 0.82rem;
+    font-weight: 900;
+}
+
+.deployment-step-card strong {
+    color: #f8fafc;
+    font-size: 0.92rem;
+    line-height: 1.25;
+}
+
+.deployment-step-card small {
+    overflow-wrap: anywhere;
+    color: rgba(203, 213, 225, 0.82);
+    font-size: 0.8rem;
+    line-height: 1.4;
 }
 
 .installer-primary-card {
     min-width: 0;
 }
 
-.installer-summary-grid,
-.embedded-artifact-list {
-    display: grid;
-    gap: 0.85rem;
-}
-
-.msi-packaging-note {
-    display: grid;
-    gap: 0.35rem;
-    margin-top: 0.85rem;
-    padding: 0.9rem 1rem;
-    border: 1px solid rgba(176, 184, 194, 0.22);
-    border-radius: 4px;
-    background: var(--thorondor-nested-background);
-}
-
-.msi-packaging-note strong {
-    color: #f8fafc;
-    font-size: 0.88rem;
-}
-
-.msi-packaging-note p {
-    margin: 0;
-    color: rgba(203, 213, 225, 0.86);
-    line-height: 1.55;
-}
-
-.embedded-artifact-row {
-    display: grid;
-    gap: 0.3rem;
-    padding-bottom: 0.8rem;
-    border-bottom: 1px solid rgba(176, 184, 194, 0.18);
-}
-
-.embedded-artifact-row:last-child {
-    padding-bottom: 0;
-    border-bottom: 0;
-}
-
-.embedded-artifact-row label {
-    color: rgba(198, 210, 222, 0.72);
-    font-size: 0.82rem;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
-.embedded-artifact-row span {
-    color: #f4f8fb;
-    line-height: 1.55;
+.deployment-summary-compact {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.8rem 1.1rem;
+    padding-top: 0.8rem;
+    border-top: 1px solid rgba(176, 184, 194, 0.14);
 }
 
 .summary-line {
@@ -1817,6 +1005,24 @@ export default {
 .summary-line span {
     color: #f4f8fb;
     text-align: right;
+}
+
+.script-details {
+    margin-top: 0.85rem;
+    border-top: 1px solid rgba(176, 184, 194, 0.14);
+    padding-top: 0.85rem;
+}
+
+.script-details summary {
+    width: fit-content;
+    color: #f0bc6a;
+    font-size: 0.78rem;
+    font-weight: 850;
+    cursor: var(--cursor-pointer), pointer;
+}
+
+.script-details .output-box {
+    margin-top: 0.75rem;
 }
 
 .control-grid {
@@ -1855,25 +1061,51 @@ export default {
     background: linear-gradient(90deg, rgba(176, 184, 194, 0.32), rgba(176, 184, 194, 0.03));
 }
 
-.deployment-selector-panel {
+.generator-setup-panel {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-    gap: 1.25rem;
-    align-items: end;
-    padding: 1.1rem;
+    grid-template-columns: minmax(0, 1fr) minmax(320px, 0.55fr);
+    gap: 1rem 1.2rem;
+    align-items: start;
+    padding: 1rem;
     border: 1px solid rgba(176, 184, 194, 0.24);
     border-radius: 4px;
     background: var(--thorondor-nested-background);
 }
 
-.deployment-selector-copy {
+.generator-persistence-panel {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.9rem;
+    align-content: start;
+    padding: 1rem;
+    border: 1px solid rgba(176, 184, 194, 0.24);
+    border-radius: 4px;
+    background: var(--thorondor-nested-background);
 }
 
-.deployment-selector-control {
+.generator-setup-copy {
     display: grid;
-    gap: 0.45rem;
+    gap: 0.36rem;
+    align-content: start;
+}
+
+.generator-setup-copy .module-title {
+    margin: 0;
+    font-size: clamp(1.2rem, 2vw, 1.55rem);
+    line-height: 1.12;
+}
+
+.generator-setup-copy .module-copy {
+    max-width: 72ch;
+    margin: 0;
+    color: rgba(212, 224, 236, 0.84);
+    font-size: 0.91rem;
+    line-height: 1.52;
+}
+
+.generator-setup-controls {
+    display: grid;
+    grid-template-columns: minmax(220px, 1fr);
+    gap: 0.72rem;
 }
 
 .log-preset-actions {
@@ -1911,6 +1143,10 @@ export default {
     min-width: 0;
 }
 
+.control-field.wide-field {
+    grid-column: span 2;
+}
+
 .control-field :is(.form-control, .form-select) {
     min-height: 2.72rem;
     border-radius: 4px;
@@ -1928,7 +1164,7 @@ export default {
     justify-content: space-between;
     align-items: flex-end;
     gap: 0.9rem;
-    padding: 0.7rem 0.75rem;
+    padding: 0.82rem 0.9rem;
     border: 1px solid rgba(176, 184, 194, 0.18);
     border-radius: 4px;
     background: var(--thorondor-soft-background);
@@ -1950,10 +1186,15 @@ export default {
 
 .diagnostic-log-grid {
     position: relative;
+    z-index: 5;
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-    gap: 0.55rem;
+    grid-template-columns: repeat(auto-fit, minmax(310px, 1fr));
+    gap: 0.72rem;
     overflow: visible;
+}
+
+.module-grid {
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
 }
 
 .diagnostic-log-option {
@@ -1961,10 +1202,10 @@ export default {
     z-index: 1;
     display: grid;
     grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.65rem;
+    gap: 0.75rem;
     align-items: flex-start;
-    min-height: 4.85rem;
-    padding: 0.72rem;
+    min-height: 6rem;
+    padding: 0.92rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
     background: var(--thorondor-soft-background);
@@ -1977,7 +1218,7 @@ export default {
 .diagnostic-log-option:hover,
 .diagnostic-log-option:focus-within,
 .diagnostic-log-option.is-help-open {
-    z-index: 30;
+    z-index: 650;
     border-color: rgba(203, 213, 225, 0.42);
     background: var(--thorondor-nested-background);
     box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
@@ -1990,13 +1231,13 @@ export default {
 
 .diagnostic-log-copy {
     display: grid;
-    gap: 0.28rem;
+    gap: 0.34rem;
     min-width: 0;
 }
 
 .diagnostic-log-copy strong {
     color: #f1f5f9;
-    font-size: 0.82rem;
+    font-size: 0.86rem;
     line-height: 1.25;
 }
 
@@ -2005,31 +1246,42 @@ export default {
     max-width: 100%;
     color: rgba(186, 205, 230, 0.78);
     font-size: 0.73rem;
-    line-height: 1.35;
+    line-height: 1.42;
     overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    text-overflow: clip;
+    white-space: pre-line;
+    overflow-wrap: anywhere;
+}
+
+.module-option {
+    min-height: 5.25rem;
+}
+
+.module-copy code {
+    white-space: normal;
 }
 
 .context-help.diagnostic-log-help {
     align-self: flex-start;
-    position: static;
-    z-index: 20;
+    position: relative;
+    z-index: 700;
 }
 
 .context-help.diagnostic-log-help .help-trigger {
-    position: static;
+    position: relative;
+    z-index: 710;
 }
 
 .context-help.diagnostic-log-help .help-popover {
-    top: calc(100% + 0.45rem);
-    right: 0.72rem;
-    left: 0.72rem;
-    width: auto;
+    top: calc(100% + 0.62rem);
+    right: 0;
+    left: auto;
+    width: min(340px, calc(100vw - 3rem));
+    z-index: 800;
 }
 
 .context-help.diagnostic-log-help .help-popover::before {
-    right: 0.9rem;
+    right: 0.1rem;
     left: auto;
 }
 
@@ -2105,7 +1357,7 @@ export default {
     transform: translateY(8px);
     pointer-events: none;
     transition: opacity 0.2s ease, transform 0.2s ease;
-    z-index: 50;
+    z-index: 500;
 }
 
 .help-popover::before {
@@ -2157,13 +1409,6 @@ export default {
     opacity: 1;
     transform: translateY(0);
     pointer-events: auto;
-}
-
-.action-guide-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.9rem;
-    margin-top: 1rem;
 }
 
 .generator-action-panel {
@@ -2237,6 +1482,11 @@ export default {
     gap: 0.75rem;
 }
 
+.persistence-mode-grid-compact {
+    grid-template-columns: 1fr;
+    gap: 0.62rem;
+}
+
 .persistence-mode-card {
     position: relative;
     display: grid;
@@ -2244,7 +1494,7 @@ export default {
     gap: 0.7rem;
     align-items: center;
     min-height: 5rem;
-    padding: 0.85rem;
+    padding: 0.78rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
     background: var(--thorondor-soft-background);
@@ -2314,51 +1564,28 @@ export default {
     filter: saturate(0.75);
 }
 
-.form-status-hint {
-    margin: 0.85rem 0 0;
-    color: rgba(209, 221, 233, 0.84);
-    font-size: 0.83rem;
-    line-height: 1.6;
-}
+@media (max-width: 1180px) {
+    .generator-intake-grid {
+        grid-template-columns: 1fr;
+    }
 
-.action-guide-card {
-    display: flex;
-    gap: 0.9rem;
-    align-items: flex-start;
-    padding: 1rem;
-    border-radius: 4px;
-    border: 1px solid rgba(176, 184, 194, 0.24);
-    background: var(--thorondor-nested-background);
-}
-
-.action-guide-icon {
-    width: 2rem;
-    height: 2rem;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 4px;
-    flex-shrink: 0;
-    border: 1px solid rgba(176, 184, 194, 0.36);
-    background: var(--thorondor-soft-background);
-    color: #dbe5ef;
-    font-size: 0.88rem;
-    font-weight: 700;
-}
-
-.action-guide-body strong {
-    display: block;
-    margin-bottom: 0.35rem;
-    color: #f4f8fb;
-}
-
-.action-guide-body p {
-    margin: 0;
-    color: rgba(218, 229, 240, 0.84);
-    line-height: 1.65;
+    .persistence-mode-grid-compact {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
 }
 
 @media (max-width: 767px) {
+    .generator-hero-top,
+    .generator-intake-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .generator-hero-summary {
+        padding: 0.85rem 0 0;
+        border-top: 1px solid rgba(176, 184, 194, 0.18);
+        border-left: 0;
+    }
+
     .control-grid {
         grid-template-columns: 1fr;
         row-gap: 0.85rem;
@@ -2379,6 +1606,10 @@ export default {
         font-size: 0.71rem;
     }
 
+    .control-field.wide-field {
+        grid-column: auto;
+    }
+
     .help-popover {
         left: 0;
         right: auto;
@@ -2387,10 +1618,6 @@ export default {
     .help-popover::before {
         left: 14px;
         right: auto;
-    }
-
-    .action-guide-grid {
-        grid-template-columns: 1fr;
     }
 
     .generator-action-panel,
@@ -2421,11 +1648,16 @@ export default {
         justify-self: start;
     }
 
-    .single-installer-grid {
+    .deployment-steps-grid,
+    .deployment-summary-compact {
         grid-template-columns: 1fr;
     }
 
-    .deployment-selector-panel {
+    .generator-setup-panel {
+        grid-template-columns: 1fr;
+    }
+
+    .generator-setup-controls {
         grid-template-columns: 1fr;
     }
 
@@ -2447,69 +1679,15 @@ export default {
     }
 
     .diagnostic-log-help .help-popover {
-        left: 0.72rem;
-        right: 0.72rem;
+        right: 0;
+        left: auto;
+        width: min(320px, calc(100vw - 3rem));
     }
 
     .diagnostic-log-help .help-popover::before {
         left: auto;
-        right: 0.9rem;
+        right: 0.1rem;
     }
 }
 
-.os-selector-panel {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-    gap: 1rem;
-    align-items: end;
-    margin-top: 1rem;
-    padding: 1rem;
-    border: 1px solid rgba(176, 184, 194, 0.2);
-    border-radius: 4px;
-    background: var(--thorondor-soft-background);
-}
-
-.os-selector-copy {
-    display: grid;
-    gap: 0.35rem;
-}
-
-.os-family-control {
-    align-self: stretch;
-}
-
-.os-install-summary {
-    grid-column: 1 / -1;
-    display: grid;
-    gap: 0.35rem;
-    padding-top: 0.9rem;
-    border-top: 1px solid rgba(176, 184, 194, 0.16);
-}
-
-.os-install-summary strong {
-    display: block;
-    margin-bottom: 0.28rem;
-    color: #f8fafc;
-    font-size: 0.92rem;
-}
-
-.os-install-summary p {
-    margin: 0;
-    color: rgba(203, 213, 225, 0.82);
-    font-size: 0.82rem;
-    line-height: 1.55;
-}
-
-.os-hint {
-    margin: 0;
-    font-size: 0.81rem;
-    color: rgba(193, 213, 247, 0.7);
-    line-height: 1.55;
-}
-
-@media (max-width: 767px) {
-    .os-selector-panel {
-        grid-template-columns: 1fr;
-    }
-}
 </style>

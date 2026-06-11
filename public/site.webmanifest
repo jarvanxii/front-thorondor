@@ -1,7 +1,7 @@
 {
   "name": "Thorondor",
   "short_name": "Thorondor",
-  "description": "Panel de monitorizacion de sistemas, agentes, alertas, reglas y respuesta operativa por host.",
+  "description": "Panel de monitorización de sistemas, agentes, alertas, reglas y respuesta operativa por host.",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#070a0f",

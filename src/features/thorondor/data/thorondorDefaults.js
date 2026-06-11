@@ -11,6 +11,8 @@ export const THORONDOR_IDB_SNAPSHOT_LIMIT = 500;
 export const THORONDOR_IDB_LOG_LIMIT = 2000;
 export const THORONDOR_IDB_EVENT_LIMIT = 1000;
 export const THORONDOR_SWEEP_INTERVAL_MS = 3_600_000;
+export const THORONDOR_AGENT_FIXED_PORT = 53553;
+export const THORONDOR_AGENT_FIXED_SERVICE_NAME = "thorondor-siem-agent";
 
 export const THORONDOR_MODULE_KEYS = [
   {
@@ -25,8 +27,8 @@ export const THORONDOR_MODULE_KEYS = [
   },
   {
     key: "sudoCommands",
-    label: "Comandos sudo",
-    description: "Busca ejecuciones sudo o elevadas para detectar acciones administrativas fuera de lo esperado."
+    label: "Comandos elevados",
+    description: "Busca ejecuciones sudo en Linux y eventos de privilegios/procesos elevados en Windows para detectar acciones administrativas fuera de lo esperado."
   },
   {
     key: "fileIntegrity",
@@ -41,7 +43,7 @@ export const THORONDOR_MODULE_KEYS = [
   {
     key: "applicationLogs",
     label: "Logs de aplicación",
-    description: "Lee las fuentes diagnósticas seleccionadas en el bloque anterior: web, base de datos, PHP, firewall, IDS y rutas personalizadas."
+    description: "Lee solo las fuentes existentes detectadas durante la instalación: web, base de datos, PHP, firewall, IDS y eventos del sistema."
   },
   {
     key: "networkRates",
@@ -70,8 +72,8 @@ export const THORONDOR_MODULE_KEYS = [
   },
   {
     key: "loginHistory",
-    label: "Historial de logins (last)",
-    description: "Incluye sesiones recientes y usuarios conectados para revisar accesos interactivos y actividad de cuentas."
+    label: "Historial de logins",
+    description: "Incluye sesiones recientes desde last en Linux o Security Event Log en Windows para revisar accesos interactivos y actividad de cuentas."
   },
   {
     key: "smartMonitor",
@@ -114,7 +116,7 @@ export const THORONDOR_LINUX_OS_MODEL_OPTIONS_BY_DISTRO = {
     "Kali Linux Rolling"
   ],
   Otra: [
-    "Linux generico"
+    "Linux genérico"
   ]
 };
 
@@ -145,7 +147,7 @@ export const THORONDOR_NETWORK_SCOPE_OPTIONS = [
     value: "local",
     label: "Localhost",
     shortLabel: "Local",
-    copy: "El agente escucha solo en localhost para comprobaciones locales; la monitorizacion real se sincroniza contra la API central."
+    copy: "El agente escucha solo en localhost para comprobaciones locales; la monitorización real se sincroniza contra la API central."
   },
   {
     value: "lan",
@@ -157,7 +159,7 @@ export const THORONDOR_NETWORK_SCOPE_OPTIONS = [
     value: "public",
     label: "Remoto / IP pública / DNS",
     shortLabel: "Remoto",
-    copy: "Usa este modo solo con firewall restrictivo; la ingesta publica debe pasar por la API central HTTPS y token de agente."
+    copy: "Usa este modo solo con firewall restrictivo; la ingesta pública debe pasar por la API central HTTPS y key agents."
   }
 ];
 
@@ -180,7 +182,7 @@ export const THORONDOR_LOG_SOURCES = [
 
 export const THORONDOR_LEGACY_ADDITIONAL_LOG_PATHS = "/var/log/nginx/access.log\n/var/log/nginx/error.log";
 
-export const THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS = [
+export const THORONDOR_PREVIOUS_LINUX_DIAGNOSTIC_LOG_PATHS = [
   "/var/log/nginx/access.log",
   "/var/log/nginx/error.log",
   "/var/log/apache2/access.log",
@@ -194,10 +196,56 @@ export const THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS = [
   "/var/log/snort/"
 ];
 
+export const THORONDOR_PREVIOUS_WINDOWS_DIAGNOSTIC_LOG_PATHS = [
+  "winlog://System",
+  "winlog://Application",
+  "winlog://Security",
+  "C:\\inetpub\\logs\\LogFiles\\W3SVC*\\u_ex*.log",
+  "C:\\Windows\\System32\\LogFiles\\HTTPERR\\httperr*.log",
+  "C:\\nginx\\logs\\access.log",
+  "C:\\nginx\\logs\\error.log",
+  "C:\\Apache24\\logs\\access.log",
+  "C:\\Apache24\\logs\\error.log",
+  "C:\\xampp\\apache\\logs\\access.log",
+  "C:\\xampp\\apache\\logs\\error.log",
+  "C:\\ProgramData\\MySQL\\MySQL Server *\\Data\\*.err",
+  "C:\\Program Files\\PostgreSQL\\*\\data\\log\\postgresql-*.log",
+  "C:\\php\\logs\\php_error.log",
+  "C:\\xampp\\php\\logs\\php_error_log",
+  "C:\\Windows\\Temp\\php_errors.log",
+  "C:\\Windows\\System32\\LogFiles\\Firewall\\pfirewall.log",
+  "C:\\Snort\\log\\alert.ids",
+  "C:\\Snort\\log\\alert_fast.txt"
+];
+
+export const THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS = [
+  "/var/log/nginx/access.log",
+  "/var/log/nginx/error.log",
+  "/var/log/apache2/access.log",
+  "/var/log/apache2/error.log",
+  "/var/log/mysql/error.log",
+  "/var/log/postgresql/postgresql-*-main.log",
+  "/var/log/php/error.log",
+  "/var/log/syslog",
+  "/var/log/auth.log",
+  "/var/log/secure",
+  "/var/log/audit/audit.log",
+  "/var/log/fail2ban.log",
+  "/var/log/ufw.log",
+  "/var/log/iptables.log",
+  "/var/log/caddy/access.log",
+  "/var/log/caddy/error.log",
+  "/var/log/letsencrypt/letsencrypt.log",
+  "/var/log/snort/"
+];
+
 export const THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS = [
   "winlog://System",
   "winlog://Application",
   "winlog://Security",
+  "winlog://Microsoft-Windows-Sysmon/Operational",
+  "winlog://Microsoft-Windows-Windows Defender/Operational",
+  "winlog://Microsoft-Windows-PowerShell/Operational",
   "C:\\inetpub\\logs\\LogFiles\\W3SVC*\\u_ex*.log",
   "C:\\Windows\\System32\\LogFiles\\HTTPERR\\httperr*.log",
   "C:\\nginx\\logs\\access.log",
@@ -230,6 +278,8 @@ function normalizeLogPathList(value) {
 
 export const THORONDOR_DEFAULT_ADDITIONAL_LOG_PATHS = joinThorondorLogPaths(THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS);
 export const THORONDOR_WINDOWS_DEFAULT_ADDITIONAL_LOG_PATHS = joinThorondorLogPaths(THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS);
+export const THORONDOR_PREVIOUS_DEFAULT_ADDITIONAL_LOG_PATHS = joinThorondorLogPaths(THORONDOR_PREVIOUS_LINUX_DIAGNOSTIC_LOG_PATHS);
+export const THORONDOR_PREVIOUS_WINDOWS_DEFAULT_ADDITIONAL_LOG_PATHS = joinThorondorLogPaths(THORONDOR_PREVIOUS_WINDOWS_DIAGNOSTIC_LOG_PATHS);
 
 export function getThorondorDefaultLogPathsForOs(targetOs = "linux") {
   return targetOs === "windows"
@@ -240,6 +290,8 @@ export function getThorondorDefaultLogPathsForOs(targetOs = "linux") {
 export function isThorondorDefaultDiagnosticLogPathList(value) {
   const normalized = normalizeLogPathList(value);
   return normalized === normalizeLogPathList(THORONDOR_LEGACY_ADDITIONAL_LOG_PATHS)
+    || normalized === normalizeLogPathList(THORONDOR_PREVIOUS_DEFAULT_ADDITIONAL_LOG_PATHS)
+    || normalized === normalizeLogPathList(THORONDOR_PREVIOUS_WINDOWS_DEFAULT_ADDITIONAL_LOG_PATHS)
     || normalized === normalizeLogPathList(THORONDOR_DEFAULT_ADDITIONAL_LOG_PATHS)
     || normalized === normalizeLogPathList(THORONDOR_WINDOWS_DEFAULT_ADDITIONAL_LOG_PATHS);
 }
@@ -254,13 +306,14 @@ export const THORONDOR_ALERT_TYPES = {
   heartbeat: "Agente sin heartbeat",
   sudoUnauthorized: "Comando sudo no autorizado",
   newUser: "Nuevo usuario creado",
+  inventoryChange: "Cambio de inventario del host",
   networkExposure: "Puerto en escucha sospechoso",
-  failedService: "Servicio systemd en estado FAILED",
+  failedService: "Servicio del sistema en estado anómalo",
   pendingUpdates: "Actualizaciones críticas pendientes",
   dockerUnhealthy: "Contenedor Docker en estado anomalo",
   dnsFailure: "Fallo de resolucion DNS",
   smartError: "Atributo SMART de disco en estado crítico",
-  highNetworkRate: "Trafico de red inusualmente elevado",
+  highNetworkRate: "Tráfico de red inusualmente elevado",
   tempCritical: "Temperatura de componente crítica"
 };
 
@@ -359,8 +412,18 @@ export function buildDefaultThorondorRuleSet() {
       description: "Marca puertos sensibles en escucha."
     },
     {
+      id: "rule-inventory-change",
+      name: "Cambio relevante en inventario",
+      type: "inventoryChange",
+      enabled: true,
+      threshold: 1,
+      durationMinutes: 1,
+      scope: "all",
+      description: "Avisa cuando cambian usuarios, grupos, servicios, puertos, tareas o firewall."
+    },
+    {
       id: "rule-failed-service",
-      name: "Servicio systemd en estado FAILED",
+      name: "Servicio del sistema en estado anómalo",
       type: "failedService",
       enabled: true,
       threshold: 1,
@@ -400,7 +463,7 @@ export function buildDefaultThorondorRuleSet() {
     },
     {
       id: "rule-high-network-rate",
-      name: "Trafico saliente por encima de 100 MB/s",
+      name: "Tráfico saliente por encima de 100 MB/s",
       type: "highNetworkRate",
       enabled: true,
       threshold: 104857600,
@@ -425,7 +488,7 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
     centralApiBaseUrl: "",
     networkScope: "local",
     corsOrigin: "*",
-    port: "",
+    port: THORONDOR_AGENT_FIXED_PORT,
     intervalSeconds: "",
     additionalLogPaths: getThorondorDefaultLogPathsForOs(normalizedTargetOs),
     modules: {
@@ -445,8 +508,10 @@ export function buildThorondorAgentDraft(targetOs = "linux") {
     },
     generateSystemd: normalizedTargetOs !== "windows",
     hostIp: "",
+    keyAgents: "",
+    agentToken: "",
     installUser: "",
-    serviceName: "",
+    serviceName: THORONDOR_AGENT_FIXED_SERVICE_NAME,
     autoStart: true,
     notes: ""
   };

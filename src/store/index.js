@@ -1,5 +1,6 @@
 import { createStore } from 'vuex'
 import {
+  THORONDOR_AGENT_FIXED_PORT,
   THORONDOR_CONNECTION_LIMIT,
   THORONDOR_HISTORY_LIMIT,
   THORONDOR_IDB_EVENT_LIMIT,
@@ -30,11 +31,17 @@ import {
 } from '@/features/thorondor/services/thorondorPersistence'
 import {
   buildThorondorRequestRules,
+  executeThorondorAgentSafeAction,
+  fetchThorondorTelemetry,
+  manageThorondorAgentService,
 } from '@/features/thorondor/services/thorondorApi'
 import {
   createThorondorCentralCommand,
+  deleteThorondorSmartResponse as requestDeleteThorondorSmartResponse,
   fetchThorondorCentralSnapshot,
+  saveThorondorSmartResponse as requestSaveThorondorSmartResponse,
   isThorondorCentralConfigured,
+  updateThorondorCentralAgent,
 } from '@/features/thorondor/services/thorondorCentralApi'
 import {
   clearThorondorJwtToken,
@@ -45,10 +52,20 @@ import {
   isThorondorJwtTokenValid,
   logoutThorondorSession as requestThorondorLogout,
   saveThorondorSession,
+  updateThorondorKeyAgents as requestThorondorKeyAgentsUpdate,
 } from '@/features/thorondor/services/thorondorAuth'
 import {
+  evaluateThorondorRules,
   deriveThorondorAgentStatus,
+  isThorondorAgentAlertsPaused,
+  isThorondorAgentPaused,
 } from '@/features/thorondor/services/thorondorRules'
+import {
+  buildDefaultThorondorSmartResponses,
+  evaluateThorondorSmartResponses,
+  normalizeThorondorSmartResponses,
+  smartActionLabel,
+} from '@/features/thorondor/services/thorondorSmartResponses'
 
 const VIRTUAL_FSTYPES = new Set([
   'tmpfs',
@@ -78,6 +95,88 @@ const VIRTUAL_FSTYPES = new Set([
 
 let thorondorPollPromise = null
 
+function numberOrZero(value) {
+  const number = Number(value)
+  return Number.isFinite(number) ? number : 0
+}
+
+function textOrEmpty(value) {
+  return String(value ?? '').trim()
+}
+
+function normalizeProcessList(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      ...item,
+      pid: numberOrZero(item?.pid),
+      ppid: numberOrZero(item?.ppid),
+      name: textOrEmpty(item?.name || item?.process) || 'N/D',
+      user: textOrEmpty(item?.user || item?.username),
+      status: textOrEmpty(item?.status),
+      cpuPercent: numberOrZero(item?.cpuPercent),
+      memoryPercent: numberOrZero(item?.memoryPercent),
+      memoryRss: numberOrZero(item?.memoryRss || item?.rss),
+      memoryVms: numberOrZero(item?.memoryVms || item?.vms),
+      threads: numberOrZero(item?.threads),
+      createdAt: textOrEmpty(item?.createdAt),
+      exe: textOrEmpty(item?.exe),
+      cmdline: textOrEmpty(item?.cmdline),
+    }))
+    .sort((a, b) =>
+      b.cpuPercent - a.cpuPercent ||
+      b.memoryPercent - a.memoryPercent ||
+      b.memoryRss - a.memoryRss,
+    )
+}
+
+function normalizeOpenPorts(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((item) => {
+      const proto = textOrEmpty(item?.proto || item?.protocol || 'tcp').toLowerCase()
+      const port = numberOrZero(item?.port || item?.localPort)
+      const ip = textOrEmpty(item?.ip || item?.localIp)
+      return {
+        ...item,
+        ip,
+        port,
+        proto,
+        family: textOrEmpty(item?.family || (ip.includes(':') ? 'IPv6' : 'IPv4')),
+        status: textOrEmpty(item?.status || (proto === 'udp' ? 'OPEN' : 'LISTEN')),
+        pid: numberOrZero(item?.pid),
+        process: textOrEmpty(item?.process || item?.name),
+        user: textOrEmpty(item?.user || item?.username),
+        cmdline: textOrEmpty(item?.cmdline),
+      }
+    })
+    .filter((item) => item.port > 0)
+    .sort((a, b) => a.proto.localeCompare(b.proto) || a.port - b.port || a.ip.localeCompare(b.ip))
+}
+
+function normalizeEstablishedConnections(items) {
+  return (Array.isArray(items) ? items : [])
+    .map((item) => ({
+      ...item,
+      pid: numberOrZero(item?.pid),
+      process: textOrEmpty(item?.process || item?.name),
+      user: textOrEmpty(item?.user || item?.username),
+      proto: textOrEmpty(item?.proto || 'tcp').toLowerCase(),
+      family: textOrEmpty(item?.family),
+      localIp: textOrEmpty(item?.localIp),
+      localPort: numberOrZero(item?.localPort),
+      remoteIp: textOrEmpty(item?.remoteIp),
+      remotePort: numberOrZero(item?.remotePort),
+      localAddr: textOrEmpty(item?.localAddr),
+      remoteAddr: textOrEmpty(item?.remoteAddr),
+      status: textOrEmpty(item?.status || 'ESTABLISHED'),
+      cmdline: textOrEmpty(item?.cmdline),
+    }))
+    .sort((a, b) =>
+      a.process.localeCompare(b.process) ||
+      a.pid - b.pid ||
+      a.remoteAddr.localeCompare(b.remoteAddr),
+    )
+}
+
 function createThorondorState() {
   return {
     initialized: false,
@@ -87,6 +186,7 @@ function createThorondorState() {
     lastSweepAt: null,
     agents: [],
     rules: [],
+    smartResponses: buildDefaultThorondorSmartResponses(),
     alerts: [],
     selectedAgentId: null,
     snapshotsByAgent: {},
@@ -131,8 +231,34 @@ function toSummarySnapshot(agentId, telemetry) {
   const metrics = telemetry?.metrics || {}
   const system = telemetry?.system || {}
   const allDisks = Array.isArray(metrics.disks) ? metrics.disks : []
-  const disks = allDisks.filter((d) => d.fstype && !VIRTUAL_FSTYPES.has(d.fstype))
+  const disks = allDisks
+    .filter((d) => d.fstype && !VIRTUAL_FSTYPES.has(d.fstype))
+    .map((disk) => {
+      const total = Number(disk.total) || 0
+      const used = Number(disk.used) || 0
+      const free = Number(disk.free) || Math.max(total - used, 0)
+      const usedPercent = Number(disk.usedPercent ?? disk.percent) || 0
+      return {
+        ...disk,
+        total,
+        used,
+        free,
+        percent: usedPercent,
+        usedPercent,
+        freePercent: Number(disk.freePercent) || (total ? Math.max(100 - usedPercent, 0) : 0),
+      }
+    })
   const topDisk = disks.reduce((max, item) => Math.max(max, Number(item.percent) || 0), 0)
+  const memoryTotal = Number(metrics.memoryTotal) || 0
+  const memoryUsed = Number(metrics.memoryUsed) || 0
+  const processes = normalizeProcessList(metrics.processes)
+  const openPorts = normalizeOpenPorts(metrics.openPorts)
+  const establishedConnections = normalizeEstablishedConnections(metrics.establishedConnections)
+  const agentStatus = {
+    ...(metrics.agentStatus || {}),
+    requestLatencyMs: Number(telemetry?.__request?.latencyMs) || Number(metrics.agentStatus?.requestLatencyMs) || null,
+    requestEndpoint: telemetry?.__request?.endpoint || metrics.agentStatus?.requestEndpoint || '',
+  }
 
   return {
     id: `${agentId}-${telemetry.heartbeat || new Date().toISOString()}`,
@@ -147,27 +273,54 @@ function toSummarySnapshot(agentId, telemetry) {
     cpuTotal: Number(metrics.cpuTotal) || 0,
     cpuPerCore: metrics.cpuPerCore || [],
     memoryPercent: Number(metrics.memoryPercent) || 0,
-    memoryUsed: Number(metrics.memoryUsed) || 0,
-    memoryTotal: Number(metrics.memoryTotal) || 0,
+    memoryUsed,
+    memoryAvailable: Number(metrics.memoryAvailable) || Math.max(memoryTotal - memoryUsed, 0),
+    memoryFree: Number(metrics.memoryFree) || 0,
+    memoryTotal,
     swapPercent: Number(metrics.swapPercent) || 0,
+    swapUsed: Number(metrics.swapUsed) || 0,
+    swapTotal: Number(metrics.swapTotal) || 0,
     disks,
     diskPercent: topDisk,
-    processes: metrics.processes || [],
+    processes,
+    processCount: Number(metrics.processCount) || processes.length,
+    processSampleLimit: Number(metrics.processSampleLimit) || processes.length,
     interfaces: metrics.interfaces || [],
     temperatures: metrics.temperatures || [],
-    openPorts: metrics.openPorts || [],
+    openPorts,
     networkRates: metrics.networkRates || [],
-    establishedConnections: metrics.establishedConnections || [],
+    establishedConnections,
     failedServices: metrics.failedServices || [],
+    serviceInventory: Array.isArray(metrics.serviceInventory) ? metrics.serviceInventory : [],
+    scheduledTasks: Array.isArray(metrics.scheduledTasks) ? metrics.scheduledTasks : [],
+    firewallRules: Array.isArray(metrics.firewallRules) ? metrics.firewallRules : [],
+    firewallSummary: metrics.firewallSummary || { total: 0, thorondor: 0, system: 0, blockedIps: [] },
     fans: metrics.fans || [],
     battery: metrics.battery || null,
     gpu: metrics.gpu || [],
     hardware: metrics.hardware || {},
+    userInventory: metrics.userInventory || {
+      collectedAt: telemetry?.heartbeat || new Date().toISOString(),
+      os: telemetry?.agent?.targetOs || '',
+      users: [],
+      groups: [],
+      privilegedGroups: [],
+    },
     docker: metrics.docker || [],
     dns: metrics.dns || [],
     smartData: metrics.smartData || [],
     loginHistory: metrics.loginHistory || [],
     pendingUpdates: metrics.pendingUpdates || { count: 0, updates: [] },
+    inventoryChanges: metrics.inventoryChanges || { initialized: true, events: [], counts: {} },
+    hostBaseline: metrics.hostBaseline || metrics.inventoryChanges || { initialized: true, events: [], importantEvents: [], counts: {} },
+    securityAccess: metrics.securityAccess || { failedLogins: 0, successfulLogins: 0, repeatedIps: [], attackedUsers: [], protocols: [], recommendation: '' },
+    agentStatus,
+    collectionStatus: metrics.collectionStatus || {
+      os: telemetry?.agent?.targetOs || '',
+      modules: telemetry?.agent?.modules || {},
+      errors: [],
+      counts: {},
+    },
     loadAverage: system.loadAverage || [],
   }
 }
@@ -271,32 +424,71 @@ function stableSecurityEventId(agentId, event, fallbackIndex = 0) {
   )}`
 }
 
+function parseAgentEndpoint(value) {
+  const raw = String(value || '').trim()
+  if (!raw) return { host: '', port: 0 }
+
+  try {
+    const url = new URL(raw.startsWith('http://') || raw.startsWith('https://') ? raw : `http://${raw}`)
+    return {
+      host: url.hostname || '',
+      port: Number(url.port) || (url.protocol === 'https:' ? 443 : 80),
+    }
+  } catch {
+    return { host: '', port: 0 }
+  }
+}
+
+function buildAgentReceiverUrl(hostIp, port, fallback = '') {
+  const rawFallback = String(fallback || '').trim()
+  const normalizedHost = String(hostIp || '').trim()
+  const normalizedPort = Number(port) || 0
+
+  if (!normalizedHost && rawFallback) {
+    return rawFallback
+  }
+  if (!normalizedHost) {
+    return ''
+  }
+
+  const base = normalizedHost.startsWith('http://') || normalizedHost.startsWith('https://')
+    ? normalizedHost.replace(/\/+$/, '')
+    : `http://${normalizedHost}`
+  return normalizedPort > 0 && !/:\d+$/.test(base)
+    ? `${base}:${normalizedPort}`
+    : base
+}
+
 function normalizeAgentRecord(agent) {
   const source = agent || {}
-  const hostIp = String(source.hostIp || '').trim()
   const receiverUrlSource = String(source.receiverUrl || source.endpoint || '').trim()
-  const portFromEndpoint = (() => {
-    try {
-      return receiverUrlSource ? Number(new URL(receiverUrlSource).port) : 0
-    } catch {
-      return 0
-    }
-  })()
-  const port = Number(source.port || source.listenPort) || portFromEndpoint || 8765
-  const receiverUrl =
-    receiverUrlSource || (hostIp ? `http://${hostIp}:${port}` : '')
+  const endpointParts = parseAgentEndpoint(receiverUrlSource)
+  const hostIp = String(source.hostIp || source.ipAddress || source.ip || endpointParts.host || '').trim()
+  const portFromEndpoint = endpointParts.port
+  const port = Number(source.port || source.listenPort) || portFromEndpoint || THORONDOR_AGENT_FIXED_PORT
+  const receiverUrl = buildAgentReceiverUrl(hostIp, port, receiverUrlSource)
   const systemName = String(source.systemName || source.displayName || 'thorondor-host').trim()
   const targetOsText = String(source.targetOs || source.os || '').toLowerCase()
   const targetOs = targetOsText.includes('win') ? 'windows' : 'linux'
   const lastHeartbeatAt = source.lastHeartbeatAt || source.heartbeat || null
+  const siemPaused = isThorondorAgentPaused(source)
+  const alertsPausedUntil = String(
+    source.alertsPausedUntil || source.alerts_paused_until || source.maintenanceUntil || '',
+  ).trim()
+  const alertsPaused = isThorondorAgentAlertsPaused({
+    ...source,
+    alertsPausedUntil,
+  })
   const statusText = String(source.lastStatus || source.status || '').toLowerCase()
-  const lastStatus = ['ok', 'online', 'success'].includes(statusText)
-    ? 'ok'
-    : ['error', 'offline', 'failed', 'danger'].includes(statusText)
-      ? 'error'
-      : lastHeartbeatAt
-        ? 'ok'
-        : ''
+  const lastStatus = siemPaused
+    ? 'paused'
+    : ['ok', 'online', 'success'].includes(statusText)
+      ? 'ok'
+      : ['error', 'offline', 'failed', 'danger'].includes(statusText)
+        ? 'error'
+        : lastHeartbeatAt
+          ? 'ok'
+          : ''
   const record = {
     id: String(source.id || `${systemName}-${hostIp || '127.0.0.1'}-${port}`)
       .toLowerCase()
@@ -324,8 +516,16 @@ function normalizeAgentRecord(agent) {
     createdAt: source.createdAt || new Date().toISOString(),
     lastHeartbeatAt,
     lastStatus,
-    lastError: source.lastError || null,
+    lastError: siemPaused ? null : source.lastError || null,
+    siemPaused,
+    pollingPaused: siemPaused,
+    alertsPaused,
+    alertsPausedUntil,
+    maintenanceReason: String(source.maintenanceReason || source.maintenance_reason || '').trim(),
     requestTimeoutMs: Math.max(3000, Number(source.requestTimeoutMs) || 10000),
+    keyAgents: String(source.keyAgents || source.key_agents || source.agentToken || source.token || '').trim(),
+    agentToken: String(source.keyAgents || source.key_agents || source.agentToken || source.token || '').trim(),
+    centralEnrollmentToken: String(source.centralEnrollmentToken || '').trim(),
     updatedAt: source.updatedAt || new Date().toISOString(),
   }
 
@@ -445,6 +645,17 @@ function isThorondorUserAuthorizedForCloudPersistence(user) {
   return Boolean(user?.canUseCloudPersistence || user?.usuarioAutorizado || user?.usuario_autorizado)
 }
 
+function isThorondorUserAdmin(user) {
+  return Boolean(
+    user?.usuarioAdmin ||
+      user?.usuario_admin ||
+      user?.isAdmin ||
+      user?.is_admin ||
+      user?.admin ||
+      (Array.isArray(user?.roles) && user.roles.includes('admin')),
+  )
+}
+
 function disableThorondorCloudPersistence(reason) {
   setThorondorCloudPersistenceAccess(false, reason)
   saveThorondorPersistenceMode('local')
@@ -491,7 +702,7 @@ function requireThorondorApiToken(state) {
     return true
   }
 
-  throw new Error('Token JWT requerido para usar servicios de monitorizacion.')
+  throw new Error('Token JWT requerido para usar servicios de monitorización.')
 }
 
 export default createStore({
@@ -594,6 +805,10 @@ export default createStore({
         payload.rules || [],
         state.thorondor.agents,
       )
+      state.thorondor.smartResponses = normalizeThorondorSmartResponses(
+        payload.smartResponses || [],
+        state.thorondor.agents,
+      )
       state.thorondor.alerts = payload.alerts || []
       state.thorondor.generatorDraft = payload.generatorDraft || buildThorondorAgentDraft()
       state.thorondor.snapshotsByAgent = mapByAgent(payload.snapshots)
@@ -642,6 +857,28 @@ export default createStore({
       }
     },
 
+    updateThorondorAgent(state, agent) {
+      const source = agent || {}
+      const agentId = source.id || source.agentId
+      if (!agentId) return
+
+      const index = state.thorondor.agents.findIndex((item) => item.id === agentId)
+      const existing = index >= 0 ? state.thorondor.agents[index] : {}
+      const record = normalizeAgentRecord({
+        ...existing,
+        ...source,
+        id: agentId,
+        updatedAt: new Date().toISOString(),
+      })
+
+      if (index >= 0) {
+        state.thorondor.agents.splice(index, 1, record)
+      } else {
+        state.thorondor.agents.push(record)
+      }
+      state.thorondor.requestRulesByAgent[record.id] = buildThorondorRequestRules(record)
+    },
+
     removeThorondorAgent(state, agentId) {
       state.thorondor.agents = state.thorondor.agents.filter((agent) => agent.id !== agentId)
       delete state.thorondor.snapshotsByAgent[agentId]
@@ -653,6 +890,9 @@ export default createStore({
       delete state.thorondor.ipBlockOperationsByAgent[agentId]
       delete state.thorondor.casesByAgent[agentId]
       state.thorondor.rules = state.thorondor.rules.filter((rule) => rule.scope !== agentId)
+      state.thorondor.smartResponses = state.thorondor.smartResponses.filter(
+        (policy) => policy.scope !== agentId,
+      )
       state.thorondor.alerts = state.thorondor.alerts.filter((alert) => alert.agentId !== agentId)
       state.thorondor.responseActions = state.thorondor.responseActions.filter(
         (action) => action.agentId !== agentId,
@@ -709,8 +949,13 @@ export default createStore({
 
       const agentIndex = state.thorondor.agents.findIndex((item) => item.id === agentId)
       if (agentIndex >= 0) {
+        const detectedModules =
+          telemetry?.agent?.modules && typeof telemetry.agent.modules === 'object'
+            ? { ...telemetry.agent.modules }
+            : state.thorondor.agents[agentIndex].modules
         state.thorondor.agents.splice(agentIndex, 1, {
           ...state.thorondor.agents[agentIndex],
+          modules: detectedModules,
           lastHeartbeatAt: telemetry.heartbeat || new Date().toISOString(),
           lastStatus: 'ok',
           lastSnapshotSummary: {
@@ -743,10 +988,21 @@ export default createStore({
 
       const agentIndex = state.thorondor.agents.findIndex((item) => item.id === payload.agentId)
       if (agentIndex >= 0) {
+        let lastStatus = state.thorondor.agents[agentIndex].lastStatus
+        if (payload.kind === 'success') {
+          lastStatus = 'ok'
+        } else if (payload.kind === 'error') {
+          lastStatus = 'error'
+        } else if (payload.kind === 'paused') {
+          lastStatus = 'paused'
+        } else if (payload.kind === 'resumed') {
+          lastStatus = state.thorondor.agents[agentIndex].lastHeartbeatAt ? 'ok' : ''
+        }
+
         state.thorondor.agents.splice(agentIndex, 1, {
           ...state.thorondor.agents[agentIndex],
-          lastStatus: payload.kind === 'success' ? 'ok' : 'error',
-          lastError: payload.error || null,
+          lastStatus,
+          lastError: payload.kind === 'error' ? payload.error || null : null,
           updatedAt: new Date().toISOString(),
         })
       }
@@ -786,6 +1042,36 @@ export default createStore({
 
     removeThorondorRule(state, ruleId) {
       state.thorondor.rules = state.thorondor.rules.filter((item) => item.id !== ruleId)
+    },
+
+    updateThorondorSmartResponse(state, policy) {
+      const record = {
+        ...policy,
+        id: policy.id || `smart-response-${Date.now()}`,
+        updatedAt: new Date().toISOString(),
+      }
+      const index = state.thorondor.smartResponses.findIndex((item) => item.id === record.id)
+      if (index >= 0) {
+        state.thorondor.smartResponses.splice(index, 1, {
+          ...state.thorondor.smartResponses[index],
+          ...record,
+        })
+      } else {
+        state.thorondor.smartResponses.push({
+          createdAt: new Date().toISOString(),
+          ...record,
+        })
+      }
+      state.thorondor.smartResponses = normalizeThorondorSmartResponses(
+        state.thorondor.smartResponses,
+        state.thorondor.agents,
+      )
+    },
+
+    removeThorondorSmartResponse(state, policyId) {
+      state.thorondor.smartResponses = state.thorondor.smartResponses.filter(
+        (item) => item.id !== policyId,
+      )
     },
 
     resetThorondorRulesForAgent(state, agentId) {
@@ -836,8 +1122,9 @@ export default createStore({
     },
 
     recordThorondorResponseAction(state, payload) {
+      const subject = payload.ip || payload.user || payload.subject || payload.group || 'accion'
       state.thorondor.responseActions.unshift({
-        id: `${payload.agentId}-${payload.action}-${payload.ip}-${Date.now()}`,
+        id: `${payload.agentId}-${payload.action}-${subject}-${Date.now()}`,
         timestamp: new Date().toISOString(),
         actor: 'frontend',
         ...payload,
@@ -922,6 +1209,7 @@ export default createStore({
           events: [],
           alerts: [],
           rules: [],
+          smartResponses: buildDefaultThorondorSmartResponses(),
           history: [],
           lastSweepAt: null,
           generatorDraft: buildThorondorAgentDraft(),
@@ -944,6 +1232,20 @@ export default createStore({
       commit('setThorondorToken', token)
       commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
       return session
+    },
+
+    async updateThorondorKeyAgents({ commit, state }, payload) {
+      const updatedUser = await requestThorondorKeyAgentsUpdate(payload)
+      const session = {
+        ...(state.thorondor.session || buildAnonymousThorondorSession()),
+        authenticated: true,
+        user: updatedUser,
+      }
+      saveThorondorSession(session)
+      configureThorondorCloudAccess(session, state.thorondor.token)
+      commit('setThorondorSession', session)
+      commit('setThorondorPersistenceStatus', getThorondorPersistenceStatus())
+      return updatedUser
     },
 
     async logoutThorondorSession({ commit }) {
@@ -1090,6 +1392,232 @@ export default createStore({
       await dispatch('persistThorondorCases')
     },
 
+    async updateThorondorAgentConnection({ commit, state }, payload) {
+      const agentId = payload?.agentId || payload?.id
+      const existing = state.thorondor.agents.find((item) => item.id === agentId)
+      if (!existing) {
+        throw new Error('Agente no encontrado')
+      }
+
+      const port = Number(payload.port || existing.port) || THORONDOR_AGENT_FIXED_PORT
+      if (port < 1 || port > 65535) {
+        throw new Error('Puerto del agente no valido')
+      }
+
+      const hostIp = String(payload.hostIp || payload.ipAddress || payload.ip || existing.hostIp || '').trim()
+      if (!hostIp) {
+        throw new Error('IP o DNS del agente requerido')
+      }
+
+      const nextKeyAgents = String(
+        payload.keyAgents || payload.key_agents || payload.agentToken || existing.keyAgents || existing.agentToken || '',
+      ).trim()
+      const receiverUrl = buildAgentReceiverUrl(hostIp, port, payload.receiverUrl || existing.receiverUrl)
+      const payloadHasPauseFlag = [
+        'siemPaused',
+        'siem_paused',
+        'pollingPaused',
+        'polling_paused',
+        'monitoringPaused',
+        'paused',
+      ].some((key) => Object.prototype.hasOwnProperty.call(payload || {}, key))
+      const siemPaused = payloadHasPauseFlag
+        ? isThorondorAgentPaused(payload)
+        : isThorondorAgentPaused(existing)
+      const record = normalizeAgentRecord({
+        ...existing,
+        ...payload,
+        id: existing.id,
+        hostIp,
+        port,
+        receiverUrl,
+        keyAgents: nextKeyAgents,
+        agentToken: nextKeyAgents,
+        alertsPaused: Object.prototype.hasOwnProperty.call(payload || {}, 'alertsPaused')
+          ? Boolean(payload.alertsPaused)
+          : existing.alertsPaused,
+        alertsPausedUntil: payload.alertsPausedUntil ?? existing.alertsPausedUntil,
+        maintenanceReason: payload.maintenanceReason ?? existing.maintenanceReason,
+        siemPaused,
+        pollingPaused: siemPaused,
+        updatedAt: new Date().toISOString(),
+      })
+
+      commit('updateThorondorAgent', record)
+      await Promise.all([
+        putOne(STORE_NAMES.agents, record),
+        putMany(STORE_NAMES.history, state.thorondor.connectionHistoryByAgent[record.id] || []),
+      ])
+
+      const shouldUpdateCentral =
+        isThorondorCentralConfigured()
+        && hasThorondorApiToken(state.thorondor.token)
+        && isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)
+
+      if (shouldUpdateCentral) {
+        try {
+          const remote = await updateThorondorCentralAgent(existing.id, {
+            hostIp,
+            port,
+            receiverUrl,
+            siemPaused: record.siemPaused,
+            pollingPaused: record.siemPaused,
+            alertsPaused: record.alertsPaused,
+            alertsPausedUntil: record.alertsPausedUntil,
+            maintenanceReason: record.maintenanceReason,
+            ...(nextKeyAgents ? { keyAgents: nextKeyAgents } : {}),
+          })
+          const merged = normalizeAgentRecord({
+            ...record,
+            ...remote,
+            keyAgents: nextKeyAgents,
+            agentToken: nextKeyAgents,
+          })
+          commit('updateThorondorAgent', merged)
+          await putOne(STORE_NAMES.agents, merged)
+          return merged
+        } catch (error) {
+          commit('pushThorondorError', `No se pudo actualizar el agente en la API central: ${error.message}`)
+          throw error
+        }
+      }
+
+      return record
+    },
+
+    async setThorondorAgentPaused({ commit, state }, payload) {
+      const agentId = payload?.agentId || payload?.id
+      const existing = state.thorondor.agents.find((item) => item.id === agentId)
+      if (!existing) {
+        throw new Error('Agente no encontrado')
+      }
+
+      const paused = Boolean(payload?.paused ?? payload?.siemPaused ?? payload?.pollingPaused)
+      const record = normalizeAgentRecord({
+        ...existing,
+        siemPaused: paused,
+        pollingPaused: paused,
+        lastStatus: paused ? 'paused' : (existing.lastStatus === 'paused' ? '' : existing.lastStatus),
+        lastError: null,
+        updatedAt: new Date().toISOString(),
+      })
+
+      commit('updateThorondorAgent', record)
+      commit('recordThorondorConnection', {
+        agentId: record.id,
+        timestamp: new Date().toISOString(),
+        kind: paused ? 'paused' : 'resumed',
+        endpoint: record.receiverUrl,
+        message: paused
+          ? 'SIEM pausado desde la consola. No se harán peticiones al host.'
+          : 'SIEM reanudado desde la consola.',
+      })
+      await Promise.all([
+        putOne(STORE_NAMES.agents, record),
+        putMany(STORE_NAMES.history, state.thorondor.connectionHistoryByAgent[record.id] || []),
+      ])
+
+      const shouldUpdateCentral =
+        isThorondorCentralConfigured()
+        && hasThorondorApiToken(state.thorondor.token)
+        && isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)
+
+      if (shouldUpdateCentral) {
+        try {
+          const remote = await updateThorondorCentralAgent(record.id, {
+            siemPaused: paused,
+            pollingPaused: paused,
+          })
+          const merged = normalizeAgentRecord({
+            ...record,
+            ...remote,
+            siemPaused: paused,
+            pollingPaused: paused,
+          })
+          commit('updateThorondorAgent', merged)
+          await putOne(STORE_NAMES.agents, merged)
+          return merged
+        } catch (error) {
+          commit('pushThorondorError', `No se pudo actualizar la pausa del agente en la API central: ${error.message}`)
+          throw error
+        }
+      }
+
+      return record
+    },
+
+    async setThorondorAgentMaintenance({ commit, state }, payload) {
+      const agentId = payload?.agentId || payload?.id
+      const existing = state.thorondor.agents.find((item) => item.id === agentId)
+      if (!existing) {
+        throw new Error('Agente no encontrado')
+      }
+
+      const minutes = Math.max(0, Number(payload?.minutes) || 0)
+      const explicitUntil = String(payload?.alertsPausedUntil || '').trim()
+      const alertsPaused = Boolean(payload?.alertsPaused ?? payload?.enabled ?? (minutes > 0 || Boolean(explicitUntil)))
+      const alertsPausedUntil = alertsPaused
+        ? explicitUntil || new Date(Date.now() + Math.max(minutes, 15) * 60000).toISOString()
+        : ''
+      const maintenanceReason = alertsPaused
+        ? String(payload?.maintenanceReason || payload?.reason || 'Ventana de mantenimiento').trim()
+        : ''
+
+      const record = normalizeAgentRecord({
+        ...existing,
+        alertsPaused,
+        alertsPausedUntil,
+        maintenanceReason,
+        updatedAt: new Date().toISOString(),
+      })
+
+      commit('updateThorondorAgent', record)
+      commit('recordThorondorConnection', {
+        agentId: record.id,
+        timestamp: new Date().toISOString(),
+        kind: alertsPaused ? 'maintenance' : 'maintenance-ended',
+        endpoint: record.receiverUrl,
+        message: alertsPaused
+          ? `Alertas pausadas hasta ${alertsPausedUntil}.`
+          : 'Alertas reanudadas desde la consola.',
+      })
+
+      await Promise.all([
+        putOne(STORE_NAMES.agents, record),
+        putMany(STORE_NAMES.history, state.thorondor.connectionHistoryByAgent[record.id] || []),
+      ])
+
+      const shouldUpdateCentral =
+        isThorondorCentralConfigured()
+        && hasThorondorApiToken(state.thorondor.token)
+        && isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)
+
+      if (shouldUpdateCentral) {
+        try {
+          const remote = await updateThorondorCentralAgent(record.id, {
+            alertsPaused,
+            alertsPausedUntil,
+            maintenanceReason,
+          })
+          const merged = normalizeAgentRecord({
+            ...record,
+            ...remote,
+            alertsPaused,
+            alertsPausedUntil,
+            maintenanceReason,
+          })
+          commit('updateThorondorAgent', merged)
+          await putOne(STORE_NAMES.agents, merged)
+          return merged
+        } catch (error) {
+          commit('pushThorondorError', `No se pudo actualizar el mantenimiento en la API central: ${error.message}`)
+          throw error
+        }
+      }
+
+      return record
+    },
+
     async removeThorondorAgent({ commit, dispatch }, agentId) {
       commit('removeThorondorAgent', agentId)
       await Promise.all([
@@ -1127,21 +1655,100 @@ export default createStore({
         if (!hasThorondorApiToken(state.thorondor.token)) {
           commit('setThorondorCentralStatus', {
             status: 'auth-required',
-            lastError: 'Token JWT requerido para monitorizar hosts.',
+            lastError: 'Token JWT requerido para monitorizar agentes.',
           })
           return false
         }
 
-        if (isThorondorCentralConfigured()) {
+        const shouldUseCentral =
+          state.thorondor.persistence?.effectiveMode === 'cloud'
+          && isThorondorCentralConfigured()
+          && isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)
+
+        if (shouldUseCentral) {
           await dispatch('syncThorondorCentralConsole')
           return true
         }
 
         commit('setThorondorCentralStatus', {
-          status: 'disabled',
-          lastError: 'API central requerida para validar el JWT antes de monitorizar hosts.',
+          status: 'local',
+          lastError: '',
         })
-        return false
+
+        const agents = [...state.thorondor.agents]
+        if (!agents.length) return false
+
+        let successCount = 0
+
+        for (const agent of agents) {
+          if (isThorondorAgentPaused(agent)) {
+            if (agent.lastStatus !== 'paused' || agent.lastError) {
+              commit('updateThorondorAgent', {
+                ...agent,
+                lastStatus: 'paused',
+                lastError: null,
+                updatedAt: new Date().toISOString(),
+              })
+              await putOne(STORE_NAMES.agents, state.thorondor.agents.find((item) => item.id === agent.id) || agent)
+            }
+            continue
+          }
+
+          try {
+            const startedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+            const telemetry = await fetchThorondorTelemetry(agent)
+            const finishedAt = typeof performance !== 'undefined' ? performance.now() : Date.now()
+            telemetry.__request = {
+              latencyMs: Math.max(0, Math.round(finishedAt - startedAt)),
+              endpoint: agent.receiverUrl || agent.hostIp || '',
+            }
+            commit('ingestThorondorTelemetry', {
+              agentId: agent.id,
+              telemetry,
+            })
+            commit('recordThorondorConnection', {
+              agentId: agent.id,
+              timestamp: new Date().toISOString(),
+              kind: 'success',
+              endpoint: agent.receiverUrl,
+              message: 'Polling local correcto.',
+            })
+
+            const currentAgent = state.thorondor.agents.find((item) => item.id === agent.id) || agent
+            if (!isThorondorAgentAlertsPaused(currentAgent)) {
+              const alerts = evaluateThorondorRules({
+                agent: currentAgent,
+                rules: state.thorondor.rules,
+                snapshots: state.thorondor.snapshotsByAgent[agent.id] || [],
+                securityEvents: state.thorondor.securityEventsByAgent[agent.id] || [],
+              })
+              if (alerts.length) {
+                commit('upsertThorondorAlerts', alerts)
+                await dispatch('persistThorondorAlerts')
+              }
+
+              await dispatch('evaluateThorondorSmartResponsesForAgent', agent.id)
+            }
+
+            await dispatch('persistThorondorAgentData', agent.id)
+            successCount += 1
+          } catch (error) {
+            const details = normalizeErrorDetails(error)
+            commit('recordThorondorConnection', {
+              agentId: agent.id,
+              timestamp: new Date().toISOString(),
+              kind: 'error',
+              endpoint: details.endpoint || agent.receiverUrl,
+              error: details.message,
+              detail: details.detail,
+              statusCode: details.status,
+              hints: details.hints,
+            })
+            await dispatch('persistThorondorAgentData', agent.id)
+          }
+        }
+
+        return successCount > 0
       })().finally(() => {
         thorondorPollPromise = null
       })
@@ -1190,6 +1797,9 @@ export default createStore({
       const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
       if (!agent) {
         throw new Error('Agente no encontrado')
+      }
+      if (isThorondorAgentPaused(agent)) {
+        throw new Error('El SIEM de este agente está pausado. Reanúdalo antes de encolar acciones sobre el host.')
       }
 
       requireThorondorApiToken(state)
@@ -1280,6 +1890,9 @@ export default createStore({
       if (!agent) {
         throw new Error('Agente no encontrado')
       }
+      if (isThorondorAgentPaused(agent)) {
+        throw new Error('El SIEM de este agente está pausado. Reanúdalo antes de encolar acciones sobre el host.')
+      }
 
       requireThorondorApiToken(state)
 
@@ -1363,6 +1976,282 @@ export default createStore({
       }
     },
 
+    async executeThorondorSafeAction({ state, commit, dispatch }, payload) {
+      const targetAgentId = payload?.agentId || state.thorondor.selectedAgentId
+      const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
+      if (!agent) {
+        throw new Error('Agente no encontrado')
+      }
+      if (isThorondorAgentPaused(agent)) {
+        throw new Error('El SIEM de este agente está pausado. Reanúdalo antes de encolar acciones sobre el host.')
+      }
+
+      requireThorondorApiToken(state)
+
+      if (!isThorondorUserAdmin(state.thorondor.session?.user)) {
+        throw new Error('Solo un usuario admin puede ejecutar acciones seguras sobre el host.')
+      }
+
+      const commandType = String(payload?.type || '').trim()
+      const allowedTypes = [
+        'block-ip',
+        'unblock-ip',
+        'restart-service',
+        'collect-logs',
+        'list-connected-users',
+        'terminate-user-session',
+        'check-host-health',
+        'set-host-baseline',
+      ]
+      if (!allowedTypes.includes(commandType)) {
+        throw new Error('Acción segura no soportada.')
+      }
+
+      if (!isThorondorCentralConfigured()) {
+        const response = await executeThorondorAgentSafeAction(agent, {
+          ...payload,
+          type: commandType,
+          reason: payload.reason || 'Acción segura desde Thorondor',
+        })
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: payload.ip || payload.serviceName || payload.username || 'host',
+          ok: response?.ok !== false,
+          message: response?.message || 'Acción segura ejecutada.',
+          detail: response?.error || response?.stderr || response?.stdout || '',
+        })
+        return response
+      }
+
+      try {
+        const command = await createThorondorCentralCommand(agent.id, {
+          type: commandType,
+          requestedBy: 'frontend',
+          reason: payload.reason || 'Acción segura desde Thorondor',
+          payload: {
+            ip: payload.ip || '',
+            serviceName: payload.serviceName || '',
+            username: payload.username || '',
+            sessionId: payload.sessionId || '',
+            reason: payload.reason || 'Acción segura desde Thorondor',
+          },
+        })
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: payload.ip || payload.serviceName || payload.username || 'host',
+          ok: true,
+          message: 'Acción segura encolada en el back central.',
+          detail: command.id,
+        })
+        await dispatch('syncThorondorCentralConsole')
+        return {
+          ok: true,
+          queued: true,
+          command,
+          message: 'Acción segura encolada. El agente la ejecutará al consultar la cola.',
+        }
+      } catch (error) {
+        const details = normalizeErrorDetails(error)
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: payload.ip || payload.serviceName || payload.username || 'host',
+          ok: false,
+          message: details.message,
+          detail: details.detail,
+        })
+        throw error
+      }
+    },
+
+    async manageThorondorUserAccount({ state, commit, dispatch }, payload) {
+      const targetAgentId = payload?.agentId || state.thorondor.selectedAgentId
+      const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
+      if (!agent) {
+        throw new Error('Agente no encontrado')
+      }
+      if (isThorondorAgentPaused(agent)) {
+        throw new Error('El SIEM de este agente está pausado. Reanúdalo antes de gestionar usuarios del host.')
+      }
+
+      requireThorondorApiToken(state)
+
+      if (!isThorondorUserAdmin(state.thorondor.session?.user)) {
+        throw new Error('Solo un usuario admin puede gestionar usuarios del host.')
+      }
+
+      if (!isThorondorCentralConfigured()) {
+        throw new Error('API central requerida para gestionar usuarios con validación JWT.')
+      }
+
+      const commandType = String(payload?.type || '').trim()
+      const username = String(payload?.username || '').trim()
+      const group = String(payload?.group || '').trim()
+      const endpoint = `/thorondor/api/console/agents/${agent.id}/commands`
+
+      if (!commandType) {
+        throw new Error('Tipo de operación requerido.')
+      }
+
+      if (commandType !== 'refresh-user-inventory' && !username) {
+        throw new Error('Usuario requerido.')
+      }
+
+      if (['add-user-to-group', 'remove-user-from-group'].includes(commandType) && !group) {
+        throw new Error('Grupo requerido.')
+      }
+
+      try {
+        const command = await createThorondorCentralCommand(agent.id, {
+          type: commandType,
+          requestedBy: 'frontend',
+          reason: payload.reason || 'gestión de usuarios',
+          payload: {
+            username,
+            group,
+            reason: payload.reason || 'gestión de usuarios',
+          },
+        })
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: username || 'inventario',
+          user: username,
+          group,
+          ok: true,
+          message: 'Comando de usuario encolado en el back central.',
+          detail: command.id,
+        })
+        await dispatch('syncThorondorCentralConsole')
+        return {
+          ok: true,
+          queued: true,
+          command,
+          message: 'Comando de usuario encolado. El agente lo ejecutará al consultar la cola.',
+        }
+      } catch (error) {
+        const details = normalizeErrorDetails(error)
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: username || 'inventario',
+          user: username,
+          group,
+          ok: false,
+          message: details.message,
+          detail: details.detail,
+        })
+        throw error
+      }
+    },
+
+    async manageThorondorService({ state, commit, dispatch }, payload) {
+      const targetAgentId = payload?.agentId || state.thorondor.selectedAgentId
+      const agent = state.thorondor.agents.find((item) => item.id === targetAgentId)
+      if (!agent) {
+        throw new Error('Agente no encontrado')
+      }
+      if (isThorondorAgentPaused(agent)) {
+        throw new Error('El SIEM de este agente está pausado. Reanúdalo antes de gestionar servicios del host.')
+      }
+
+      requireThorondorApiToken(state)
+
+      if (!isThorondorUserAdmin(state.thorondor.session?.user)) {
+        throw new Error('Solo un usuario admin puede gestionar servicios del host.')
+      }
+
+      const commandType = String(payload?.type || '').trim()
+      const serviceName = String(payload?.serviceName || payload?.name || '').trim()
+
+      if (!['refresh-service-inventory', 'start-service', 'stop-service', 'restart-service'].includes(commandType)) {
+        throw new Error('Tipo de operación de servicio no soportado.')
+      }
+
+      if (commandType !== 'refresh-service-inventory' && !serviceName) {
+        throw new Error('Servicio requerido.')
+      }
+
+      if (isThorondorCentralConfigured()) {
+        try {
+          const command = await createThorondorCentralCommand(agent.id, {
+            type: commandType,
+            requestedBy: 'frontend',
+            reason: payload.reason || 'gestión de servicios',
+            payload: {
+              serviceName,
+              reason: payload.reason || 'gestión de servicios',
+            },
+          })
+          commit('recordThorondorResponseAction', {
+            agentId: agent.id,
+            agentName: agent.displayName,
+            action: commandType,
+            subject: serviceName || 'inventario de servicios',
+            ok: true,
+            message: 'Comando de servicio encolado en el back central.',
+            detail: command.id,
+          })
+          await dispatch('syncThorondorCentralConsole')
+          return {
+            ok: true,
+            queued: true,
+            command,
+            message: 'Comando de servicio encolado. El agente lo ejecutará al consultar la cola.',
+          }
+        } catch (error) {
+          const details = normalizeErrorDetails(error)
+          commit('recordThorondorResponseAction', {
+            agentId: agent.id,
+            agentName: agent.displayName,
+            action: commandType,
+            subject: serviceName || 'inventario de servicios',
+            ok: false,
+            message: details.message,
+            detail: details.detail,
+          })
+          throw error
+        }
+      }
+
+      try {
+        const response = await manageThorondorAgentService(agent, {
+          type: commandType,
+          serviceName,
+          reason: payload.reason || 'gestión de servicios',
+        })
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: serviceName || 'inventario de servicios',
+          ok: response?.ok !== false,
+          message: response?.message || 'Operación de servicio ejecutada.',
+          detail: response?.stderr || response?.stdout || '',
+        })
+        return response
+      } catch (error) {
+        const details = normalizeErrorDetails(error)
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: commandType,
+          subject: serviceName || 'inventario de servicios',
+          ok: false,
+          message: details.message,
+          detail: details.detail,
+        })
+        throw error
+      }
+    },
+
     async persistThorondorAgentData({ state }, agentId) {
       const snapshots = state.thorondor.snapshotsByAgent[agentId] || []
       const logs = state.thorondor.logsByAgent[agentId] || []
@@ -1391,6 +2280,10 @@ export default createStore({
       await putMany(STORE_NAMES.rules, state.thorondor.rules)
     },
 
+    async persistThorondorSmartResponses({ state }) {
+      await setMeta('smartResponses', state.thorondor.smartResponses || [])
+    },
+
     async persistThorondorCases({ state }) {
       await setMeta('casesByAgent', state.thorondor.casesByAgent || {})
     },
@@ -1409,6 +2302,173 @@ export default createStore({
       commit('removeThorondorRule', ruleId)
       await deleteOne(STORE_NAMES.rules, ruleId)
       await dispatch('persistThorondorRules')
+    },
+
+    async saveThorondorSmartResponse({ commit, state, dispatch }, policy) {
+      const normalized = normalizeThorondorSmartResponses([policy], state.thorondor.agents)[0]
+      let saved = normalized
+
+      const shouldSyncCentral =
+        isThorondorCentralConfigured()
+        && hasThorondorApiToken(state.thorondor.token)
+        && isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)
+
+      if (shouldSyncCentral) {
+        saved = await requestSaveThorondorSmartResponse(normalized)
+      }
+
+      commit('updateThorondorSmartResponse', saved)
+      await dispatch('persistThorondorSmartResponses')
+      return saved
+    },
+
+    async deleteThorondorSmartResponse({ commit, state, dispatch }, policyId) {
+      const shouldSyncCentral =
+        isThorondorCentralConfigured()
+        && hasThorondorApiToken(state.thorondor.token)
+        && isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user)
+
+      if (shouldSyncCentral) {
+        await requestDeleteThorondorSmartResponse(policyId)
+      }
+
+      commit('removeThorondorSmartResponse', policyId)
+      await dispatch('persistThorondorSmartResponses')
+    },
+
+    async executeThorondorSmartResponse({ state, commit, dispatch }, match) {
+      const agentId = match?.agentId || state.thorondor.selectedAgentId
+      const agent = state.thorondor.agents.find((item) => item.id === agentId)
+      if (!agent) {
+        throw new Error('Agente no encontrado')
+      }
+
+      const actionType = match?.actionType || 'create-alert'
+      const subject = String(match?.subject || match?.sourceIp || match?.username || '').trim()
+      const reason = match?.reason || 'Respuesta inteligente de Thorondor'
+      if (isThorondorAgentPaused(agent) && actionType !== 'create-alert') {
+        throw new Error('El SIEM de este agente está pausado. Reanúdalo antes de ejecutar respuestas sobre el host.')
+      }
+
+      try {
+        let result = null
+
+        if (actionType === 'create-alert') {
+          const alert = {
+            id: `smart-${match.id || `${agent.id}-${Date.now()}`}`,
+            agentId: agent.id,
+            ruleId: match.policyId,
+            type: 'smart_response',
+            typeLabel: 'Respuesta inteligente',
+            name: match.policyName || 'Respuesta inteligente',
+            severity: match.severity || 'danger',
+            description: reason,
+            status: 'active',
+            count: match.count || 1,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          }
+          commit('upsertThorondorAlerts', [alert])
+          await dispatch('persistThorondorAlerts')
+          result = { ok: true, alert }
+        } else if (actionType === 'block-ip') {
+          if (!match.sourceIp && !subject) {
+            throw new Error('La politica no ha detectado una IP bloqueable.')
+          }
+          result = await dispatch('blockThorondorIp', {
+            agentId: agent.id,
+            ip: match.sourceIp || subject,
+            reason,
+          })
+        } else if (actionType === 'lock-user') {
+          if (!match.username && !subject) {
+            throw new Error('La politica no ha detectado un usuario bloqueable.')
+          }
+          result = await dispatch('manageThorondorUserAccount', {
+            agentId: agent.id,
+            type: 'lock-user',
+            username: match.username || subject,
+            reason,
+          })
+        } else if (['collect-telemetry', 'collect-logs'].includes(actionType)) {
+          requireThorondorApiToken(state)
+          if (!isThorondorCentralConfigured()) {
+            throw new Error('API central requerida para encolar respuestas inteligentes.')
+          }
+          const command = await createThorondorCentralCommand(agent.id, {
+            type: actionType,
+            requestedBy: 'smart-response',
+            reason,
+            payload: {
+              policyId: match.policyId,
+              subject,
+              sourceIp: match.sourceIp || '',
+              username: match.username || '',
+              reason,
+            },
+          })
+          await dispatch('syncThorondorCentralConsole')
+          result = { ok: true, queued: true, command }
+        } else {
+          throw new Error(`Acción inteligente no soportada: ${actionType}`)
+        }
+
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: `smart:${actionType}`,
+          policyId: match.policyId,
+          policyName: match.policyName,
+          subject,
+          ip: match.sourceIp || '',
+          user: match.username || '',
+          ok: true,
+          message: `${smartActionLabel(actionType)} ejecutada por respuesta inteligente.`,
+          detail: result?.command?.id || result?.alert?.id || result?.message || '',
+        })
+        return result
+      } catch (error) {
+        commit('recordThorondorResponseAction', {
+          agentId: agent.id,
+          agentName: agent.displayName,
+          action: `smart:${actionType}`,
+          policyId: match.policyId,
+          policyName: match.policyName,
+          subject,
+          ip: match.sourceIp || '',
+          user: match.username || '',
+          ok: false,
+          message: error.message,
+          detail: '',
+        })
+        throw error
+      }
+    },
+
+    async evaluateThorondorSmartResponsesForAgent({ state, dispatch }, agentId) {
+      const agent = state.thorondor.agents.find((item) => item.id === agentId)
+      if (!agent) return []
+      if (isThorondorAgentPaused(agent)) return []
+      if (isThorondorAgentAlertsPaused(agent)) return []
+
+      const matches = evaluateThorondorSmartResponses({
+        agent,
+        policies: state.thorondor.smartResponses,
+        securityEvents: state.thorondor.securityEventsByAgent[agent.id] || [],
+        logs: state.thorondor.logsByAgent[agent.id] || [],
+        responseActions: state.thorondor.responseActions,
+      })
+
+      for (const match of matches) {
+        if (!match.autoExecute || match.inCooldown) continue
+        try {
+          await dispatch('executeThorondorSmartResponse', match)
+        } catch {
+          // La accion queda auditada en responseActions; el polling no debe quedar bloqueado.
+        }
+      }
+
+      return matches
     },
 
     async setThorondorAlertStatus({ commit, dispatch }, payload) {

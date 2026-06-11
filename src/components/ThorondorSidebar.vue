@@ -105,15 +105,29 @@ export default {
 
   methods: {
     routeFor(item) {
+      const query = { ...(item.query || {}) }
+
       if (item.agentScoped && this.selectedAgentId) {
-        return { name: item.routeName, query: { agent: this.selectedAgentId } }
+        query.agent = this.selectedAgentId
       }
 
-      return { name: item.routeName }
+      return { name: item.routeName, query }
     },
 
     isActive(item) {
-      return this.$route.name === item.routeName
+      if (this.$route.name !== item.routeName) return false
+
+      if (!item.query) {
+        return true
+      }
+
+      return Object.entries(item.query).every(([key, value]) => {
+        if (key === 'tab' && value === 'overview') {
+          return !this.$route.query.tab || this.$route.query.tab === value
+        }
+
+        return this.$route.query[key] === value
+      })
     },
 
     selectAgent(agentId) {
@@ -218,10 +232,41 @@ export default {
   min-height: 36px;
   border: 1px solid rgba(189, 196, 205, 0.24);
   border-radius: 4px;
-  background: var(--thorondor-soft-background);
+  appearance: none;
+  background:
+    linear-gradient(45deg, transparent 50%, var(--thorondor-gold-strong) 50%)
+      calc(100% - 18px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(135deg, var(--thorondor-gold-strong) 50%, transparent 50%)
+      calc(100% - 13px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 32px), rgba(236, 194, 119, 0.11) calc(100% - 32px)),
+    var(--thorondor-soft-background);
   color: #f4f6f8;
   font-size: 0.8rem;
   outline: none;
+  padding: 0 38px 0 10px;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+}
+
+.sidebar-system select:hover,
+.sidebar-system select:focus {
+  border-color: rgba(236, 194, 119, 0.45);
+  background:
+    linear-gradient(45deg, transparent 50%, #ffe0a6 50%)
+      calc(100% - 18px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(135deg, #ffe0a6 50%, transparent 50%)
+      calc(100% - 13px) calc(50% - 3px) / 6px 6px no-repeat,
+    linear-gradient(90deg, transparent calc(100% - 32px), rgba(236, 194, 119, 0.16) calc(100% - 32px)),
+    var(--thorondor-nested-background);
+  box-shadow: 0 0 0 3px rgba(218, 166, 92, 0.1);
+}
+
+.sidebar-system select:disabled {
+  opacity: 0.62;
+}
+
+.sidebar-system select option {
+  background: #10141a;
+  color: #f4f6f8;
 }
 
 .sidebar-nav {

@@ -18,10 +18,15 @@ function normalizeBaseUrl(agent) {
   return "";
 }
 
-function buildJsonHeaders() {
+function buildJsonHeaders(agent = {}) {
+  const keyAgents = String(agent?.keyAgents || agent?.key_agents || agent?.agentToken || agent?.token || "").trim();
   return {
     Accept: "application/json",
-    "Content-Type": "application/json"
+    "Content-Type": "application/json",
+    ...(keyAgents ? {
+      "X-Thorondor-Key-Agents": keyAgents,
+      "X-Thorondor-Agent-Token": keyAgents
+    } : {})
   };
 }
 
@@ -169,7 +174,7 @@ async function fetchJsonWithTimeout(url, agent, errorLabel) {
       method: "GET",
       mode: "cors",
       cache: "no-store",
-      headers: buildJsonHeaders(),
+      headers: buildJsonHeaders(agent),
       signal: controller.signal
     });
     const payload = await readResponsePayload(response);
@@ -200,7 +205,7 @@ async function postJsonWithTimeout(url, agent, payload, errorLabel) {
       method: "POST",
       mode: "cors",
       cache: "no-store",
-      headers: buildJsonHeaders(),
+      headers: buildJsonHeaders(agent),
       body: JSON.stringify(payload || {}),
       signal: controller.signal
     });
@@ -231,7 +236,10 @@ export function buildThorondorAgentEndpoints(agent) {
     logsUrl: `${baseUrl}/logs`,
     blocksUrl: `${baseUrl}/response/blocks`,
     blockIpUrl: `${baseUrl}/response/block-ip`,
-    unblockIpUrl: `${baseUrl}/response/unblock-ip`
+    unblockIpUrl: `${baseUrl}/response/unblock-ip`,
+    userManagementUrl: `${baseUrl}/response/user-management`,
+    serviceManagementUrl: `${baseUrl}/response/service-management`,
+    safeActionUrl: `${baseUrl}/response/safe-action`
   };
 }
 
@@ -280,7 +288,46 @@ export async function unblockThorondorIp(agent, payload) {
   return postJsonWithTimeout(endpoints.unblockIpUrl, agent, payload, "Desbloqueo de IP");
 }
 
+export async function manageThorondorAgentUser(agent, payload) {
+  const endpoints = buildThorondorAgentEndpoints(agent);
+  if (!endpoints.baseUrl) {
+    throw new Error("Endpoint del agente no configurado");
+  }
+
+  return postJsonWithTimeout(endpoints.userManagementUrl, agent, payload, "Gestión de usuario");
+}
+
+export async function manageThorondorAgentService(agent, payload) {
+  const endpoints = buildThorondorAgentEndpoints(agent);
+  if (!endpoints.baseUrl) {
+    throw new Error("Endpoint del agente no configurado");
+  }
+
+  return postJsonWithTimeout(endpoints.serviceManagementUrl, agent, payload, "Gestión de servicio");
+}
+
+export async function executeThorondorAgentSafeAction(agent, payload) {
+  const endpoints = buildThorondorAgentEndpoints(agent);
+  if (!endpoints.baseUrl) {
+    throw new Error("Endpoint del agente no configurado");
+  }
+
+  return postJsonWithTimeout(endpoints.safeActionUrl, agent, payload, "AcciÃ³n segura");
+}
+
 export function buildThorondorRequestRules(agent) {
+  const paused = Boolean(
+    agent?.siemPaused ||
+    agent?.siem_paused ||
+    agent?.pollingPaused ||
+    agent?.polling_paused ||
+    agent?.monitoringPaused ||
+    agent?.paused
+  );
+  if (paused) {
+    return [];
+  }
+
   const endpoints = buildThorondorAgentEndpoints(agent);
 
   return [
@@ -291,7 +338,7 @@ export function buildThorondorRequestRules(agent) {
       intervalSeconds: Math.max(15, Number(agent.intervalSeconds) || 30),
       method: "GET",
       url: endpoints.healthUrl,
-      headers: buildJsonHeaders()
+      headers: buildJsonHeaders(agent)
     },
     {
       id: `${agent.id}-telemetry`,
@@ -300,7 +347,7 @@ export function buildThorondorRequestRules(agent) {
       intervalSeconds: Math.max(15, Number(agent.intervalSeconds) || 30),
       method: "GET",
       url: endpoints.telemetryUrl,
-      headers: buildJsonHeaders()
+      headers: buildJsonHeaders(agent)
     }
   ];
 }

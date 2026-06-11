@@ -73,6 +73,24 @@ export function fetchThorondorCentralSnapshot() {
   return requestCentral('/console/snapshot')
 }
 
+export function fetchThorondorEmailAlertSettings() {
+  return requestCentral('/console/email-alerts/settings')
+}
+
+export function updateThorondorEmailAlertSettings(settings) {
+  return requestCentral('/console/email-alerts/settings', {
+    method: 'PUT',
+    body: JSON.stringify(settings || {}),
+  })
+}
+
+export function sendThorondorEmailAlertTest() {
+  return requestCentral('/console/email-alerts/test', {
+    method: 'POST',
+    body: JSON.stringify({}),
+  })
+}
+
 export function fetchThorondorCentralEvents(params = {}) {
   const query = new URLSearchParams()
   Object.entries(params).forEach(([key, value]) => {
@@ -88,6 +106,39 @@ export function createThorondorCentralCommand(agentId, command) {
   return requestCentral(`/console/agents/${encodeURIComponent(agentId)}/commands`, {
     method: 'POST',
     body: JSON.stringify(command || {}),
+  })
+}
+
+export function updateThorondorCentralAgent(agentId, payload) {
+  return requestCentral(`/console/agents/${encodeURIComponent(agentId)}`, {
+    method: 'PATCH',
+    body: JSON.stringify(payload || {}),
+  })
+}
+
+export function fetchThorondorSmartResponses() {
+  return requestCentral('/console/smart-responses')
+}
+
+export function saveThorondorSmartResponse(policy) {
+  const id = String(policy?.id || '').trim()
+  if (id) {
+    return requestCentral(`/console/smart-responses/${encodeURIComponent(id)}`, {
+      method: 'PUT',
+      body: JSON.stringify(policy || {}),
+    })
+  }
+
+  return requestCentral('/console/smart-responses', {
+    method: 'POST',
+    body: JSON.stringify(policy || {}),
+  })
+}
+
+export function deleteThorondorSmartResponse(id) {
+  return requestCentral(`/console/smart-responses/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+    body: JSON.stringify({}),
   })
 }
 

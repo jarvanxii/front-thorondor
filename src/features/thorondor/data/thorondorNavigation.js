@@ -4,7 +4,7 @@ export const THORONDOR_TOP_NAV_ITEMS = [
   { label: 'Generador de Agentes', routeName: 'thorondor-agent-generator' },
   { label: 'Dashboard', routeName: 'thorondor-dashboard' },
   { label: 'Eventos', routeName: 'thorondor-events' },
-  { label: 'Hosts', routeName: 'thorondor-agents' },
+  { label: 'Agentes', routeName: 'thorondor-agents' },
 ]
 
 export const THORONDOR_SIDEBAR_GROUPS = [
@@ -16,13 +16,54 @@ export const THORONDOR_SIDEBAR_GROUPS = [
         label: 'Dashboard del host',
         routeName: 'thorondor-host-detail',
         agentScoped: true,
+        query: { tab: 'overview' },
+      },
+      {
+        id: 'logs',
+        label: 'Logs',
+        routeName: 'thorondor-host-detail',
+        agentScoped: true,
+        query: { tab: 'logs' },
+      },
+      {
+        id: 'hardware',
+        label: 'Hardware',
+        routeName: 'thorondor-host-detail',
+        agentScoped: true,
+        query: { tab: 'hardware' },
+      },
+      {
+        id: 'processes',
+        label: 'Procesos',
+        routeName: 'thorondor-host-detail',
+        agentScoped: true,
+        query: { tab: 'processes' },
+      },
+      {
+        id: 'network',
+        label: 'Red',
+        routeName: 'thorondor-host-detail',
+        agentScoped: true,
+        query: { tab: 'network' },
+      },
+      {
+        id: 'users',
+        label: 'Usuarios',
+        routeName: 'thorondor-host-detail',
+        agentScoped: true,
+        query: { tab: 'users' },
+      },
+      {
+        id: 'commands',
+        label: 'Comandos',
+        routeName: 'thorondor-command-audit',
+        agentScoped: true,
       },
       {
         id: 'alerts',
         label: 'Alertas',
         routeName: 'thorondor-alerts',
         agentScoped: true,
-        badge: 'Host',
       },
       {
         id: 'rules',
@@ -30,11 +71,12 @@ export const THORONDOR_SIDEBAR_GROUPS = [
         routeName: 'thorondor-monitorization-rules',
         agentScoped: true,
       },
-    ],
-  },
-  {
-    label: 'Respuesta e investigación',
-    items: [
+      {
+        id: 'smart_response',
+        label: 'Respuesta Inteligente',
+        routeName: 'thorondor-smart-response',
+        agentScoped: true,
+      },
       {
         id: 'ip_blocks',
         label: 'Bloqueo de IPs',
@@ -42,17 +84,10 @@ export const THORONDOR_SIDEBAR_GROUPS = [
         agentScoped: true,
       },
       {
-        id: 'commands',
-        label: 'Comandos ejecutados',
-        routeName: 'thorondor-command-audit',
-        agentScoped: true,
-      },
-      {
         id: 'cases',
         label: 'Casos',
         routeName: 'thorondor-cases',
         agentScoped: true,
-        badge: 'IRIS',
       },
     ],
   },
@@ -62,6 +97,7 @@ export const THORONDOR_HOST_SCOPED_ROUTES = [
   'thorondor-host-detail',
   'thorondor-alerts',
   'thorondor-monitorization-rules',
+  'thorondor-smart-response',
   'thorondor-ip-blocks',
   'thorondor-command-audit',
   'thorondor-cases',
@@ -70,8 +106,44 @@ export const THORONDOR_HOST_SCOPED_ROUTES = [
 export const THORONDOR_HOST_ROUTE_LABELS = [
   {
     id: 'dashboard',
-    label: 'Dashboard',
+    label: 'Dashboard del host',
     routeName: 'thorondor-host-detail',
+    query: { tab: 'overview' },
+  },
+  {
+    id: 'logs',
+    label: 'Logs',
+    routeName: 'thorondor-host-detail',
+    query: { tab: 'logs' },
+  },
+  {
+    id: 'hardware',
+    label: 'Hardware',
+    routeName: 'thorondor-host-detail',
+    query: { tab: 'hardware' },
+  },
+  {
+    id: 'processes',
+    label: 'Procesos',
+    routeName: 'thorondor-host-detail',
+    query: { tab: 'processes' },
+  },
+  {
+    id: 'network',
+    label: 'Red',
+    routeName: 'thorondor-host-detail',
+    query: { tab: 'network' },
+  },
+  {
+    id: 'users',
+    label: 'Usuarios',
+    routeName: 'thorondor-host-detail',
+    query: { tab: 'users' },
+  },
+  {
+    id: 'commands',
+    label: 'Comandos',
+    routeName: 'thorondor-command-audit',
   },
   {
     id: 'alerts',
@@ -84,8 +156,13 @@ export const THORONDOR_HOST_ROUTE_LABELS = [
     routeName: 'thorondor-monitorization-rules',
   },
   {
+    id: 'smart_response',
+    label: 'Respuesta Inteligente',
+    routeName: 'thorondor-smart-response',
+  },
+  {
     id: 'ip_blocks',
-    label: 'Bloqueo IPs',
+    label: 'Bloqueo de IPs',
     routeName: 'thorondor-ip-blocks',
   },
   {

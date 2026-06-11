@@ -143,6 +143,7 @@ export async function loadThorondorPersistence() {
     lastSweepAt,
     generatorDraft,
     casesByAgent,
+    smartResponses,
   ] = await Promise.all([
     getAll(STORE_NAMES.agents),
     getAll(STORE_NAMES.snapshots),
@@ -154,6 +155,7 @@ export async function loadThorondorPersistence() {
     getMeta('lastSweepAt', null),
     getMeta('generatorDraft', null),
     getMeta('casesByAgent', {}),
+    getMeta('smartResponses', null),
   ])
 
   return {
@@ -167,6 +169,7 @@ export async function loadThorondorPersistence() {
     lastSweepAt,
     generatorDraft,
     casesByAgent,
+    smartResponses,
   }
 }
 

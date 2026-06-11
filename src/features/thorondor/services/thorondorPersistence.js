@@ -119,6 +119,7 @@ function normalizePersistencePayload(payload = {}) {
     lastSweepAt: payload.lastSweepAt || null,
     generatorDraft: payload.generatorDraft || null,
     casesByAgent: payload.casesByAgent || {},
+    smartResponses: Array.isArray(payload.smartResponses) ? payload.smartResponses : null,
   }
 }
 
@@ -133,6 +134,7 @@ function hasPortableThorondorData(payload = {}) {
     data.alerts,
     data.rules,
     data.history,
+    data.smartResponses || [],
   ].some((items) => items.length > 0)
 }
 
@@ -160,6 +162,7 @@ async function cacheDatasetLocally(payload) {
     setLocalMeta('lastSweepAt', data.lastSweepAt),
     setLocalMeta('generatorDraft', data.generatorDraft),
     setLocalMeta('casesByAgent', data.casesByAgent),
+    setLocalMeta('smartResponses', data.smartResponses),
   ])
 }
 
