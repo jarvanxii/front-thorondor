@@ -19,12 +19,9 @@
         <section class="section-box">
             <div class="control-grid compact-grid">
                 <div class="control-field">
-                    <label class="field-label" for="selected-agent">Sistema</label>
-                    <select id="selected-agent" class="form-select input-dark" :value="selectedAgentId" @change="selectAgentAndSync($event.target.value)">
-                        <option v-for="agent in dashboardCards" :key="agent.id" :value="agent.id">
-                            {{ agent.displayName }} · {{ agent.systemName }}
-                        </option>
-                    </select>
+                    <span class="field-label">Sistema</span>
+                    <strong>{{ selectedAgent ? selectedAgent.displayName : "Sin sistema seleccionado" }}</strong>
+                    <small>{{ selectedAgent ? agentEndpoint(selectedAgent) : "Elige un sistema desde la barra lateral." }}</small>
                 </div>
                 <div class="control-field">
                     <label class="field-label" for="history-range">Rango histórico</label>
@@ -2208,7 +2205,6 @@ export default {
                     || this.currentSessionUser?.isAdmin
                     || this.currentSessionUser?.is_admin
                     || this.currentSessionUser?.admin
-                    || (Array.isArray(this.currentSessionUser?.roles) && this.currentSessionUser.roles.includes("admin"))
             );
         },
 
@@ -2558,16 +2554,61 @@ export default {
             handler() {
                 this.syncDetailTabFromRoute();
             }
+        },
+        selectedAgentId() {
+            this.syncHostRouteQuery();
+        },
+        dashboardCards() {
+            this.syncSelectedAgentFromRoute();
+            this.syncHostRouteQuery();
         }
     },
 
     methods: {
         normalizeDetailTab(tabId) {
-            return this.detailTabs.some((tab) => tab.id === tabId) ? tabId : "overview";
+            const rawTab = Array.isArray(tabId) ? tabId[0] : tabId;
+            const normalizedTab = String(rawTab || "overview").trim();
+            const aliases = {
+                dashboard: "overview",
+                home: "overview",
+                process: "processes",
+                networking: "network",
+                user: "users",
+                log: "logs"
+            };
+            const nextTab = aliases[normalizedTab] || normalizedTab;
+            return this.detailTabs.some((tab) => tab.id === nextTab) ? nextTab : "overview";
         },
 
         syncDetailTabFromRoute() {
             this.detailTab = this.normalizeDetailTab(this.$route.query.tab);
+            this.syncHostRouteQuery();
+        },
+
+        syncHostRouteQuery() {
+            if (this.$route.name !== "thorondor-host-detail") return;
+
+            const query = { ...this.$route.query };
+            const nextTab = this.normalizeDetailTab(query.tab || this.detailTab);
+            const currentAgent = Array.isArray(query.agent) ? query.agent[0] : query.agent;
+            const nextAgent = this.selectedAgentId || currentAgent || "";
+
+            if (nextTab) {
+                query.tab = nextTab;
+            }
+
+            if (nextAgent) {
+                query.agent = nextAgent;
+            }
+
+            const sameTab = this.$route.query.tab === query.tab;
+            const sameAgent = (this.$route.query.agent || "") === (query.agent || "");
+            if (sameTab && sameAgent) return;
+
+            this.$router.replace({
+                name: "thorondor-host-detail",
+                query
+            });
         },
 
         setDetailTab(tabId) {
@@ -2585,21 +2626,17 @@ export default {
         },
 
         syncSelectedAgentFromRoute() {
-            const routeAgent = this.$route.query.agent;
+            const routeAgent = Array.isArray(this.$route.query.agent)
+                ? this.$route.query.agent[0]
+                : this.$route.query.agent;
             if (routeAgent && this.dashboardCards.find((item) => item.id === routeAgent)) {
                 this.selectAgent(routeAgent);
+                this.syncHostRouteQuery();
                 return;
             }
 
             this.ensureSelectedAgent();
-        },
-
-        selectAgentAndSync(agentId) {
-            this.selectAgent(agentId);
-            this.$router.replace({
-                name: "thorondor-host-detail",
-                query: { ...this.$route.query, agent: agentId, tab: this.detailTab }
-            });
+            this.syncHostRouteQuery();
         },
 
         formatUserStarted(value) {

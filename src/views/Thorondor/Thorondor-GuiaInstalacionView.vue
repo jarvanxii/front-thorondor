@@ -178,7 +178,7 @@ export default {
             return [
                 {
                     label: "Permisos elevados",
-                    copy: this.isWindowsHostOs ? "PowerShell debe abrirse como administrador." : "Ejecuta con root o sudo."
+                    copy: this.isWindowsHostOs ? "El instalador pedirá administrador si hace falta." : "Ejecuta con root o sudo."
                 },
                 {
                     label: "Un único instalador",
@@ -200,15 +200,15 @@ export default {
                 return [
                     {
                         label: "Permisos",
-                        copy: "El instalador incluye #Requires -RunAsAdministrator. Si PowerShell no está elevado, se detiene."
+                        copy: "Puedes ejecutarlo desde PowerShell normal; si no está elevado, pedirá permisos de administrador."
                     },
                     {
                         label: "Dependencias",
-                        copy: "Usa PowerShell 5.1+, .NET SDK 8, WiX Toolset y Python 3. Si faltan y winget existe, intenta instalarlos."
+                        copy: "Usa PowerShell 5.1+ y Python 3.8+. Si falta Python y existe winget, intenta instalarlo automáticamente."
                     },
                     {
-                        label: "Instalación real",
-                        copy: "Genera artefactos en ProgramData, compila thorondor-agent.msi, lo instala con msiexec y deja una copia del MSI en el Escritorio."
+                        label: "Instalación",
+                        copy: "Crea C:\\ProgramData\\Thorondor-Agent, un venv aislado, el agente, logs, configuración y desinstalador."
                     },
                     {
                         label: "Arranque",
@@ -220,7 +220,7 @@ export default {
                     },
                     {
                         label: "Desinstalación",
-                        copy: "El desinstalador también requiere administrador; elimina tarea, procesos, reglas de firewall asociadas, MSI y carpetas."
+                        copy: "El desinstalador también pide administrador; elimina tarea, procesos, reglas de firewall del agente y carpetas."
                     }
                 ];
             }
@@ -265,8 +265,8 @@ export default {
                     {
                         title: "Ejecutar instalador",
                         badge: "Admin",
-                        copy: "Abre PowerShell como administrador. El asistente prepara dependencias, genera el MSI, lo instala y crea el desinstalador.",
-                        command: `Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass\n.\\${this.installerName}`
+                        copy: "Ejecuta el instalador. Si PowerShell no está elevado, pedirá permisos de administrador y continuará la instalación.",
+                        command: `powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\\${this.installerName}"`
                     },
                     {
                         title: "Validar instalación",
@@ -305,7 +305,7 @@ export default {
                     title: "Ejecutar desinstalador",
                     badge: this.osLabel,
                     copy: this.isWindowsHostOs
-                        ? "Abre PowerShell como administrador. Retira tarea, procesos, MSI, reglas asociadas y carpetas del agente."
+                        ? "Ejecuta el desinstalador. Si hace falta, pedirá permisos de administrador y retirará tarea, procesos, reglas y carpetas del agente."
                         : "Ejecuta con sudo o root. Retira systemd, procesos, sudoers limitado, usuario creado por el instalador y carpeta del agente.",
                     command: this.isWindowsHostOs
                         ? `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${this.uninstallPath}"`

@@ -5,33 +5,20 @@
       title="Bloqueo de IPs"
       copy="Bloqueos manuales por host. Revisión de IPs cortadas e intentos fallidos recientes."
       badge="Manual"
-      :badge-note="`${totalBlockedIps} IPs bloqueadas en está sesión.`"
+      :badge-note="`${selectedBlockedIps.length} IPs bloqueadas en este host.`"
     />
 
     <section class="section-box">
       <section class="ip-block-layout">
         <article class="tool-card">
           <header class="card-head">
-            <h5>Control por sistema</h5>
+            <h5>Control del host</h5>
             <span class="mini-badge">{{
               selectedAgent ? selectedAgent.displayName : 'Sin agente'
             }}</span>
           </header>
 
           <section class="control-grid compact-grid ip-control-grid">
-            <label class="control-field full-span" for="block-agent">
-              <span class="field-label">Sistema</span>
-              <select
-                id="block-agent"
-                v-model="draft.agentId"
-                class="form-select input-dark"
-                @change="handleAgentChange"
-              >
-                <option v-for="agent in dashboardCards" :key="agent.id" :value="agent.id">
-                  {{ agent.displayName }}
-                </option>
-              </select>
-            </label>
             <label class="control-field full-span" for="block-ip">
               <span class="field-label">IP</span>
               <input
@@ -325,7 +312,6 @@ export default {
   data() {
     return {
       draft: {
-        agentId: '',
         ip: '',
         reason: '',
       },
@@ -340,7 +326,7 @@ export default {
 
   computed: {
     effectiveAgentId() {
-      return this.draft.agentId || this.selectedAgentId
+      return this.selectedAgentId
     },
 
     selectedBlockedIps() {
@@ -365,13 +351,6 @@ export default {
 
     latestConnection() {
       return this.selectedConnectionHistory[0] || null
-    },
-
-    totalBlockedIps() {
-      return Object.values(this.thorondorState.blockedIpsByAgent || {}).reduce(
-        (total, list) => total + list.length,
-        0,
-      )
     },
 
     canSubmit() {
@@ -518,15 +497,6 @@ export default {
   },
 
   watch: {
-    selectedAgentId: {
-      immediate: true,
-      handler(value) {
-        if (!this.draft.agentId && value) {
-          this.draft.agentId = value
-        }
-      },
-    },
-
     effectiveAgentId: {
       immediate: true,
       handler(value) {
@@ -538,11 +508,6 @@ export default {
   },
 
   methods: {
-    async handleAgentChange() {
-      this.selectAgent(this.draft.agentId)
-      await this.refreshBlocks()
-    },
-
     async refreshBlocks() {
       if (!this.effectiveAgentId) return
       this.refreshing = true

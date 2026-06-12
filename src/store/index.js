@@ -572,9 +572,117 @@ function normalizeThorondorCasesByAgent(casesByAgent, agents) {
   const agentIds = new Set((agents || []).map((agent) => agent.id))
   return Object.entries(casesByAgent || {}).reduce((acc, [agentId, cases]) => {
     if (!agentIds.has(agentId)) return acc
-    acc[agentId] = Array.isArray(cases) ? cases : []
+    acc[agentId] = Array.isArray(cases)
+      ? cases.map((item) => normalizeThorondorCase(item, agentId)).filter(Boolean)
+      : []
     return acc
   }, {})
+}
+
+function normalizeCaseSeverity(value) {
+  const severity = String(value || '').trim().toLowerCase()
+  return ['low', 'medium', 'high', 'critical'].includes(severity) ? severity : 'medium'
+}
+
+function normalizeCaseStatus(value) {
+  const status = String(value || '').trim().toLowerCase()
+  return ['new', 'triage', 'contained', 'resolved', 'false_positive'].includes(status)
+    ? status
+    : 'new'
+}
+
+function normalizeCaseTimelineEntry(entry, fallbackTimestamp, index) {
+  if (!entry) return null
+  const title = textOrEmpty(entry.title || entry.label)
+  const copy = textOrEmpty(entry.copy || entry.note || entry.message || entry.description)
+  if (!title && !copy) return null
+
+  return {
+    id: textOrEmpty(entry.id) || `case-entry-${fallbackTimestamp}-${index}`,
+    type: textOrEmpty(entry.type) || 'note',
+    title: title || 'Nota registrada',
+    copy,
+    actor: textOrEmpty(entry.actor) || 'Thorondor',
+    tone: textOrEmpty(entry.tone) || 'timeline-info',
+    timestamp: textOrEmpty(entry.timestamp || entry.createdAt || entry.updatedAt) || fallbackTimestamp,
+    pinned: Boolean(entry.pinned),
+  }
+}
+
+function normalizeThorondorCase(caseItem, fallbackAgentId = '') {
+  if (!caseItem) return null
+  const now = new Date().toISOString()
+  const id = textOrEmpty(caseItem.id) || `case-${Date.now()}`
+  const agentId = textOrEmpty(caseItem.agentId || fallbackAgentId)
+  if (!agentId) return null
+
+  const createdAt = textOrEmpty(caseItem.createdAt) || now
+  const initialNote = textOrEmpty(caseItem.note)
+  const timeline = (Array.isArray(caseItem.timeline) ? caseItem.timeline : [])
+    .map((entry, index) => normalizeCaseTimelineEntry(entry, createdAt, index))
+    .filter(Boolean)
+
+  if (!timeline.some((entry) => entry.type === 'created')) {
+    timeline.unshift({
+      id: `${id}-created`,
+      type: 'created',
+      title: 'Caso creado',
+      copy: 'Investigacion abierta para este host.',
+      actor: 'Thorondor',
+      tone: 'timeline-info',
+      timestamp: createdAt,
+    })
+  }
+
+  if (initialNote && !timeline.some((entry) => entry.id === `${id}-initial-note`)) {
+    timeline.push({
+      id: `${id}-initial-note`,
+      type: 'note',
+      title: 'Nota inicial',
+      copy: initialNote,
+      actor: textOrEmpty(caseItem.owner) || 'Operador',
+      tone: 'timeline-note',
+      timestamp: createdAt,
+    })
+  }
+
+  const legacyNotes = Array.isArray(caseItem.notes) ? caseItem.notes : []
+  legacyNotes.forEach((note, index) => {
+    const normalized = normalizeCaseTimelineEntry(
+      typeof note === 'string' ? { copy: note, title: 'Nota' } : note,
+      createdAt,
+      index,
+    )
+    if (normalized && !timeline.some((entry) => entry.id === normalized.id)) {
+      timeline.push({
+        ...normalized,
+        type: normalized.type || 'note',
+        tone: normalized.tone || 'timeline-note',
+      })
+    }
+  })
+
+  return {
+    ...caseItem,
+    id,
+    agentId,
+    title: textOrEmpty(caseItem.title) || 'Investigacion del host',
+    status: normalizeCaseStatus(caseItem.status),
+    severity: normalizeCaseSeverity(caseItem.severity),
+    owner: textOrEmpty(caseItem.owner),
+    summary: textOrEmpty(caseItem.summary),
+    note: initialNote,
+    alerts: Array.isArray(caseItem.alerts) ? caseItem.alerts.filter(Boolean) : [],
+    evidence: Array.isArray(caseItem.evidence) ? caseItem.evidence.filter(Boolean) : [],
+    tasks: (Array.isArray(caseItem.tasks) ? caseItem.tasks : []).map((task, index) => ({
+      id: textOrEmpty(task.id) || `task-${index + 1}`,
+      label: textOrEmpty(task.label || task.title) || 'Tarea pendiente',
+      done: Boolean(task.done),
+    })),
+    timeline: timeline.sort((a, b) => String(a.timestamp).localeCompare(String(b.timestamp))),
+    createdAt,
+    updatedAt: textOrEmpty(caseItem.updatedAt) || createdAt,
+  }
 }
 
 function mapCentralIpListByAgent(items, type) {
@@ -651,8 +759,7 @@ function isThorondorUserAdmin(user) {
       user?.usuario_admin ||
       user?.isAdmin ||
       user?.is_admin ||
-      user?.admin ||
-      (Array.isArray(user?.roles) && user.roles.includes('admin')),
+      user?.admin,
   )
 }
 
@@ -1140,18 +1247,23 @@ export default createStore({
 
       const cases = state.thorondor.casesByAgent[payload.agentId]
       const index = cases.findIndex((item) => item.id === payload.id)
-      const record = {
-        ...payload,
-        updatedAt: new Date().toISOString(),
-      }
+      const record = normalizeThorondorCase(
+        {
+          ...payload,
+          updatedAt: new Date().toISOString(),
+        },
+        payload.agentId,
+      )
+      if (!record) return
 
       if (index >= 0) {
-        cases.splice(index, 1, {
+        const merged = normalizeThorondorCase({
           ...cases[index],
           ...record,
         })
+        cases.splice(index, 1, merged)
       } else {
-        cases.unshift({
+        cases.unshift(normalizeThorondorCase({
           createdAt: new Date().toISOString(),
           status: 'new',
           severity: 'medium',
@@ -1159,7 +1271,7 @@ export default createStore({
           notes: [],
           tasks: [],
           ...record,
-        })
+        }))
       }
     },
 

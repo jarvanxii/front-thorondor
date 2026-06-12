@@ -128,14 +128,6 @@
                       <span>Nombre visible</span>
                       <input v-model.trim="operatorSettings.displayName" type="text" placeholder="Nombre visible" />
                     </label>
-                    <label class="settings-field">
-                      <span>Rol operativo</span>
-                      <select v-model="operatorSettings.role">
-                        <option>Administrador</option>
-                        <option>Operador</option>
-                        <option>Solo lectura</option>
-                      </select>
-                    </label>
                     <label class="settings-field settings-field--full">
                       <span>Email de alertas</span>
                       <input v-model.trim="operatorSettings.alertEmail" type="email" placeholder="Email de alertas" />
@@ -584,7 +576,6 @@ const THORONDOR_OPERATOR_SETTINGS_KEY = 'thorondor.operator.settings'
 function buildDefaultOperatorSettings() {
   return {
     displayName: '',
-    role: 'Administrador',
     alertEmail: '',
     timezone: 'Europe/Madrid',
     digestCadence: 'Tiempo real',
@@ -676,9 +667,9 @@ export default {
       accountMenuItems: [
         {
           key: 'account',
-          kicker: 'Operador',
+          kicker: 'Cuenta',
           label: 'Cuenta y seguridad',
-          copy: 'Perfil, rol, acceso y confirmaciones',
+          copy: 'Perfil, acceso y confirmaciones',
         },
         {
           key: 'preferences',
@@ -818,9 +809,7 @@ export default {
           this.currentSessionUser?.usuario_admin ||
           this.currentSessionUser?.isAdmin ||
           this.currentSessionUser?.is_admin ||
-          this.currentSessionUser?.admin ||
-          (Array.isArray(this.currentSessionUser?.roles) &&
-            this.currentSessionUser.roles.includes('admin')),
+          this.currentSessionUser?.admin,
       )
     },
 
@@ -883,7 +872,7 @@ export default {
           '',
       ).trim()
 
-      return sessionDisplayName || 'Operador local'
+      return sessionDisplayName || 'Usuario local'
     },
 
     operatorInitials() {
@@ -900,7 +889,7 @@ export default {
     },
 
     operatorSessionLabel() {
-      return `${this.operatorSettings.role} - sesión local`
+      return this.currentSessionUser?.email || 'Sesión activa'
     },
 
     persistenceModeTitle() {
@@ -1251,7 +1240,7 @@ export default {
         return enabled ? 'Usuario activado.' : 'Usuario deshabilitado.'
       }
       if (field === 'usuarioAdmin') {
-        return enabled ? 'Usuario marcado como administrador.' : 'Rol admin retirado.'
+        return enabled ? 'Usuario marcado como administrador.' : 'Permiso admin retirado.'
       }
       if (field === 'usuarioAutorizado') {
         return enabled
@@ -1549,11 +1538,15 @@ export default {
     },
 
     routeFor(item) {
+      const query = { ...(item.query || {}) }
+
       if (item.agentScoped && this.selectedAgentId) {
-        return { name: item.routeName, query: { agent: this.selectedAgentId } }
+        query.agent = this.selectedAgentId
       }
 
-      return { name: item.routeName }
+      return Object.keys(query).length
+        ? { name: item.routeName, query }
+        : { name: item.routeName }
     },
 
     formatErrorTime(timestamp) {
@@ -1618,21 +1611,25 @@ export default {
 }
 
 .thorondor-top-nav {
-  display: flex;
+  --top-nav-button-width: 148px;
+  --top-nav-button-height: var(--main-header-height);
+  --top-nav-gap: 0px;
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(112px, var(--top-nav-button-width));
   justify-self: center;
-  width: min(100%, 760px);
+  width: min(100%, calc((var(--top-nav-button-width) * 6) + (var(--top-nav-gap) * 5)));
   min-width: 0;
   align-items: center;
   justify-content: center;
-  gap: 5px;
+  gap: var(--top-nav-gap);
   overflow-x: auto;
-  padding: 5px;
-  border: 1px solid rgba(236, 194, 119, 0.16);
-  border-radius: 4px;
-  background: var(--thorondor-nested-background);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 10px 22px rgba(0, 0, 0, 0.22);
+  min-height: var(--main-header-height);
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
   scrollbar-width: none;
 }
 
@@ -1641,33 +1638,84 @@ export default {
 }
 
 .top-nav-link {
+  position: relative;
   display: inline-flex;
-  flex: 0 0 auto;
-  min-width: 96px;
-  min-height: 36px;
+  width: var(--top-nav-button-width);
+  height: var(--top-nav-button-height);
   align-items: center;
   justify-content: center;
-  width: auto;
-  padding: 0 10px;
-  border-radius: 3px;
-  color: #aeb8c4;
-  font-size: 0.8rem;
+  overflow: hidden;
+  padding: 0 12px;
+  border: 0;
+  border-left: 1px solid rgba(236, 194, 119, 0.12);
+  border-right: 1px solid rgba(154, 169, 187, 0.08);
+  border-radius: 0;
+  background: transparent;
+  color: rgba(226, 234, 244, 0.78);
+  font-size: 0.74rem;
   font-weight: 800;
+  letter-spacing: 0.01em;
+  line-height: 1.15;
   text-decoration: none;
+  text-align: center;
   white-space: nowrap;
+  box-shadow: none;
+  transition:
+    border-color 0.16s ease,
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease,
+    box-shadow 0.16s ease;
+}
+
+.top-nav-link::after {
+  position: absolute;
+  right: 12%;
+  bottom: 0;
+  left: 12%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.92), transparent);
+  opacity: 0;
+  transform: scaleX(0.35);
+  transform-origin: center;
+  content: "";
+  transition:
+    opacity 0.18s ease,
+    transform 0.22s ease,
+    box-shadow 0.18s ease;
 }
 
 .top-nav-link:hover {
-  color: #f8fafc;
-  background: rgba(218, 166, 92, 0.08);
+  border-left-color: rgba(236, 194, 119, 0.24);
+  border-right-color: rgba(236, 194, 119, 0.18);
+  background:
+    radial-gradient(circle at 50% 0%, rgba(236, 194, 119, 0.12), transparent 72%),
+    linear-gradient(180deg, rgba(236, 194, 119, 0.06), rgba(255, 255, 255, 0));
+  color: #f5d99d;
+  transform: translateY(-1px);
+  box-shadow:
+    inset 0 0 18px rgba(236, 194, 119, 0.1),
+    inset 0 1px 0 rgba(255, 240, 180, 0.04);
 }
 
 .top-nav-link.router-link-active {
-  background: linear-gradient(180deg, rgba(218, 166, 92, 0.2), rgba(126, 93, 42, 0.16));
-  color: #f8fafc;
+  border-left-color: rgba(236, 194, 119, 0.32);
+  border-right-color: rgba(236, 194, 119, 0.22);
+  background:
+    radial-gradient(circle at 50% -10%, rgba(236, 194, 119, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(236, 194, 119, 0.09), rgba(236, 194, 119, 0.025));
+  color: #fff2cf;
   box-shadow:
-    inset 0 0 0 1px rgba(236, 194, 119, 0.2),
-    0 8px 16px rgba(0, 0, 0, 0.18);
+    inset 0 0 22px rgba(236, 194, 119, 0.12),
+    inset 0 1px 0 rgba(255, 240, 180, 0.05);
+}
+
+.top-nav-link:hover::after,
+.top-nav-link.router-link-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+  box-shadow: 0 0 12px rgba(236, 194, 119, 0.46);
 }
 
 .thorondor-account-nav {
@@ -3112,6 +3160,7 @@ export default {
   }
 
   .thorondor-top-nav {
+    --top-nav-button-width: 126px;
     justify-self: center;
     width: 100%;
     min-width: 0;
@@ -3129,14 +3178,13 @@ export default {
   }
 
   .thorondor-top-nav {
+    --top-nav-button-width: 118px;
+    --top-nav-button-height: 34px;
+    --top-nav-gap: 6px;
     width: 100%;
     justify-content: flex-start;
-    gap: 3px;
-    min-height: 36px;
-    padding: 3px;
-    border-color: rgba(176, 184, 194, 0.13);
-    background: var(--thorondor-nested-background);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    min-height: var(--top-nav-button-height);
+    padding: 0 1px;
   }
 
   .settings-menu-copy span,
@@ -3150,9 +3198,8 @@ export default {
   }
 
   .top-nav-link {
-    min-width: 78px;
-    min-height: 30px;
-    padding: 0 7px;
+    padding: 0 8px;
+    border-radius: 4px;
     font-size: 0.68rem;
   }
 
@@ -3234,6 +3281,12 @@ export default {
     padding: 0 8px;
   }
 
+  .thorondor-top-nav {
+    --top-nav-button-width: 112px;
+    --top-nav-button-height: 32px;
+    --top-nav-gap: 5px;
+  }
+
   .thorondor-brand {
     width: 102px;
   }
@@ -3266,8 +3319,6 @@ export default {
   }
 
   .top-nav-link {
-    min-width: 70px;
-    min-height: 29px;
     padding: 0 6px;
     font-size: 0.64rem;
   }

@@ -12,16 +12,6 @@
 
     <section class="section-box alert-filters">
       <label class="control-field">
-        <span class="field-label">Sistema</span>
-        <select :value="selectedAgentId || ''" class="form-select input-dark" @change="selectHost">
-          <option value="" disabled>Selecciona sistema</option>
-          <option v-for="agent in dashboardCards" :key="agent.id" :value="agent.id">
-            {{ agent.displayName }}
-          </option>
-        </select>
-      </label>
-
-      <label class="control-field">
         <span class="field-label">Estado</span>
         <select v-model="filters.status" class="form-select input-dark">
           <option value="all">Todos</option>
@@ -153,16 +143,6 @@ export default {
   },
 
   methods: {
-    selectHost(event) {
-      const agentId = event.target.value
-      if (!agentId) return
-      this.selectAgent(agentId)
-      this.$router.replace({
-        name: this.$route.name,
-        query: { ...this.$route.query, agent: agentId },
-      })
-    },
-
     humanizeRuleType(type) {
       const map = {
         cpu: 'CPU sostenida alta',
@@ -199,13 +179,8 @@ export default {
 <style scoped>
 .alert-filters {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(220px, 320px);
-  gap: 24px;
-  align-items: start;
-}
-
-.alert-filters {
-  grid-template-columns: repeat(2, minmax(180px, 1fr)) auto;
+  grid-template-columns: minmax(180px, 280px) auto;
+  gap: 16px;
   align-items: end;
 }
 

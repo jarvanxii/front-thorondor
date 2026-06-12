@@ -29,7 +29,6 @@
                   <th>Nombre</th>
                   <th>Tipo</th>
                   <th>Umbral</th>
-                  <th>Ambito</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -39,7 +38,6 @@
                   <td>{{ rule.name }}</td>
                   <td>{{ humanizeRuleType(rule.type) }}</td>
                   <td>{{ formatRuleThreshold(rule) }}</td>
-                  <td>{{ agentNameById(rule.scope) }}</td>
                   <td>
                     <span class="state-chip" :class="rule.enabled ? 'chip-success' : 'chip-muted'">
                       {{ rule.enabled ? 'Activa' : 'Pausada' }}
@@ -58,7 +56,7 @@
                   </td>
                 </tr>
                 <tr v-if="!selectedRules.length">
-                  <td colspan="6" class="text-muted">
+                  <td colspan="5" class="text-muted">
                     Sin reglas para este host. Restaura base o crea una regla.
                   </td>
                 </tr>
@@ -106,10 +104,8 @@
                 <span>{{ humanizeRuleType(ruleDraft.type) }}</span>
               </article>
               <article class="preview-line">
-                <label>Ambito</label>
-                <span>{{
-                  ruleDraft.scope ? agentNameById(ruleDraft.scope) : 'Selecciona un host'
-                }}</span>
+                <label>Host</label>
+                <span>{{ selectedAgent ? selectedAgent.displayName : 'Sin host seleccionado' }}</span>
               </article>
               <article class="preview-line">
                 <label>Condicion</label>
@@ -161,20 +157,6 @@
                   class="form-control input-dark"
                   placeholder="Minutos"
                 />
-              </label>
-              <label class="control-field full-span" for="rule-scope">
-                <span class="field-label">Host</span>
-                <select
-                  id="rule-scope"
-                  v-model="ruleDraft.scope"
-                  class="form-select input-dark"
-                  disabled
-                >
-                  <option value="">Selecciona un host</option>
-                  <option v-if="selectedAgent" :value="selectedAgentId">
-                    {{ selectedAgent.displayName }}
-                  </option>
-                </select>
               </label>
               <label class="control-field full-span" for="rule-description">
                 <span class="field-label">Descripcion operativa</span>

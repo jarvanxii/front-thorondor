@@ -38,14 +38,6 @@
             <label class="field-label" for="display-name">Nombre visible</label>
             <input id="display-name" v-model="settings.displayName" class="form-control input-dark" type="text" placeholder="Nombre visible" />
           </div>
-          <div class="control-field">
-            <label class="field-label" for="user-role">Rol</label>
-            <select id="user-role" v-model="settings.role" class="form-select input-dark">
-              <option>Administrador</option>
-              <option>Operador</option>
-              <option>Solo lectura</option>
-            </select>
-          </div>
           <div class="control-field full-span">
             <label class="field-label" for="alert-email">Email de alertas</label>
             <input id="alert-email" v-model="settings.alertEmail" class="form-control input-dark" type="email" placeholder="Email de alertas" />
@@ -366,7 +358,6 @@ export default {
       thorondorLogo,
       settings: {
         displayName: "",
-        role: "Administrador",
         alertEmail: "",
         timezone: "Europe/Madrid",
         digestCadence: "Tiempo real",
@@ -430,7 +421,7 @@ export default {
     },
 
     currentDisplayName() {
-      return this.currentSessionUser?.displayName || this.settings.displayName || "Operador local";
+      return this.currentSessionUser?.displayName || this.settings.displayName || "Usuario local";
     },
 
     isSessionAdmin() {
@@ -470,7 +461,7 @@ export default {
 
     settingsSections() {
       const sections = [
-        { id: "cuenta-seguridad", label: "Cuenta y seguridad", copy: "Perfil, rol y acceso" },
+        { id: "cuenta-seguridad", label: "Cuenta y seguridad", copy: "Perfil y acceso" },
         { id: "preferencias", label: "Preferencias", copy: "Vista, zona horaria y retención" },
         { id: "alertas-email", label: "Alertas por email", copy: "SMTP de acceso activo" },
         { id: "persistencia-datos", label: "Persistencia", copy: "Datos y uso" }

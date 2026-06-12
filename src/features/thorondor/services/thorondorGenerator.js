@@ -64,6 +64,10 @@ function escapeXmlAttribute(value) {
     .replace(/'/g, "&apos;");
 }
 
+function powerShellSingleQuotedString(value) {
+  return `'${String(value ?? "").replace(/'/g, "''")}'`;
+}
+
 function base64Utf8(value) {
   if (typeof globalThis.Buffer !== "undefined") {
     return globalThis.Buffer.from(String(value), "utf8").toString("base64");
@@ -175,16 +179,16 @@ export function buildThorondorAgentFiles(draft = {}) {
     agentFileName: "thorondor-agent.py",
     serviceFileName: shouldBuildSystemd ? buildServiceFileName(config) : null,
     installFileName: isWindows ? "thorondor-installer.ps1" : "thorondor-installer.sh",
-    windowsInstallFileName: isWindows ? "thorondor-agent-install.ps1" : null,
-    msiFileName: isWindows ? "thorondor-agent.msi" : null,
-    wixFileName: isWindows ? "thorondor-agent.wxs" : null,
-    msiBuildFileName: isWindows ? "build-thorondor-msi.ps1" : null,
+    windowsInstallFileName: null,
+    msiFileName: null,
+    wixFileName: null,
+    msiBuildFileName: null,
     python: buildThorondorPythonAgent(config),
     systemd: shouldBuildSystemd ? buildThorondorSystemdUnit(config) : null,
-    installScript: isWindows ? buildThorondorWindowsMsiBootstrapperScript(config) : buildThorondorInstallScript(config),
-    windowsInstallScript: isWindows ? buildThorondorWindowsInstallScript(config) : null,
-    wixSource: isWindows ? buildThorondorWixSource(config) : null,
-    msiBuildScript: isWindows ? buildThorondorMsiBuildScript(config) : null,
+    installScript: isWindows ? buildThorondorWindowsStandaloneInstallScript(config) : buildThorondorInstallScript(config),
+    windowsInstallScript: null,
+    wixSource: null,
+    msiBuildScript: null,
     instructions: buildThorondorInstallInstructions(config)
   };
 }
@@ -4453,29 +4457,28 @@ export function buildThorondorInstallInstructions(config) {
     ? "Persistencia en servidor Thorondor: el agente sincroniza telemetría con la API central y la consola lee la BBDD autorizada."
     : "Persistencia local: la consola guarda logs, eventos y alertas en IndexedDB. El agente no sincroniza telemetría con la API central.";
   const permissionNote = isWindows
-    ? "Ejecuta el instalador desde PowerShell abierto como administrador. El script incluye #Requires -RunAsAdministrator y se detiene si no está elevado."
+    ? "Ejecuta el instalador desde PowerShell. Si no está elevado, solicita permisos de administrador y continúa en una consola elevada."
     : "Ejecuta el instalador como root o con sudo. Si no hay sudo y no eres root, el script se detiene.";
   const dependencyNote = isWindows
-    ? "Requiere PowerShell 5.1+. Si faltan .NET SDK 8, WiX Toolset o Python 3 y existe winget, el instalador intenta instalarlos."
+    ? "Requiere PowerShell 5.1+. Si falta Python 3 y existe winget, el instalador intenta instalarlo. Las dependencias Python se aíslan en un venv propio."
     : "Con apt, dnf o pacman instala Python, venv/pip, lm-sensors, smartmontools, dmidecode y pciutils. Si no detecta gestor, intenta usar el Python disponible.";
   const serviceNote = isWindows
-    ? "Instala un MSI real con msiexec y registra la tarea programada ThorondorAgent como SYSTEM, RunLevel Highest, al inicio del sistema."
+    ? "Instala los ficheros en ProgramData y registra la tarea programada ThorondorAgent como SYSTEM, RunLevel Highest, al inicio del sistema."
     : `Crea /opt/thorondor-agent, usuario de sistema, entorno venv, ${buildServiceFileName(config)} en systemd y lo habilita con enable --now.`;
   const networkNote = "El agente queda escuchando en el puerto configurado. Si necesitas acceso remoto, expón ese puerto con túnel, proxy o redirección controlada.";
   const uninstallPermissionNote = isWindows
-    ? "Abre PowerShell como administrador para desinstalar."
+    ? "Ejecuta el desinstalador; si no está elevado, pedirá permisos de administrador."
     : "Ejecuta el desinstalador con sudo o como root.";
   const installFolder = isWindows ? "C:\\Thorondor-Agent-Installer" : "~/thorondor-agent-installer";
   const generatedUninstaller = isWindows
     ? "C:\\ProgramData\\Thorondor-Agent\\thorondor-uninstaller.ps1"
     : "/opt/thorondor-agent/thorondor-uninstaller.sh";
   const runCommand = isWindows
-    ? `# Abre PowerShell como administrador antes de ejecutar estos comandos.
+    ? `# Puedes ejecutarlo en una consola normal; el instalador pedirá administrador si hace falta.
 New-Item -ItemType Directory -Force "${installFolder}" | Out-Null
 # Deja ${installerName} en esa carpeta.
 cd "${installFolder}"
-Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
-.\\${installerName}`
+powershell.exe -NoProfile -ExecutionPolicy Bypass -File ".\\${installerName}"`
     : `# Ejecuta con un usuario que tenga sudo.
 mkdir -p ${installFolder}
 # Deja ${installerName} en esa carpeta.
@@ -4547,15 +4550,32 @@ ${uninstallCommand}
 
 function buildThorondorWindowsUninstallScript(config) {
   const installDir = "C:\\ProgramData\\Thorondor-Agent";
-  const packageName = normalizeWindowsPackageName(config).replace(/"/g, "`\"");
+  const port = Number(config.port) || THORONDOR_AGENT_FIXED_PORT;
 
-  return `#Requires -RunAsAdministrator
-Set-StrictMode -Version Latest
+  return `Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
+
+function Test-IsAdministrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (-not (Test-IsAdministrator)) {
+    $scriptPath = $PSCommandPath
+    if (-not $scriptPath) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not $scriptPath) { throw "Guarda este desinstalador como .ps1 y ejecútalo de nuevo." }
+
+    Write-Host "Solicitando permisos de administrador para desinstalar Thorondor Agent..." -ForegroundColor Yellow
+    $quotedScript = '"' + $scriptPath + '"'
+    $process = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File $quotedScript" -Verb RunAs -PassThru -Wait
+    if ($null -ne $process.ExitCode) { exit $process.ExitCode }
+    exit 0
+}
 
 $InstallDir = "${installDir}"
 $TaskName = "ThorondorAgent"
-$PackageName = "Thorondor Agent - ${packageName}"
+$Port = ${port}
 
 Write-Host "=== Thorondor Agent Uninstaller para Windows ===" -ForegroundColor Cyan
 
@@ -4569,28 +4589,11 @@ Get-CimInstance Win32_Process |
     }
 
 Get-NetFirewallRule -DisplayName "Thorondor Agent HTTP" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+Get-NetFirewallRule -DisplayName "Thorondor Agent HTTP $Port" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 Get-NetFirewallRule -DisplayName "Thorondor Agent" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 Get-NetFirewallRule -DisplayName "Thorondor Block *" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
 
-$registryRoots = @(
-    "HKLM:\\SOFTWARE\\Microsoft\\Windows\\CurrentVersion\\Uninstall",
-    "HKLM:\\SOFTWARE\\WOW6432Node\\Microsoft\\Windows\\CurrentVersion\\Uninstall"
-)
-
-foreach ($root in $registryRoots) {
-    if (-not (Test-Path $root)) { continue }
-    Get-ChildItem $root -ErrorAction SilentlyContinue |
-        Get-ItemProperty -ErrorAction SilentlyContinue |
-        Where-Object { $_.DisplayName -eq $PackageName -or $_.DisplayName -like "Thorondor Agent*" } |
-        ForEach-Object {
-            if ($_.PSChildName -match "^\\{[0-9A-Fa-f-]+\\}$") {
-                Start-Process -FilePath "msiexec.exe" -ArgumentList @("/x", $_.PSChildName, "/passive", "/norestart") -Wait
-            }
-        }
-}
-
 Remove-Item -Recurse -Force $InstallDir -ErrorAction SilentlyContinue
-Remove-Item -Recurse -Force "C:\\Program Files\\Thorondor Agent" -ErrorAction SilentlyContinue
 
 Write-Host "Desinstalación completada." -ForegroundColor Green
 `;
@@ -4770,5 +4773,280 @@ Write-Host ""
 Write-Host "Diagnóstico de arranque:"
 Write-Host "  Get-ScheduledTaskInfo -TaskName ThorondorAgent"
 Write-Host "  Get-WinEvent -LogName Microsoft-Windows-TaskScheduler/Operational -MaxEvents 20"
+`;
+}
+
+function buildThorondorWindowsStandaloneInstallScript(config) {
+  const port = Number(config.port) || THORONDOR_AGENT_FIXED_PORT;
+  const installDir = "C:\\ProgramData\\Thorondor-Agent";
+  const pythonAgent = buildThorondorPythonAgent(config);
+  const uninstallScriptB64 = base64Utf8(buildThorondorWindowsUninstallScript(config));
+  const displayName = powerShellSingleQuotedString(config.displayName || config.systemName || THORONDOR_AGENT_FIXED_SERVICE_NAME);
+  const hostAddress = powerShellSingleQuotedString(config.hostIp || "127.0.0.1");
+  const receiverUrl = powerShellSingleQuotedString(normalizeReceiverBaseUrl(config));
+  const keyAgents = powerShellSingleQuotedString(config.keyAgents || config.agentToken || "");
+  const persistenceMode = powerShellSingleQuotedString(config.persistenceMode === "cloud" ? "cloud" : "local");
+  const verifyCommand = `Invoke-RestMethod http://127.0.0.1:${port}/health | ConvertTo-Json -Depth 3`;
+
+  return `<#
+.SYNOPSIS
+    Instala Thorondor Agent en Windows.
+.DESCRIPTION
+    Instalador unico para Windows. Si no se ejecuta como administrador,
+    solicita elevacion, prepara Python/venv, crea la tarea programada,
+    abre el puerto del agente en el firewall y deja un desinstalador.
+#>
+
+Set-StrictMode -Version Latest
+$ErrorActionPreference = "Stop"
+$ProgressPreference = "SilentlyContinue"
+
+$INSTALL_DIR  = "${installDir}"
+$AGENT_FILE   = "thorondor-agent.py"
+$RUNNER_FILE  = "run-thorondor-agent.ps1"
+$UNINSTALL_FILE = "thorondor-uninstaller.ps1"
+$TASK_NAME    = "ThorondorAgent"
+$PORT         = ${port}
+$DISPLAY_NAME = ${displayName}
+$HOST_ADDRESS = ${hostAddress}
+$RECEIVER_URL = ${receiverUrl}
+$KEY_AGENTS = ${keyAgents}
+$PERSISTENCE_MODE = ${persistenceMode}
+$VENV_DIR = Join-Path $INSTALL_DIR ".venv"
+$VENV_PYTHON = Join-Path $VENV_DIR "Scripts\\python.exe"
+$LOG_DIR = Join-Path $INSTALL_DIR "logs"
+$CONFIG_FILE = Join-Path $INSTALL_DIR "agent-config.json"
+
+function Test-IsAdministrator {
+    $identity = [Security.Principal.WindowsIdentity]::GetCurrent()
+    $principal = New-Object Security.Principal.WindowsPrincipal($identity)
+    return $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+}
+
+if (-not (Test-IsAdministrator)) {
+    $scriptPath = $PSCommandPath
+    if (-not $scriptPath) { $scriptPath = $MyInvocation.MyCommand.Path }
+    if (-not $scriptPath) { throw "Guarda este instalador como .ps1 y ejecutalo de nuevo." }
+
+    Write-Host "Solicitando permisos de administrador para instalar Thorondor Agent..." -ForegroundColor Yellow
+    $quotedScript = '"' + $scriptPath + '"'
+    $process = Start-Process -FilePath "powershell.exe" -ArgumentList "-NoProfile -ExecutionPolicy Bypass -File $quotedScript" -Verb RunAs -PassThru -Wait
+    if ($null -ne $process.ExitCode) { exit $process.ExitCode }
+    exit 0
+}
+
+function ConvertTo-SingleQuotedPowerShellString {
+    param([Parameter(Mandatory = $true)][string]$Value)
+    return "'" + $Value.Replace("'", "''") + "'"
+}
+
+function Write-Step {
+    param([Parameter(Mandatory = $true)][string]$Message)
+    Write-Host $Message -ForegroundColor Yellow
+}
+
+function Resolve-PythonCommand {
+    $candidates = @(
+        [pscustomobject]@{ Command = "python"; Args = @() },
+        [pscustomobject]@{ Command = "python3"; Args = @() },
+        [pscustomobject]@{ Command = "py"; Args = @("-3") }
+    )
+
+    foreach ($candidate in $candidates) {
+        try {
+            $args = @()
+            $args += $candidate.Args
+            $args += "--version"
+            $version = & $candidate.Command @args 2>&1
+            if ($version -match "Python 3\\.(\\d+)") {
+                if ([int]$Matches[1] -lt 8) { continue }
+                return [pscustomobject]@{
+                    Path = (Get-Command $candidate.Command -ErrorAction Stop).Source
+                    Args = $candidate.Args
+                    Version = [string]$version
+                }
+            }
+        } catch { }
+    }
+
+    return $null
+}
+
+function Ensure-Python {
+    $pythonInfo = Resolve-PythonCommand
+    if ($null -ne $pythonInfo) {
+        Write-Host "    Python encontrado: $($pythonInfo.Version)" -ForegroundColor Green
+        return $pythonInfo
+    }
+
+    if (-not (Get-Command winget -ErrorAction SilentlyContinue)) {
+        throw "No se encontro Python 3.8+ ni winget. Instala Python 3.11 o superior y vuelve a ejecutar el instalador."
+    }
+
+    Write-Host "    Python no encontrado. Instalando Python 3.11 con winget..." -ForegroundColor Yellow
+    winget install --id Python.Python.3.11 --scope machine --silent --accept-source-agreements --accept-package-agreements
+    $env:PATH = "$env:PATH;C:\\Program Files\\Python311;C:\\Program Files\\Python311\\Scripts;$env:LOCALAPPDATA\\Programs\\Python\\Python311;$env:LOCALAPPDATA\\Programs\\Python\\Python311\\Scripts"
+
+    $pythonInfo = Resolve-PythonCommand
+    if ($null -eq $pythonInfo) {
+        throw "Python se instalo, pero todavia no esta disponible. Cierra PowerShell, abre otra consola y ejecuta de nuevo el instalador."
+    }
+
+    Write-Host "    Python disponible: $($pythonInfo.Version)" -ForegroundColor Green
+    return $pythonInfo
+}
+
+function Stop-ExistingThorondorAgent {
+    Stop-ScheduledTask -TaskName $TASK_NAME -ErrorAction SilentlyContinue
+    Unregister-ScheduledTask -TaskName $TASK_NAME -Confirm:$false -ErrorAction SilentlyContinue
+
+    Get-CimInstance Win32_Process |
+        Where-Object { $_.CommandLine -like "*thorondor-agent.py*" -and $_.CommandLine -like "*Thorondor-Agent*" } |
+        ForEach-Object {
+            try { Stop-Process -Id $_.ProcessId -Force -ErrorAction Stop } catch { }
+        }
+}
+
+function Ensure-AgentFirewallRule {
+    param([Parameter(Mandatory = $true)][int]$LocalPort)
+
+    $ruleName = "Thorondor Agent HTTP $LocalPort"
+    try {
+        Get-NetFirewallRule -DisplayName "Thorondor Agent HTTP" -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+        Get-NetFirewallRule -DisplayName "Thorondor Agent HTTP *" -ErrorAction SilentlyContinue | Remove-NetFirewallRule -ErrorAction SilentlyContinue
+        New-NetFirewallRule -DisplayName $ruleName -Direction Inbound -Action Allow -Protocol TCP -LocalPort $LocalPort -Profile Any | Out-Null
+        Write-Host "    Firewall: permitido TCP/$LocalPort." -ForegroundColor Green
+    } catch {
+        Write-Host "    No se pudo configurar el firewall automaticamente: $($_.Exception.Message)" -ForegroundColor DarkYellow
+    }
+}
+
+Write-Host "=== Thorondor Agent Installer para Windows ===" -ForegroundColor Cyan
+Write-Host "Host: $DISPLAY_NAME"
+Write-Host "Puerto: $PORT"
+
+Write-Step "[1/7] Preparando carpeta de instalacion..."
+Stop-ExistingThorondorAgent
+New-Item -ItemType Directory -Force -Path $INSTALL_DIR | Out-Null
+New-Item -ItemType Directory -Force -Path $LOG_DIR | Out-Null
+$agentSource = @'
+${pythonAgent}
+'@
+Set-Content -Path "$INSTALL_DIR\\$AGENT_FILE" -Value $agentSource -Encoding UTF8
+[System.IO.File]::WriteAllBytes((Join-Path $INSTALL_DIR $UNINSTALL_FILE), [System.Convert]::FromBase64String(@'
+${uninstallScriptB64}
+'@))
+
+$configSummary = [ordered]@{
+    displayName = $DISPLAY_NAME
+    hostAddress = $HOST_ADDRESS
+    receiverUrl = $RECEIVER_URL
+    port = $PORT
+    keyAgents = $KEY_AGENTS
+    persistenceMode = $PERSISTENCE_MODE
+    installDir = $INSTALL_DIR
+    taskName = $TASK_NAME
+    runAs = "SYSTEM"
+    installedAt = (Get-Date).ToString("o")
+} | ConvertTo-Json -Depth 5
+Set-Content -Path $CONFIG_FILE -Value $configSummary -Encoding UTF8
+Write-Host "    Ficheros preparados en $INSTALL_DIR." -ForegroundColor Green
+
+Write-Step "[2/7] Preparando Python y entorno aislado..."
+$pythonInfo = Ensure-Python
+if (-not (Test-Path $VENV_PYTHON)) {
+    $venvArgs = @()
+    $venvArgs += $pythonInfo.Args
+    $venvArgs += @("-m", "venv", $VENV_DIR)
+    & $pythonInfo.Path @venvArgs
+}
+if (-not (Test-Path $VENV_PYTHON)) {
+    throw "No se pudo crear el entorno Python en $VENV_DIR."
+}
+
+Write-Step "[3/7] Instalando dependencias del agente..."
+& $VENV_PYTHON -m pip install --upgrade pip --quiet
+& $VENV_PYTHON -m pip install psutil --quiet
+Write-Host "    Dependencias instaladas en el venv del agente." -ForegroundColor Green
+
+Write-Step "[4/7] Detectando capacidades del host..."
+& $VENV_PYTHON (Join-Path $INSTALL_DIR $AGENT_FILE) "--detect-logs" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "    La deteccion inicial de logs no se completo; el agente lo reintentara al arrancar." -ForegroundColor DarkYellow
+}
+& $VENV_PYTHON (Join-Path $INSTALL_DIR $AGENT_FILE) "--detect-modules" | Out-Null
+if ($LASTEXITCODE -ne 0) {
+    Write-Host "    La deteccion inicial de modulos no se completo; el agente lo reintentara al arrancar." -ForegroundColor DarkYellow
+}
+
+Write-Step "[5/7] Creando runner y logs..."
+$runnerLog = Join-Path $LOG_DIR "agent.log"
+$runnerArguments = @()
+$runnerArguments += (Join-Path $INSTALL_DIR $AGENT_FILE)
+$runnerSource = @(
+    'Set-StrictMode -Version Latest',
+    '$ErrorActionPreference = "Continue"',
+    '$python = ' + (ConvertTo-SingleQuotedPowerShellString $VENV_PYTHON),
+    '$arguments = @(' + (($runnerArguments | ForEach-Object { ConvertTo-SingleQuotedPowerShellString $_ }) -join ', ') + ')',
+    '$logFile = ' + (ConvertTo-SingleQuotedPowerShellString $runnerLog),
+    'New-Item -ItemType Directory -Force -Path (Split-Path -Parent $logFile) | Out-Null',
+    'while ($true) {',
+    '    $stamp = (Get-Date).ToString("s")',
+    '    Add-Content -Path $logFile -Value "[$stamp] Thorondor Agent arrancando."',
+    '    & $python @arguments *>> $logFile',
+    '    $exitCode = $LASTEXITCODE',
+    '    $end = (Get-Date).ToString("s")',
+    '    Add-Content -Path $logFile -Value "[$end] Thorondor Agent se detuvo con codigo $exitCode. Reinicio en 5 segundos."',
+    '    Start-Sleep -Seconds 5',
+    '}'
+) -join [Environment]::NewLine
+Set-Content -Path (Join-Path $INSTALL_DIR $RUNNER_FILE) -Value $runnerSource -Encoding UTF8
+Write-Host "    Log principal: $runnerLog" -ForegroundColor Green
+
+Write-Step "[6/7] Configurando firewall y tarea programada..."
+Ensure-AgentFirewallRule -LocalPort $PORT
+$runnerPath = Join-Path $INSTALL_DIR $RUNNER_FILE
+$taskArgument = '-NoProfile -ExecutionPolicy Bypass -File "' + $runnerPath + '"'
+$action = New-ScheduledTaskAction -Execute "powershell.exe" -Argument $taskArgument
+$trigger = New-ScheduledTaskTrigger -AtStartup
+try {
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Seconds 0) -RestartCount 3 -RestartInterval (New-TimeSpan -Minutes 1) -MultipleInstances IgnoreNew
+} catch {
+    $settings = New-ScheduledTaskSettingsSet -StartWhenAvailable -RunOnlyIfNetworkAvailable -ExecutionTimeLimit (New-TimeSpan -Seconds 0)
+}
+$principal = New-ScheduledTaskPrincipal -UserId "SYSTEM" -LogonType ServiceAccount -RunLevel Highest
+Register-ScheduledTask -TaskName $TASK_NAME -Action $action -Trigger $trigger -Settings $settings -Principal $principal -Force | Out-Null
+Start-ScheduledTask -TaskName $TASK_NAME
+
+Write-Step "[7/7] Validando agente..."
+$healthOk = $false
+for ($attempt = 1; $attempt -le 12; $attempt += 1) {
+    try {
+        Invoke-RestMethod -Uri "http://127.0.0.1:$PORT/health" -TimeoutSec 2 | Out-Null
+        $healthOk = $true
+        break
+    } catch {
+        Start-Sleep -Seconds 1
+    }
+}
+
+$state = (Get-ScheduledTask -TaskName $TASK_NAME).State
+Write-Host "    Estado de la tarea: $state" -ForegroundColor $(if ($state -eq "Running") { "Green" } else { "Yellow" })
+if ($healthOk) {
+    Write-Host "    Health check correcto en http://127.0.0.1:$PORT/health" -ForegroundColor Green
+} else {
+    Write-Host "    La tarea quedo registrada, pero el health check aun no responde. Revisa $runnerLog." -ForegroundColor DarkYellow
+}
+
+Write-Host ""
+Write-Host "=== Instalacion completada ===" -ForegroundColor Green
+Write-Host "Verifica el agente con:"
+Write-Host "  ${verifyCommand}"
+Write-Host "Desinstalador:"
+Write-Host ('  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $INSTALL_DIR $UNINSTALL_FILE) + '"')
+Write-Host ""
+Write-Host "Diagnostico de arranque:"
+Write-Host "  Get-ScheduledTaskInfo -TaskName ThorondorAgent"
+Write-Host "  Get-Content -Tail 80 '$runnerLog'"
 `;
 }

@@ -182,7 +182,7 @@
                 <article class="deployment-step-card">
                     <span>2</span>
                     <strong>Ejecútalo en el host</strong>
-                    <small>{{ generatedSnapshot.targetOs === 'windows' ? 'PowerShell como administrador' : 'sudo o root' }}</small>
+                    <small>{{ generatedSnapshot.targetOs === 'windows' ? 'Pide administrador' : 'sudo o root' }}</small>
                 </article>
                 <article class="deployment-step-card">
                     <span>3</span>

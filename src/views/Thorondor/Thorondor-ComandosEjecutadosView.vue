@@ -17,20 +17,6 @@
           <span class="mini-badge">{{ commandEvents.length }} eventos</span>
         </header>
         <section class="control-grid command-filter-grid">
-          <label class="control-field" for="command-agent">
-            <span class="field-label">Sistema</span>
-            <select
-              id="command-agent"
-              v-model="filters.agentId"
-              class="form-select input-dark"
-              @change="selectHost"
-            >
-              <option value="" disabled>Selecciona host</option>
-              <option v-for="agent in dashboardCards" :key="agent.id" :value="agent.id">
-                {{ agent.displayName }}
-              </option>
-            </select>
-          </label>
           <label class="control-field" for="command-kind">
             <span class="field-label">Tipo</span>
             <select id="command-kind" v-model="filters.kind" class="form-select input-dark">
@@ -73,7 +59,6 @@
             <thead>
               <tr>
                 <th>Fecha</th>
-                <th>Sistema</th>
                 <th>Tipo</th>
                 <th>Usuario</th>
                 <th>Ejecuta como</th>
@@ -85,7 +70,6 @@
             <tbody>
               <tr v-for="event in filteredCommandEvents" :key="event.id">
                 <td>{{ formatDateTime(event.timestamp) }}</td>
-                <td>{{ event.agentName }}</td>
                 <td>
                   <span class="state-chip" :class="commandKindClass(event.kind)">
                     {{ humanizeCommandKind(event.kind) }}
@@ -100,7 +84,7 @@
                 <td class="detail-cell">{{ event.message || '-' }}</td>
               </tr>
               <tr v-if="!filteredCommandEvents.length">
-                <td colspan="8" class="text-muted">
+                <td colspan="7" class="text-muted">
                   Sin comandos registrados con los filtros actuales.
                 </td>
               </tr>
@@ -132,21 +116,11 @@ export default {
   data() {
     return {
       filters: {
-        agentId: '',
         kind: 'all',
         user: '',
         command: '',
       },
     }
-  },
-
-  watch: {
-    selectedAgentId: {
-      immediate: true,
-      handler(value) {
-        this.filters.agentId = value || ''
-      },
-    },
   },
 
   computed: {
@@ -196,7 +170,7 @@ export default {
       const commandFilter = this.filters.command.toLowerCase()
 
       return this.commandEvents.filter((event) => {
-        if (!this.filters.agentId || event.agentId !== this.filters.agentId) return false
+        if (!this.selectedAgentId || event.agentId !== this.selectedAgentId) return false
         if (this.filters.kind !== 'all' && event.kind !== this.filters.kind) return false
         if (
           userFilter &&
@@ -217,9 +191,7 @@ export default {
     },
 
     commandSummary() {
-      const hostEvents = this.commandEvents.filter(
-        (event) => event.agentId === this.filters.agentId,
-      )
+      const hostEvents = this.commandEvents.filter((event) => event.agentId === this.selectedAgentId)
       const sudo = hostEvents.filter((event) => event.kind === 'sudo_command').length
       const windows = hostEvents.filter((event) => event.kind === 'command_execution').length
       const response = hostEvents.filter((event) => event.kind === 'response_action').length
@@ -255,16 +227,6 @@ export default {
   },
 
   methods: {
-    selectHost(event) {
-      const agentId = event.target.value
-      if (!agentId) return
-      this.selectAgent(agentId)
-      this.$router.replace({
-        name: this.$route.name,
-        query: { ...this.$route.query, agent: agentId },
-      })
-    },
-
     commandFromMessage(message) {
       const text = String(message || '')
       const sudoMatch = text.match(/COMMAND=(.+)$/)

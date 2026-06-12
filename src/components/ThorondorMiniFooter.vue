@@ -5,10 +5,10 @@
       <span>Consola SIEM para hosts autorizados</span>
     </div>
 
-    <div class="footer-status" aria-label="Estado operativo">
+    <div class="footer-meta" aria-label="Información operativa">
       <span>Operación privada</span>
       <span>Seguridad y trazabilidad</span>
-      <span>2026</span>
+      <span>© 2026</span>
     </div>
   </footer>
 </template>
@@ -23,89 +23,96 @@ export default {
 .thorondor-mini-footer {
   display: grid;
   grid-template-columns: minmax(220px, 1fr) minmax(260px, auto);
-  gap: clamp(16px, 2vw, 32px);
+  gap: clamp(18px, 2vw, 34px);
   align-items: center;
   width: 100%;
-  margin: 16px 0 0;
-  padding: 14px clamp(20px, 2.4vw, 36px);
-  border-top: 1px solid rgba(214, 161, 92, 0.22);
+  margin: 18px 0 0;
+  padding: 16px clamp(22px, 2.6vw, 40px);
+  border-top: 1px solid rgba(214, 161, 92, 0.2);
   background:
-    linear-gradient(135deg, rgba(18, 24, 31, 0.96), rgba(14, 18, 24, 0.98)),
+    linear-gradient(135deg, rgba(20, 27, 32, 0.94), rgba(13, 18, 23, 0.96)),
     var(--thorondor-panel-background);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    0 -12px 32px rgba(0, 0, 0, 0.18);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
   color: #aeb8c4;
   font-family: 'Inter', sans-serif;
 }
 
 .footer-brand {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 14px;
+  align-items: baseline;
   min-width: 0;
 }
 
 .footer-brand strong {
   color: #f0c77e;
-  font-size: 0.86rem;
+  font-size: 0.8rem;
   font-weight: 800;
-  letter-spacing: 0.04em;
+  letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .footer-brand span {
-  color: #b1bdc9;
-  font-size: 0.75rem;
+  color: #aeb8c4;
+  font-size: 0.76rem;
+  line-height: 1.4;
 }
 
-.footer-status {
+.footer-meta {
   display: flex;
   flex-wrap: wrap;
   justify-content: flex-end;
-  gap: 8px;
+  gap: 0;
   align-items: center;
+  color: #9eaab7;
+  font-size: 0.72rem;
+  line-height: 1.5;
 }
 
-.footer-status span {
+.footer-meta span {
   display: inline-flex;
   align-items: center;
-  min-height: 28px;
-  padding: 6px 10px;
-  border: 1px solid rgba(177, 189, 201, 0.16);
-  border-radius: 999px;
-  color: #c1cad5;
-  background: rgba(255, 255, 255, 0.025);
-  font-size: 0.68rem;
-  font-weight: 800;
-  letter-spacing: 0.03em;
-  text-transform: uppercase;
+  min-height: 20px;
+  color: inherit;
+  font-weight: 600;
+  letter-spacing: 0;
   white-space: nowrap;
+}
+
+.footer-meta span + span::before {
+  content: '';
+  width: 1px;
+  height: 12px;
+  margin: 0 12px;
+  background: rgba(214, 161, 92, 0.3);
 }
 
 @media (max-width: 980px) {
   .thorondor-mini-footer {
     grid-template-columns: 1fr;
+    gap: 10px;
     align-items: start;
   }
 
-  .footer-status {
+  .footer-meta {
     justify-content: flex-start;
   }
 }
 
 @media (max-width: 560px) {
   .thorondor-mini-footer {
-    padding: 16px 14px;
+    padding: 16px;
   }
 
-  .footer-status {
-    gap: 6px;
+  .footer-brand,
+  .footer-meta {
+    display: grid;
+    gap: 4px;
   }
 
-  .footer-status span {
-    min-height: 26px;
-    padding: 5px 8px;
-    font-size: 0.64rem;
+  .footer-meta span + span::before {
+    display: none;
   }
 }
 </style>

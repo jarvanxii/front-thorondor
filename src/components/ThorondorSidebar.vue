@@ -39,7 +39,7 @@
           class="sidebar-nav-item"
           :class="{
             'is-active': isActive(item),
-            'is-disabled': item.agentScoped && !selectedAgentId,
+            'is-disabled': item.agentScoped && !effectiveAgentId,
           }"
           :to="routeFor(item)"
           @click="handleNavClick(item, $event)"
@@ -90,6 +90,15 @@ export default {
       return this.thorondorState.selectedAgentId
     },
 
+    routeAgentId() {
+      const routeAgent = this.$route.query.agent
+      return Array.isArray(routeAgent) ? routeAgent[0] : String(routeAgent || '')
+    },
+
+    effectiveAgentId() {
+      return this.selectedAgentId || this.routeAgentId
+    },
+
     selectedAgent() {
       return this.$store.getters.thorondorSelectedAgent || null
     },
@@ -107,8 +116,8 @@ export default {
     routeFor(item) {
       const query = { ...(item.query || {}) }
 
-      if (item.agentScoped && this.selectedAgentId) {
-        query.agent = this.selectedAgentId
+      if (item.agentScoped && this.effectiveAgentId) {
+        query.agent = this.effectiveAgentId
       }
 
       return { name: item.routeName, query }
@@ -148,7 +157,7 @@ export default {
     },
 
     handleNavClick(item, event) {
-      if (item.agentScoped && !this.selectedAgentId) {
+      if (item.agentScoped && !this.effectiveAgentId) {
         event.preventDefault()
         return
       }

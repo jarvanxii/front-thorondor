@@ -47,7 +47,6 @@
                   <th>Política</th>
                   <th>Patrón</th>
                   <th>Acción</th>
-                  <th>Ámbito</th>
                   <th>Estado</th>
                   <th>Acciones</th>
                 </tr>
@@ -60,7 +59,6 @@
                   </td>
                   <td>{{ triggerLabel(policy.triggerType) }}</td>
                   <td>{{ actionLabel(policy.actionType) }}</td>
-                  <td>{{ scopeLabel(policy.scope) }}</td>
                   <td>
                     <span class="state-chip" :class="policy.enabled ? 'chip-success' : 'chip-muted'">
                       {{ policy.enabled ? 'Activa' : 'Pausada' }}
@@ -82,7 +80,7 @@
                   </td>
                 </tr>
                 <tr v-if="!policies.length">
-                  <td colspan="6" class="text-muted">
+                  <td colspan="5" class="text-muted">
                     No hay políticas de respuesta inteligente configuradas.
                   </td>
                 </tr>
@@ -137,15 +135,6 @@
                 <input id="smart-cooldown" v-model.number="draft.cooldownMinutes" class="form-control input-dark" type="number" min="1" placeholder="Minutos" />
               </label>
 
-              <label class="control-field" for="smart-scope">
-                <span class="field-label">Ámbito</span>
-                <select id="smart-scope" v-model="draft.scope" class="form-select input-dark">
-                  <option value="all">Todos los agentes</option>
-                  <option v-if="selectedAgent" :value="selectedAgent.id">
-                    {{ selectedAgent.displayName }}
-                  </option>
-                </select>
-              </label>
 
               <label class="control-field full-span" for="smart-description">
                 <span class="field-label">Descripción</span>
@@ -291,7 +280,10 @@ export default {
     },
 
     policies() {
-      return this.thorondorState.smartResponses || []
+      if (!this.selectedAgentId) return []
+      return (this.thorondorState.smartResponses || []).filter(
+        (policy) => policy.scope === this.selectedAgentId,
+      )
     },
 
     enabledPolicies() {
@@ -314,15 +306,23 @@ export default {
     },
 
     canSaveDraft() {
-      return Boolean(this.draft.name && this.draft.threshold > 0 && this.draft.durationMinutes > 0)
+      return Boolean(
+        this.selectedAgentId &&
+          this.draft.name &&
+          this.draft.threshold > 0 &&
+          this.draft.durationMinutes > 0,
+      )
     },
   },
 
   watch: {
-    selectedAgentId(value) {
-      if (!this.draft.id && this.draft.scope !== 'all') {
-        this.draft.scope = value || 'all'
-      }
+    selectedAgentId: {
+      immediate: true,
+      handler(value) {
+        if (!this.draft.id) {
+          this.draft.scope = value || ''
+        }
+      },
     },
   },
 
@@ -330,12 +330,8 @@ export default {
     triggerLabel: smartTriggerLabel,
     actionLabel: smartActionLabel,
 
-    scopeLabel(scope) {
-      return scope === 'all' ? 'Todos' : this.agentNameById(scope)
-    },
-
     newPolicy() {
-      this.draft = createThorondorSmartResponseDraft(this.selectedAgentId || 'all')
+      this.draft = createThorondorSmartResponseDraft(this.selectedAgentId || '')
       this.feedback = { type: '', message: '' }
     },
 
@@ -364,6 +360,7 @@ export default {
         const policy = {
           ...this.draft,
           id: this.draft.id || `smart-response-${Date.now()}`,
+          scope: this.selectedAgentId,
           updatedAt: new Date().toISOString(),
         }
         await this.$store.dispatch('saveThorondorSmartResponse', policy)

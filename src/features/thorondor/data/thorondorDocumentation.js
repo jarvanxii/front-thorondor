@@ -13,7 +13,7 @@ autorizado, sincroniza su workspace privado con una base de datos por API.
 - **IndexedDB**: base local del navegador para snapshots, eventos, logs, reglas, alertas y estado de conexión.
 - **Persistencia remota**: API con base de datos para workspaces sincronizados y aislados por usuario autorizado.
 - **Motor de reglas**: evaluación JavaScript de umbrales, heartbeat, autenticación, sudo e integridad de ficheros.
-- **Instalador Windows**: \`thorondor-installer.ps1\` genera \`thorondor-agent.msi\`, lo deja en el Escritorio y lo instala con \`msiexec\`.
+- **Instalador Windows**: \`thorondor-installer.ps1\` solicita permisos de administrador, crea \`C:\\ProgramData\\Thorondor-Agent\`, prepara un venv, registra la tarea \`ThorondorAgent\`, abre el puerto del agente y deja desinstalador.
 - **Instalador Linux**: \`thorondor-installer.sh\` crea \`/opt/thorondor-agent\`, prepara dependencias y habilita systemd.
 
 ## Telemetría

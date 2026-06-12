@@ -24,12 +24,17 @@
     linear-gradient(145deg, rgba(55, 65, 66, 0.5), rgba(32, 41, 44, 0.62)),
     rgba(36, 45, 48, 0.5);
   --thorondor-grid-background:
-    radial-gradient(circle at 1px 1px, rgba(236, 194, 119, 0.08) 1px, transparent 1.6px),
-    radial-gradient(circle at 18px 18px, rgba(126, 158, 137, 0.055) 0.8px, transparent 1.5px),
-    repeating-linear-gradient(135deg, rgba(236, 194, 119, 0.022) 0 1px, transparent 1px 46px),
-    linear-gradient(150deg, rgba(60, 72, 68, 0.98), rgba(39, 49, 51, 0.99) 44%, rgba(28, 36, 40, 1)),
+    radial-gradient(circle at 1px 1px, rgba(126, 211, 173, 0.12) 0.8px, transparent 1.8px),
+    radial-gradient(circle at 21px 17px, rgba(236, 194, 119, 0.07) 0.75px, transparent 1.7px),
+    repeating-linear-gradient(0deg, rgba(132, 190, 160, 0.042) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(90deg, rgba(132, 190, 160, 0.034) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(35deg, transparent 0 26px, rgba(99, 169, 135, 0.038) 26px 27px, transparent 27px 58px),
+    repeating-linear-gradient(145deg, transparent 0 42px, rgba(43, 116, 91, 0.055) 42px 43px, transparent 43px 96px),
+    radial-gradient(circle at 14% 16%, rgba(78, 142, 112, 0.18), transparent 28%),
+    radial-gradient(circle at 82% 72%, rgba(50, 112, 91, 0.16), transparent 30%),
+    linear-gradient(150deg, rgba(54, 68, 62, 0.985), rgba(37, 50, 49, 0.995) 44%, rgba(27, 38, 38, 1)),
     #263133;
-  --thorondor-grid-background-size: 34px 34px, 34px 34px, 54px 54px, auto, auto;
+  --thorondor-grid-background-size: 34px 34px, 38px 38px, 34px 34px, 34px 34px, 116px 116px, 188px 188px, auto, auto, auto, auto;
   --cursor-default: auto;
   --cursor-pointer: pointer;
   --cursor-text: text;

@@ -384,11 +384,31 @@ export default {
 }
 
 .agent-capabilities-section .section-topline {
-    align-items: end;
+    align-items: center;
 }
 
 .agent-capabilities-section .module-copy {
     max-width: 68ch;
+}
+
+.agent-capabilities-section .phase-badge-block {
+    width: min(100%, 220px);
+    justify-self: end;
+    align-self: center;
+    justify-items: end;
+    gap: 9px;
+    text-align: right;
+}
+
+.agent-capabilities-section .phase-badge-block small {
+    max-width: 24ch;
+    color: #afbdc7;
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.agent-capabilities-section .phase-badge {
+    min-width: 144px;
 }
 
 .capabilities-grid .tool-card {
@@ -416,6 +436,17 @@ export default {
     .hero-status-bar div + div {
         border-top: 0;
         border-left: 1px solid rgba(196, 204, 214, 0.16);
+    }
+
+    .agent-capabilities-section .phase-badge-block {
+        width: 100%;
+        justify-self: start;
+        justify-items: start;
+        text-align: left;
+    }
+
+    .agent-capabilities-section .phase-badge-block small {
+        max-width: 46ch;
     }
 }
 
