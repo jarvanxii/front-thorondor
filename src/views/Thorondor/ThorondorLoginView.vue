@@ -491,7 +491,7 @@ export default {
 
     startSocialLogin(provider) {
       if (!provider.configured) {
-        this.feedbackMessage = 'El acceso con Google, Microsoft, GitHub y Apple está pendiente de activar.'
+        this.feedbackMessage = 'El acceso con Google está pendiente de activar.'
         return
       }
 
@@ -501,7 +501,7 @@ export default {
 
       if (!result.started) {
         this.feedbackMessage =
-          'Configura VITE_THORONDOR_API_BASE_URL para activar el login con Google, Microsoft, GitHub y Apple.'
+          'Configura VITE_THORONDOR_API_BASE_URL para activar el login con Google.'
         return
       }
 
@@ -804,6 +804,10 @@ export default {
     border-color 160ms ease,
     box-shadow 160ms ease,
     transform 160ms ease;
+}
+
+.social-login-button:only-child {
+  grid-column: 1 / -1;
 }
 
 .social-login-button:hover:not(:disabled),
