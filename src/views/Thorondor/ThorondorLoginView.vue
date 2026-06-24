@@ -1116,17 +1116,28 @@ export default {
 }
 
 @media (max-width: 980px) {
+  .login-page {
+    --login-mobile-visual-height: min(300px, calc(100vw * 0.6667));
+  }
+
   .login-layout {
-    grid-template-columns: 1fr;
-    grid-template-rows: clamp(210px, 30svh, 270px) minmax(0, 1fr);
+    position: relative;
+    display: block;
     min-height: 100vh;
     min-height: 100svh;
+    padding-top: var(--login-mobile-visual-height);
   }
 
   .login-visual {
-    height: auto;
+    position: fixed;
+    top: 0;
+    right: 0;
+    left: 0;
+    z-index: 0;
+    height: var(--login-mobile-visual-height);
     min-height: 0;
     padding: 0;
+    background: #020607;
   }
 
   .login-banner {
@@ -1134,16 +1145,20 @@ export default {
     height: 100%;
     max-width: none;
     max-height: none;
-    object-fit: cover;
-    object-position: center 48%;
+    object-fit: contain;
+    object-position: top center;
   }
 
   .login-card {
-    height: 100%;
+    position: relative;
+    z-index: 1;
+    height: calc(100svh - var(--login-mobile-visual-height));
     justify-items: center;
     gap: 11px;
     padding: clamp(18px, 3.2vw, 28px);
-    min-height: auto;
+    min-height: calc(100svh - var(--login-mobile-visual-height));
+    overflow-x: hidden;
+    overflow-y: auto;
     border-top: 1px solid rgba(236, 194, 119, 0.24);
     border-left: 0;
     box-shadow: 0 -16px 42px rgba(5, 9, 8, 0.3);
@@ -1158,8 +1173,8 @@ export default {
 }
 
 @media (max-width: 620px) {
-  .login-layout {
-    grid-template-rows: clamp(228px, 34svh, 288px) minmax(0, 1fr);
+  .login-page {
+    --login-mobile-visual-height: min(288px, calc(100vw * 0.6667));
   }
 
   .login-card {
@@ -1219,8 +1234,8 @@ export default {
 }
 
 @media (max-height: 760px) {
-  .login-layout {
-    grid-template-rows: clamp(174px, 27svh, 210px) minmax(0, 1fr);
+  .login-page {
+    --login-mobile-visual-height: min(250px, calc(100vw * 0.6667));
   }
 
   .login-card {
