@@ -1118,7 +1118,7 @@ export default {
 @media (max-width: 980px) {
   .login-layout {
     grid-template-columns: 1fr;
-    grid-template-rows: clamp(160px, 26svh, 220px) minmax(0, 1fr);
+    grid-template-rows: clamp(210px, 30svh, 270px) minmax(0, 1fr);
     min-height: 100vh;
     min-height: 100svh;
   }
@@ -1135,12 +1135,14 @@ export default {
     max-width: none;
     max-height: none;
     object-fit: cover;
+    object-position: center 48%;
   }
 
   .login-card {
     height: 100%;
     justify-items: center;
-    padding: clamp(20px, 4vw, 34px);
+    gap: 11px;
+    padding: clamp(18px, 3.2vw, 28px);
     min-height: auto;
     border-top: 1px solid rgba(236, 194, 119, 0.24);
     border-left: 0;
@@ -1157,12 +1159,12 @@ export default {
 
 @media (max-width: 620px) {
   .login-layout {
-    grid-template-rows: clamp(142px, 23svh, 190px) minmax(0, 1fr);
+    grid-template-rows: clamp(228px, 34svh, 288px) minmax(0, 1fr);
   }
 
   .login-card {
-    gap: 10px;
-    padding: 18px;
+    gap: 9px;
+    padding: 16px 18px 18px;
   }
 
   .cookie-modal-backdrop {
@@ -1217,10 +1219,14 @@ export default {
 }
 
 @media (max-height: 760px) {
+  .login-layout {
+    grid-template-rows: clamp(174px, 27svh, 210px) minmax(0, 1fr);
+  }
+
   .login-card {
-    gap: 9px;
-    padding-top: 18px;
-    padding-bottom: 18px;
+    gap: 7px;
+    padding-top: 14px;
+    padding-bottom: 14px;
   }
 
   .login-card-header {
@@ -1243,11 +1249,11 @@ export default {
   .login-submit,
   .social-login-button,
   .login-field input {
-    min-height: 38px;
+    min-height: 36px;
   }
 
   .login-form {
-    gap: 8px;
+    gap: 7px;
   }
 
   .password-control button {
