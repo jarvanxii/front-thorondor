@@ -138,18 +138,79 @@ function hasPortableThorondorData(payload = {}) {
   ].some((items) => items.length > 0)
 }
 
+function recordTimestamp(value = {}) {
+  return Date.parse(
+    value.updatedAt ||
+      value.timestamp ||
+      value.lastHeartbeatAt ||
+      value.createdAt ||
+      value.heartbeat ||
+      '',
+  ) || 0
+}
+
+function recordMergeKey(value = {}) {
+  const explicitKey = value.id || value._id || value.key
+  if (explicitKey) return String(explicitKey).trim()
+
+  return [
+    value.agentId || value.agent_id,
+    value.timestamp || value.createdAt || value.updatedAt || value.lastHeartbeatAt,
+    value.kind || value.type || value.source || value.name || value.message,
+  ]
+    .map((item) => String(item || '').trim())
+    .filter(Boolean)
+    .join('|')
+}
+
+function mergeRecordArrays(localItems = [], remoteItems = []) {
+  const records = new Map()
+
+  ;[...localItems, ...remoteItems].forEach((item) => {
+    if (!item || typeof item !== 'object') return
+    const key = recordMergeKey(item)
+    if (!key) return
+    const existing = records.get(key)
+    if (!existing || recordTimestamp(item) >= recordTimestamp(existing)) {
+      records.set(key, {
+        ...existing,
+        ...item,
+      })
+    }
+  })
+
+  return Array.from(records.values())
+}
+
+function mergeCasesByAgent(localCases = {}, remoteCases = {}) {
+  const merged = { ...(localCases || {}) }
+  Object.entries(remoteCases || {}).forEach(([agentId, cases]) => {
+    merged[agentId] = mergeRecordArrays(merged[agentId] || [], Array.isArray(cases) ? cases : [])
+  })
+  return merged
+}
+
+function mergePersistencePayload(localPayload = {}, remotePayload = {}) {
+  const localData = normalizePersistencePayload(localPayload)
+  const remoteData = normalizePersistencePayload(remotePayload)
+
+  return {
+    agents: mergeRecordArrays(localData.agents, remoteData.agents),
+    snapshots: mergeRecordArrays(localData.snapshots, remoteData.snapshots),
+    logs: mergeRecordArrays(localData.logs, remoteData.logs),
+    events: mergeRecordArrays(localData.events, remoteData.events),
+    alerts: mergeRecordArrays(localData.alerts, remoteData.alerts),
+    rules: mergeRecordArrays(localData.rules, remoteData.rules),
+    history: mergeRecordArrays(localData.history, remoteData.history),
+    lastSweepAt: [localData.lastSweepAt, remoteData.lastSweepAt].filter(Boolean).sort().pop() || null,
+    generatorDraft: remoteData.generatorDraft || localData.generatorDraft || null,
+    casesByAgent: mergeCasesByAgent(localData.casesByAgent, remoteData.casesByAgent),
+    smartResponses: mergeRecordArrays(localData.smartResponses || [], remoteData.smartResponses || []),
+  }
+}
+
 async function cacheDatasetLocally(payload) {
   const data = normalizePersistencePayload(payload)
-
-  await Promise.all([
-    clearLocalStore(STORE_NAMES.agents),
-    clearLocalStore(STORE_NAMES.snapshots),
-    clearLocalStore(STORE_NAMES.logs),
-    clearLocalStore(STORE_NAMES.events),
-    clearLocalStore(STORE_NAMES.alerts),
-    clearLocalStore(STORE_NAMES.rules),
-    clearLocalStore(STORE_NAMES.history),
-  ])
 
   await Promise.all([
     putLocalMany(STORE_NAMES.agents, data.agents),
@@ -193,6 +254,26 @@ async function runCloudWrite(operation) {
   }
 }
 
+async function runCloudWriteStrict(operation) {
+  if (!shouldUseCloudPersistence()) return true
+
+  try {
+    await operation()
+    await recordCloudSyncState({
+      status: 'ok',
+      message: '',
+    })
+    return true
+  } catch (error) {
+    await recordCloudSyncState({
+      status: 'error',
+      message: error.message,
+    })
+    console.warn('[Thorondor] No se pudo sincronizar con persistencia cloud:', error)
+    return false
+  }
+}
+
 export async function openThorondorPersistence() {
   await openLocalThorondorDb()
   return getThorondorPersistenceStatus()
@@ -213,10 +294,14 @@ export async function loadThorondorPersistence() {
     const remoteData = normalizePersistencePayload(await fetchThorondorCloudDataset())
 
     if (hasPortableThorondorData(remoteData)) {
-      await cacheDatasetLocally(remoteData)
+      const mergedData = mergePersistencePayload(localData, remoteData)
+      await cacheDatasetLocally(mergedData)
+      if (hasPortableThorondorData(localData)) {
+        await replaceThorondorCloudDataset(mergedData)
+      }
 
       return {
-        ...remoteData,
+        ...mergedData,
         persistence: getThorondorPersistenceStatus({
           syncStatus: 'cloud-synced',
           lastSyncAt: new Date().toISOString(),
@@ -237,7 +322,7 @@ export async function loadThorondorPersistence() {
     }
 
     return {
-      ...remoteData,
+      ...localData,
       persistence: getThorondorPersistenceStatus({
         syncStatus: 'cloud-empty',
         lastSyncAt: new Date().toISOString(),
@@ -293,14 +378,17 @@ export async function setMeta(key, value) {
 }
 
 export async function sweepThorondorPersistence(cutoffIso, agentIds = [], perAgentLimits = {}) {
-  await sweepLocalThorondorPersistence(cutoffIso, agentIds, perAgentLimits)
-  await runCloudWrite(() =>
+  const cloudSweepOk = await runCloudWriteStrict(() =>
     runThorondorCloudRetentionSweep({
       cutoffIso,
       agentIds,
       perAgentLimits,
     }),
   )
+
+  if (!cloudSweepOk) return
+
+  await sweepLocalThorondorPersistence(cutoffIso, agentIds, perAgentLimits)
 }
 
 export { STORE_NAMES }

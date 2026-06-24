@@ -34,14 +34,10 @@
                     <span class="section-kicker">Cómo funciona</span>
                     <h2 class="module-title">Un agente por cada equipo que quieras vigilar</h2>
                     <p class="module-copy">
-                        Instalas un agente ligero en cada equipo autorizado. El agente recoge el estado del sistema, los
+                        Instalas un agente ligero en cada equipo que quieras monitorizar. El agente recoge el estado del sistema, los
                         eventos relevantes y las señales de seguridad disponibles. Thorondor ordena esa información para
                         que puedas revisarla sin saltar entre herramientas.
                     </p>
-                </div>
-                <div class="phase-badge-block">
-                    <span class="phase-badge">Linux y Windows</span>
-                    <small>La misma forma de trabajar en ambos sistemas.</small>
                 </div>
             </div>
 
@@ -56,20 +52,41 @@
             </div>
         </section>
 
+        <section class="section-box telemetry-summary-section" aria-labelledby="agent-telemetry-title">
+            <header class="telemetry-summary-header">
+                <span class="section-kicker">Telemetría recogida</span>
+                <h2 id="agent-telemetry-title" class="module-title">Qué informa cada agente</h2>
+                <p class="module-copy">
+                    Cada agente envía una lectura ordenada del host monitorizado. La consola muestra lo que existe en
+                    cada sistema: si un sensor, log o servicio no está disponible, se omite en lugar de generar ruido.
+                </p>
+            </header>
+
+            <ul class="telemetry-list" aria-label="Resumen de telemetría y métricas del agente">
+                <li v-for="group in agentTelemetryGroups" :key="group.label" class="telemetry-row">
+                    <strong>{{ group.label }}</strong>
+                    <span>{{ group.summary }}</span>
+                    <ul class="telemetry-metrics" :aria-label="`Métricas de ${group.label}`">
+                        <li v-for="metric in group.metrics" :key="metric.name">
+                            <b>{{ metric.name }}</b>
+                            <span>{{ metric.detail }}</span>
+                        </li>
+                    </ul>
+                </li>
+            </ul>
+        </section>
+
         <section class="section-box">
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Datos de trabajo</span>
                     <h2 class="module-title">Dónde se conserva la información</h2>
                     <p class="module-copy">
-                        Si todavía no tienes autorización, los datos se quedan en este navegador para que puedas probar
-                        la consola. Con una cuenta autorizada, Thorondor puede guardar el histórico para mantener el
-                        seguimiento entre sesiones.
+                        Thorondor conserva la información de dos formas. Los usuarios no autorizados guardan agentes,
+                        logs, reglas, alertas y preferencias en IndexedDB del navegador. Cuando la cuenta está
+                        autorizada, la API guarda el histórico en la base de datos del servidor e IndexedDB sigue
+                        funcionando como caché local.
                     </p>
-                </div>
-                <div class="phase-badge-block">
-                    <span class="phase-badge">{{ persistenceBadge }}</span>
-                    <small>{{ persistenceNote }}</small>
                 </div>
             </div>
 
@@ -88,13 +105,9 @@
                     <span class="section-kicker">Forma de uso</span>
                     <h2 class="module-title">Del primer agente a la operación diaria</h2>
                     <p class="module-copy">
-                        El objetivo es que puedas añadir un equipo, confirmar que envía información y empezar a trabajar
-                        sobre alertas, eventos y acciones desde una interfaz clara.
+                        El objetivo es que puedas instalar un agente, registrarlo en la consola, confirmar que envía
+                        información y empezar a trabajar sobre alertas, eventos y acciones desde una interfaz clara.
                     </p>
-                </div>
-                <div class="phase-badge-block">
-                    <span class="phase-badge">Guía sencilla</span>
-                    <small>Todo queda separado por tareas.</small>
                 </div>
             </div>
 
@@ -146,8 +159,8 @@ export default {
         storageCards() {
             return [
                 {
-                    label: "Histórico conservado",
-                    value: `${this.thorondorState.retentionDays} días`,
+                    label: "Persistencia activa",
+                    value: this.thorondorState.persistence?.effectiveMode === "cloud" ? "Servidor + IDB" : "IndexedDB",
                     tone: "tone-success",
                     note: this.persistenceWindowNote
                 },
@@ -166,20 +179,10 @@ export default {
             ];
         },
 
-        persistenceBadge() {
-            return this.thorondorState.persistence?.effectiveMode === "cloud" ? "Servidor Thorondor" : "Modo local";
-        },
-
-        persistenceNote() {
-            return this.thorondorState.persistence?.effectiveMode === "cloud"
-                ? "Histórico disponible para la cuenta autorizada."
-                : "Datos guardados solo en este navegador.";
-        },
-
         persistenceWindowNote() {
             return this.thorondorState.persistence?.effectiveMode === "cloud"
-                ? "Ventana de trabajo compartida con tu cuenta."
-                : "Ventana de trabajo local antes de limpiar datos antiguos.";
+                ? "Histórico sincronizado en servidor con caché IndexedDB local."
+                : "Histórico local en IndexedDB hasta la limpieza automática.";
         },
 
         agentCapabilities() {
@@ -217,23 +220,85 @@ export default {
             ];
         },
 
+        agentTelemetryGroups() {
+            return [
+                {
+                    label: "Identidad y salud del agente",
+                    summary: "Permite saber qué host responde, desde dónde responde y si la última lectura es válida.",
+                    metrics: [
+                        { name: "Host", detail: "nombre visible, sistema operativo, versión, IP/DNS y puerto configurado." },
+                        { name: "Heartbeat", detail: "fecha de última señal, estado de /health y errores de colección." },
+                        { name: "Persistencia", detail: "modo local o servidor Thorondor, retención y sincronización disponible." }
+                    ]
+                },
+                {
+                    label: "Sistema y hardware",
+                    summary: "Resume inventario físico y uso actual del equipo monitorizado.",
+                    metrics: [
+                        { name: "CPU", detail: "modelo, fabricante, núcleos, carga total y uso por núcleo cuando está disponible." },
+                        { name: "Memoria", detail: "RAM instalada, memoria usada, memoria libre y porcentaje de ocupación." },
+                        { name: "Discos", detail: "particiones, espacio usado/libre, discos físicos y estado SMART si el host lo permite." },
+                        { name: "Sensores", detail: "temperaturas, ventiladores, batería y GPU con uso, VRAM, driver y temperatura si se puede leer." }
+                    ]
+                },
+                {
+                    label: "Procesos y servicios",
+                    summary: "Ayuda a entender qué se está ejecutando y qué puede estar consumiendo recursos.",
+                    metrics: [
+                        { name: "Procesos", detail: "PID, nombre, usuario, CPU, memoria, ruta y comando de arranque." },
+                        { name: "Servicios", detail: "servicios detectados, estado, arranque y cambios frente al baseline." },
+                        { name: "Tareas", detail: "tareas programadas o unidades persistentes relevantes para el arranque." }
+                    ]
+                },
+                {
+                    label: "Red y exposición",
+                    summary: "Muestra cómo se comunica el host y qué superficie queda abierta.",
+                    metrics: [
+                        { name: "Interfaces", detail: "interfaces activas, direcciones, tráfico y tasas de red cuando están disponibles." },
+                        { name: "Puertos", detail: "puertos en escucha, protocolo, proceso asociado y exposición local/remota." },
+                        { name: "Conexiones", detail: "conexiones activas, estados, IPs remotas y procesos relacionados." },
+                        { name: "Firewall", detail: "reglas activas y reglas propias de Thorondor separadas para no romper configuración del sistema." }
+                    ]
+                },
+                {
+                    label: "Usuarios y accesos",
+                    summary: "Centraliza identidad local, grupos y actividad de autenticación.",
+                    metrics: [
+                        { name: "Usuarios", detail: "usuarios locales, grupos, cuentas privilegiadas y usuarios conectados." },
+                        { name: "Logins", detail: "últimos accesos correctos y fallidos, IPs repetidas y usuarios más atacados." },
+                        { name: "Privilegios", detail: "sudo en Linux, elevaciones relevantes en Windows y cambios en grupos sensibles." }
+                    ]
+                },
+                {
+                    label: "Logs, seguridad y cambios",
+                    summary: "Convierte logs nativos y señales del sistema en eventos útiles para revisar.",
+                    metrics: [
+                        { name: "Logs detectados", detail: "web, base de datos, PHP, firewall, IDS y eventos del sistema si existen en el host." },
+                        { name: "Integridad", detail: "hashes de archivos críticos y cambios en ficheros sensibles." },
+                        { name: "Baseline", detail: "cambios de usuarios, servicios, puertos, tareas, firewall y componentes persistentes." },
+                        { name: "Respuesta", detail: "acciones ejecutadas, bloqueos de IP, recolección de logs y trazabilidad de comandos." }
+                    ]
+                }
+            ];
+        },
+
         startSteps() {
             return [
                 {
-                    label: "1. Añade un equipo",
-                    copy: "Indica un nombre claro, la dirección del equipo y el puerto por el que el agente va a responder."
+                    label: "1. Genera el instalador",
+                    copy: "Genera el instalador para Linux o Windows y deja preparado el servicio que recogerá la información."
                 },
                 {
                     label: "2. Instala el agente",
-                    copy: "Descarga el instalador de Linux o Windows y ejecútalo con los permisos necesarios en el equipo destino."
+                    copy: "Copia el fichero en el equipo destino y ejecútalo con los permisos necesarios. El instalador deja también el desinstalador."
                 },
                 {
-                    label: "3. Comprueba la señal",
-                    copy: "Cuando el agente responde, Thorondor empieza a mostrar estado, eventos, hardware, red y actividad del sistema."
+                    label: "3. Registra el agente",
+                    copy: "Indica en Thorondor el nombre, la IP o DNS y el puerto por el que la consola debe consultar ese equipo."
                 },
                 {
-                    label: "4. Trabaja con criterio",
-                    copy: "Revisa alertas, consulta logs, ajusta reglas y ejecuta respuestas solo cuando la información lo justifique."
+                    label: "4. Opera con contexto",
+                    copy: "Revisa estado, hardware, red, usuarios, logs, alertas y acciones desde las vistas del host seleccionado."
                 }
             ];
         }
@@ -383,32 +448,49 @@ export default {
     grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 
+.section-box {
+    display: grid;
+    gap: clamp(18px, 1.8vw, 24px);
+}
+
+.section-box .section-topline {
+    margin-bottom: 0;
+}
+
+.section-box .module-header {
+    gap: 0.62rem;
+}
+
+.section-box .module-copy {
+    max-width: 82ch;
+}
+
+.capabilities-grid,
+.storage-grid,
+.guide-grid {
+    gap: clamp(14px, 1.35vw, 18px);
+}
+
+.capability-card,
+.storage-grid .signal-card,
+.guide-grid .guide-card {
+    padding: clamp(15px, 1.25vw, 18px);
+}
+
+.capability-card .card-head {
+    margin-bottom: 0.5rem;
+}
+
+.guide-grid .guide-card {
+    gap: 0.72rem;
+}
+
 .agent-capabilities-section .section-topline {
     align-items: center;
 }
 
 .agent-capabilities-section .module-copy {
     max-width: 68ch;
-}
-
-.agent-capabilities-section .phase-badge-block {
-    width: min(100%, 220px);
-    justify-self: end;
-    align-self: center;
-    justify-items: end;
-    gap: 9px;
-    text-align: right;
-}
-
-.agent-capabilities-section .phase-badge-block small {
-    max-width: 24ch;
-    color: #afbdc7;
-    font-size: 0.88rem;
-    line-height: 1.45;
-}
-
-.agent-capabilities-section .phase-badge {
-    min-width: 144px;
 }
 
 .capabilities-grid .tool-card {
@@ -419,6 +501,82 @@ export default {
     max-width: 58ch;
     font-size: 0.94rem;
     line-height: 1.48;
+}
+
+.telemetry-summary-section {
+    display: grid;
+    gap: 1rem;
+}
+
+.telemetry-summary-header {
+    display: grid;
+    gap: 0.42rem;
+    max-width: 76ch;
+}
+
+.telemetry-summary-header .module-title,
+.telemetry-summary-header .module-copy {
+    margin: 0;
+}
+
+.telemetry-list,
+.telemetry-metrics {
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.telemetry-list {
+    display: grid;
+    border-top: 1px solid rgba(205, 213, 210, 0.14);
+}
+
+.telemetry-row {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.28fr) minmax(220px, 0.42fr) minmax(360px, 1fr);
+    gap: 1rem;
+    align-items: start;
+    padding: 0.95rem 0;
+    border-bottom: 1px solid rgba(205, 213, 210, 0.14);
+}
+
+.telemetry-row > strong {
+    color: #f8fafc;
+    font-size: 0.96rem;
+    line-height: 1.3;
+}
+
+.telemetry-row > span {
+    color: #c2cec5;
+    font-size: 0.9rem;
+    line-height: 1.48;
+}
+
+.telemetry-metrics {
+    display: grid;
+    gap: 0.45rem;
+}
+
+.telemetry-metrics li {
+    display: grid;
+    grid-template-columns: minmax(96px, 0.28fr) minmax(0, 1fr);
+    gap: 0.75rem;
+    align-items: baseline;
+}
+
+.telemetry-metrics b {
+    color: #f0bc6a;
+    font-size: 0.75rem;
+    font-weight: 900;
+    letter-spacing: 0.05em;
+    line-height: 1.35;
+    text-transform: uppercase;
+}
+
+.telemetry-metrics span {
+    color: #d5dfd7;
+    font-size: 0.88rem;
+    line-height: 1.45;
 }
 
 @media (max-width: 1180px) {
@@ -438,15 +596,12 @@ export default {
         border-left: 1px solid rgba(196, 204, 214, 0.16);
     }
 
-    .agent-capabilities-section .phase-badge-block {
-        width: 100%;
-        justify-self: start;
-        justify-items: start;
-        text-align: left;
+    .telemetry-row {
+        grid-template-columns: minmax(180px, 0.35fr) minmax(0, 1fr);
     }
 
-    .agent-capabilities-section .phase-badge-block small {
-        max-width: 46ch;
+    .telemetry-metrics {
+        grid-column: 1 / -1;
     }
 }
 
@@ -504,6 +659,19 @@ export default {
 
     .storage-grid {
         grid-template-columns: 1fr;
+    }
+
+    .telemetry-row {
+        grid-template-columns: 1fr;
+        gap: 0.42rem;
+        padding: 0.9rem 0;
+    }
+
+    .telemetry-metrics li {
+        grid-template-columns: 1fr;
+        gap: 0.12rem;
+        padding-left: 0.6rem;
+        border-left: 2px solid rgba(236, 194, 119, 0.28);
     }
 }
 

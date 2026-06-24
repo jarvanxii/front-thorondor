@@ -1,14 +1,16 @@
 <template>
     <ThorondorPageShell>
+        <ThorondorAgentInstallerBuilder v-model:target-os="hostOsFamily" />
+
         <section class="section-box intro-box install-hero">
             <div class="section-topline">
                 <div class="module-header">
                     <span class="section-kicker">Instalación simplificada</span>
                     <h1 class="section-name">Instalación del agente</h1>
                     <p class="section-copy">
-                        El despliegue solo depende del sistema operativo. Descarga el instalador generado, déjalo en
-                        una carpeta del host, ejecútalo con permisos elevados y el agente quedará instalado con su
-                        desinstalador preparado.
+                        Elige el sistema operativo en el generador, descarga el instalador, déjalo en una carpeta del
+                        host y ejecútalo con permisos elevados. El agente quedará instalado con su desinstalador
+                        preparado.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -22,27 +24,6 @@
                     <label>{{ item.label }}</label>
                     <span>{{ item.copy }}</span>
                 </article>
-            </div>
-        </section>
-
-        <section class="section-box">
-            <div class="section-topline">
-                <div class="module-header">
-                    <span class="section-kicker">Sistema objetivo</span>
-                    <h2 class="module-title">Elige el SO del host</h2>
-                    <p class="module-copy">
-                        No hay modo local, LAN o remoto en la instalación. La conectividad y la persistencia se resuelven
-                        desde la configuración del agente y la API de Thorondor.
-                    </p>
-                </div>
-                <label class="control-field os-picker" for="host-os-family">
-                    <span class="field-label">Sistema operativo</span>
-                    <select id="host-os-family" v-model="hostOsFamily" class="form-select input-dark">
-                        <option v-for="family in osFamilyOptions" :key="family.value" :value="family.value">
-                            {{ family.label }}
-                        </option>
-                    </select>
-                </label>
             </div>
         </section>
 
@@ -122,17 +103,14 @@
 </template>
 
 <script>
+import ThorondorAgentInstallerBuilder from "@/components/Thorondor/ThorondorAgentInstallerBuilder.vue";
 import ThorondorPageShell from "@/components/Thorondor/ThorondorPageShell.vue";
-
-const OS_FAMILY_OPTIONS = [
-    { value: "linux", label: "Linux" },
-    { value: "windows", label: "Windows" }
-];
 
 export default {
     name: "ThorondorGuiaInstalacionView",
 
     components: {
+        ThorondorAgentInstallerBuilder,
         ThorondorPageShell
     },
 
@@ -144,10 +122,6 @@ export default {
     },
 
     computed: {
-        osFamilyOptions() {
-            return OS_FAMILY_OPTIONS;
-        },
-
         isWindowsHostOs() {
             return this.hostOsFamily === "windows";
         },
@@ -216,7 +190,7 @@ export default {
                     },
                     {
                         label: "Red",
-                        copy: "El agente queda en el puerto configurado. Si se accede desde fuera del host, expón ese puerto con túnel o proxy."
+                        copy: "Crea una regla inbound TCP para el puerto configurado. Para acceso externo, usa túnel, proxy o NAT controlado."
                     },
                     {
                         label: "Desinstalación",
@@ -240,11 +214,15 @@ export default {
                 },
                 {
                     label: "Arranque",
-                    copy: "Crea thorondor-siem-agent.service en systemd, recarga systemd y lo habilita con enable --now."
+                    copy: "Crea thorondor-siem-agent.service en systemd, recarga systemd, lo habilita y reinicia el servicio."
                 },
                 {
                     label: "Permisos de lectura",
                     copy: "Añade el usuario del agente a adm, systemd-journal y docker si existen; detecta logs y módulos disponibles durante la instalación."
+                },
+                {
+                    label: "Red",
+                    copy: "El agente escucha en el puerto configurado. Si el host tiene firewall, permite ese puerto de forma controlada o usa un túnel local hacia 127.0.0.1."
                 },
                 {
                     label: "Operativa controlada",

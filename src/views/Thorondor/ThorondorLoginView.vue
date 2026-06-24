@@ -675,7 +675,7 @@ export default {
   background: var(--thorondor-grid-background);
   background-size: var(--thorondor-grid-background-size);
   box-shadow:
-    -32px 0 86px rgba(0, 0, 0, 0.46),
+    -20px 0 54px rgba(5, 9, 8, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.08);
 }
 
@@ -996,9 +996,9 @@ export default {
   border-radius: 6px;
   background:
     linear-gradient(145deg, rgba(236, 194, 119, 0.025), transparent 46%),
-    linear-gradient(180deg, #141920, #0b0f15);
+    var(--thorondor-panel-background);
   box-shadow:
-    0 28px 80px rgba(0, 0, 0, 0.5),
+    0 18px 48px rgba(5, 9, 8, 0.32),
     inset 0 1px 0 rgba(255, 255, 255, 0.06);
 }
 
@@ -1140,7 +1140,7 @@ export default {
     min-height: auto;
     border-top: 1px solid rgba(236, 194, 119, 0.24);
     border-left: 0;
-    box-shadow: 0 -24px 64px rgba(0, 0, 0, 0.4);
+    box-shadow: 0 -16px 42px rgba(5, 9, 8, 0.3);
   }
 
   .login-card::before {

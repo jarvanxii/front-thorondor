@@ -1,33 +1,33 @@
 <template>
-    <ThorondorPageShell>
+    <div class="agent-installer-builder">
         <section class="section-box intro-box generator-builder-section">
             <div class="section-topline generator-hero-top">
                 <header class="module-header">
                     <span class="section-kicker">Instalador de agentes</span>
-                    <h1 class="section-name">Generador de agentes</h1>
+                    <h1 class="section-name">Instalador del agente</h1>
                     <p class="section-copy">
-                        Completa nombre, IP o DNS, puerto y sistema operativo. Thorondor genera un único instalador con
-                        key agents, detección automática, persistencia y autoarranque.
+                        El instalador solo prepara el servicio en el equipo destino. El nombre y la IP o DNS se
+                        configuran después desde Registro; la persistencia depende de la cuenta y de sus permisos.
                     </p>
                 </header>
-                <aside class="generator-hero-summary" aria-label="Resumen del generador">
+                <aside class="generator-hero-summary" aria-label="Resumen del instalador">
                     <span>Un fichero</span>
                     <strong>{{ agentDraft.targetOs === 'windows' ? 'thorondor-installer.ps1' : 'thorondor-installer.sh' }}</strong>
-                    <small>{{ persistenceModeTitle }}</small>
+                    <small>Puerto {{ normalizedDraftPort }}</small>
                 </aside>
             </div>
 
-            <div class="generator-intake-grid">
+            <div class="generator-intake-grid generator-intake-grid-minimal">
                 <div class="generator-setup-panel">
                     <div class="generator-setup-copy">
-                        <span class="section-kicker">Generación rápida</span>
-                        <h2 class="module-title">Datos del host</h2>
+                        <span class="section-kicker">Generación directa</span>
+                        <h2 class="module-title">Elige lo imprescindible</h2>
                         <p class="module-copy">
-                            El instalador incluye la configuración necesaria. No tienes que elegir módulos, rutas de logs
-                            ni servicios internos.
+                            No hace falta indicar nombre ni dirección del host para instalar. El agente detecta lo
+                            disponible en el sistema y queda escuchando en el puerto configurado.
                         </p>
                     </div>
-                    <div class="generator-setup-controls">
+                    <div class="generator-setup-controls installer-control-grid">
                         <label class="control-field" for="target-os-family">
                             <span class="field-label">Sistema operativo</span>
                             <select id="target-os-family" :value="agentDraft.targetOs" class="form-select input-dark" @change="setTargetOs($event.target.value)">
@@ -36,126 +36,42 @@
                                 </option>
                             </select>
                         </label>
-                    </div>
-                </div>
-
-                <article class="generator-persistence-panel">
-                    <div class="action-group-copy">
-                        <span>Persistencia</span>
-                        <strong>{{ persistenceModeTitle }}</strong>
-                        <p>{{ persistenceModeDescription }}</p>
-                    </div>
-                    <div class="persistence-mode-grid persistence-mode-grid-compact" role="radiogroup" aria-label="Modo de persistencia de Thorondor">
-                        <label
-                            v-for="option in persistenceOptions"
-                            :key="option.value"
-                            class="persistence-mode-card"
-                            :class="{ 'is-active': selectedPersistenceMode === option.value, 'is-disabled': option.disabled || persistenceModeChanging }"
-                        >
+                        <div class="control-field">
+                            <div class="field-heading">
+                                <label class="field-label" for="agent-port">Puerto del agente</label>
+                                <ThorondorContextHelp
+                                    :title="fieldGuides.port.title"
+                                    :copy="fieldGuides.port.copy"
+                                    aria-label="Ayuda sobre el puerto del agente"
+                                />
+                            </div>
                             <input
-                                type="radio"
-                                name="thorondor-persistence-mode"
-                                :value="option.value"
-                                :checked="selectedPersistenceMode === option.value"
-                                :disabled="option.disabled || persistenceModeChanging"
-                                @change="setPersistenceMode(option.value)"
+                                id="agent-port"
+                                v-model.number="agentDraft.port"
+                                :placeholder="fieldGuides.port.placeholder"
+                                class="form-control input-dark"
+                                inputmode="numeric"
+                                min="1"
+                                max="65535"
+                                type="number"
                             />
-                            <span class="mode-card-main">
-                                <strong>{{ option.label }}</strong>
-                                <small>{{ option.copy }}</small>
-                            </span>
-                            <span class="mode-card-status">{{ option.status }}</span>
-                        </label>
-                    </div>
-                </article>
-            </div>
-        </section>
-
-        <section class="section-box generator-form-section">
-            <div class="control-grid">
-                <div class="form-section-label full-span"><span>Datos mínimos</span></div>
-                <div class="control-field wide-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="host-display-name">Nombre visible del host</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'displayName' }" aria-label="Ayuda sobre el nombre visible del host" @click.stop="togglePinnedHelp('displayName')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.displayName.title }}</strong>
-                                    {{ fieldGuides.displayName.copy }}
-                                </span>
-                            </button>
                         </div>
                     </div>
-                    <input id="host-display-name" v-model="agentDraft.displayName" :placeholder="fieldGuides.displayName.placeholder" class="form-control input-dark" />
-                </div>
-                <div class="control-field wide-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="host-ip">IP o DNS del host</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'hostIp' }" aria-label="Ayuda sobre la dirección del host" @click.stop="togglePinnedHelp('hostIp')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.hostIp.title }}</strong>
-                                    {{ fieldGuides.hostIp.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input id="host-ip" v-model="agentDraft.hostIp" :placeholder="fieldGuides.hostIp.placeholder" class="form-control input-dark" />
-                </div>
-                <div class="control-field">
-                    <div class="field-heading">
-                        <label class="field-label" for="agent-port">Puerto del agente</label>
-                        <div class="context-help">
-                            <button type="button" class="help-trigger" :class="{ 'is-pinned': pinnedHelpKey === 'port' }" aria-label="Ayuda sobre el puerto del agente" @click.stop="togglePinnedHelp('port')">
-                                ?
-                                <span class="help-popover" @click.stop>
-                                    <strong>{{ fieldGuides.port.title }}</strong>
-                                    {{ fieldGuides.port.copy }}
-                                </span>
-                            </button>
-                        </div>
-                    </div>
-                    <input
-                        id="agent-port"
-                        v-model.number="agentDraft.port"
-                        :placeholder="fieldGuides.port.placeholder"
-                        class="form-control input-dark"
-                        inputmode="numeric"
-                        min="1"
-                        max="65535"
-                        type="number"
-                    />
                 </div>
             </div>
 
             <div class="generator-action-panel">
                 <article class="generator-action-group action-group-primary">
                     <div class="action-group-copy">
-                        <span>Instalador</span>
-                        <strong>Crear instalador</strong>
-                        <p>Solo crea el instalador con la configuración del formulario. No registra el host ni lanza polling.</p>
+                        <span>Generar instalador</span>
+                        <strong>Descarga un fichero listo para ejecutar</strong>
+                        <p>El registro del agente se hace después, indicando nombre, IP o DNS y puerto desde Thorondor.</p>
                     </div>
                     <div class="action-button-row">
                         <button class="btn btn-main" :disabled="!isGenerateReady" :title="generateButtonTitle" @click="generateAndDownload">Generar instalador</button>
                         <button class="btn btn-quiet" :disabled="!generatedBundle" @click="downloadGeneratedInstaller">Descargar último</button>
                     </div>
                 </article>
-
-                <article class="generator-action-group">
-                    <div class="action-group-copy">
-                        <span>Operación</span>
-                        <strong>Registro y polling</strong>
-                        <p>Registra el agente en el panel cuando ya vayas a consultarlo. El polling solo prueba agentes registrados.</p>
-                    </div>
-                    <div class="action-button-row">
-                        <button class="btn btn-subtle" :disabled="!isGenerateReady" @click="registerCurrentDraft">Registrar host</button>
-                        <button class="btn btn-subtle" :disabled="!hasRegisteredHosts" :title="pollButtonTitle" @click="pollNow">Probar polling</button>
-                        <button class="btn btn-quiet" @click="clearFormData">Borrar formulario</button>
-                    </div>
-                </article>
-
             </div>
         </section>
 
@@ -168,7 +84,7 @@
                     <strong>Instalador listo</strong>
                     <p>
                         Descarga {{ generatedBundle.installFileName }}, cópialo al host y ejecútalo con permisos elevados.
-                        Después registra el agente si quieres empezar a consultarlo desde Thorondor.
+                        Después registra el agente en Thorondor con la dirección por la que vas a consultarlo.
                     </p>
                 </div>
             </div>
@@ -186,8 +102,8 @@
                 </article>
                 <article class="deployment-step-card">
                     <span>3</span>
-                    <strong>Valida y registra</strong>
-                    <small>{{ generatedSnapshot.receiverUrl }}</small>
+                    <strong>Registra el agente</strong>
+                    <small>Nombre, IP o DNS y puerto se indican en Registro</small>
                 </article>
             </div>
 
@@ -204,16 +120,16 @@
                 </div>
                 <div class="deployment-summary deployment-summary-compact">
                     <div class="summary-line">
-                        <label>Host</label>
-                        <span>{{ buildAgentRecordFromDraft(generatedSnapshot).displayName }}</span>
+                        <label>Endpoint local</label>
+                        <span>{{ generatedSnapshot.receiverUrl }}</span>
                     </div>
                     <div class="summary-line">
                         <label>Puerto</label>
                         <span>{{ generatedSnapshot.port }}</span>
                     </div>
                     <div class="summary-line">
-                        <label>Persistencia</label>
-                        <span>{{ generatedSnapshot.persistenceMode === 'cloud' ? 'Servidor Thorondor' : 'IndexedDB local' }}</span>
+                        <label>Key agents</label>
+                        <span>Incluida automáticamente</span>
                     </div>
                     <div class="summary-line">
                         <label>Desinstalar</label>
@@ -238,12 +154,12 @@
                 </div>
             </div>
         </section>
-    </ThorondorPageShell>
+    </div>
 </template>
 
 <script>
+import ThorondorContextHelp from "@/components/Thorondor/ThorondorContextHelp.vue";
 import ThorondorMarkdownArticle from "@/components/Thorondor/ThorondorMarkdownArticle.vue";
-import ThorondorPageShell from "@/components/Thorondor/ThorondorPageShell.vue";
 import thorondorBaseMixin from "@/features/thorondor/mixins/thorondorBaseMixin";
 import {
     THORONDOR_AGENT_FIXED_PORT,
@@ -263,16 +179,6 @@ function cloneDraft(value) {
 }
 
 const FIELD_GUIDES = {
-    displayName: {
-        title: "Nombre visible",
-        placeholder: "Nombre visible del host",
-        copy: "Etiqueta usada en dashboard, detalle, reglas y alertas."
-    },
-    hostIp: {
-        title: "Host monitorizado",
-        placeholder: "127.0.0.1, 192.168.0.25 o servidor.midominio.com",
-        copy: "IP o DNS del sistema donde se ejecutará el agente. Puedes usar una IP pública, privada o un DNS."
-    },
     port: {
         title: "Puerto de acceso",
         placeholder: String(THORONDOR_AGENT_FIXED_PORT),
@@ -280,15 +186,10 @@ const FIELD_GUIDES = {
     }
 };
 
-const REQUIRED_GENERATION_FIELDS_LINUX = [
-    { key: "displayName", label: "Nombre visible del host", id: "host-display-name" },
-    { key: "hostIp", label: "IP o DNS del host", id: "host-ip" },
-    { key: "port", label: "Puerto del agente", id: "agent-port" }
-];
+const INSTALLER_INTERNAL_HOST_NAME = "thorondor-agent";
+const INSTALLER_INTERNAL_HOST_ADDRESS = "127.0.0.1";
 
-const REQUIRED_GENERATION_FIELDS_WINDOWS = [
-    { key: "displayName", label: "Nombre visible del host", id: "host-display-name" },
-    { key: "hostIp", label: "IP o DNS del host", id: "host-ip" },
+const REQUIRED_GENERATION_FIELDS = [
     { key: "port", label: "Puerto del agente", id: "agent-port" }
 ];
 
@@ -383,11 +284,20 @@ function generateSecretToken(byteLength = 32) {
 }
 
 export default {
-    name: "ThorondorGeneradorAgentesView",
+    name: "ThorondorAgentInstallerBuilder",
+
+    props: {
+        targetOs: {
+            type: String,
+            default: ""
+        }
+    },
+
+    emits: ["update:targetOs"],
 
     components: {
-        ThorondorMarkdownArticle,
-        ThorondorPageShell
+        ThorondorContextHelp,
+        ThorondorMarkdownArticle
     },
 
     mixins: [thorondorBaseMixin],
@@ -396,9 +306,7 @@ export default {
         return {
             agentDraft: buildThorondorAgentDraft(),
             generatedBundle: null,
-            generatedSnapshot: null,
-            pinnedHelpKey: null,
-            persistenceModeChanging: false
+            generatedSnapshot: null
         };
     },
 
@@ -428,7 +336,7 @@ export default {
         },
 
         requiredFields() {
-            return [...(this.isWindows ? REQUIRED_GENERATION_FIELDS_WINDOWS : REQUIRED_GENERATION_FIELDS_LINUX)];
+            return [...REQUIRED_GENERATION_FIELDS];
         },
 
         missingRequiredFieldLabels() {
@@ -441,22 +349,8 @@ export default {
 
         generateButtonTitle() {
             return this.isGenerateReady
-                ? "Genera y descarga el instalador único."
+                ? "Genera y descarga el instalador."
                 : `Completa primero: ${this.missingRequiredFieldLabels.join(", ")}`;
-        },
-
-        hasRegisteredHosts() {
-            return this.dashboardCards.length > 0;
-        },
-
-        pollButtonTitle() {
-            return this.hasRegisteredHosts
-                ? "Ejecuta ahora el polling contra los agentes registrados."
-                : "Registra al menos un agente antes de lanzar polling.";
-        },
-
-        persistenceStatus() {
-            return this.thorondorState.persistence || {};
         },
 
         currentSessionUser() {
@@ -467,85 +361,8 @@ export default {
             return String(this.currentSessionUser?.keyAgents || this.currentSessionUser?.key_agents || "").trim();
         },
 
-        isCurrentUserAuthorized() {
-            return Boolean(
-                this.currentSessionUser?.canUseCloudPersistence
-                    || this.currentSessionUser?.usuarioAutorizado
-                    || this.currentSessionUser?.usuario_autorizado
-            );
-        },
-
-        selectedPersistenceMode() {
-            return this.persistenceStatus.requestedMode || this.persistenceStatus.effectiveMode || "local";
-        },
-
-        persistenceEffectiveMode() {
-            return this.persistenceStatus.effectiveMode || "local";
-        },
-
-        canUseDatabasePersistence() {
-            return Boolean(this.persistenceStatus.cloudAllowed && this.isCurrentUserAuthorized);
-        },
-
-        persistenceModeTitle() {
-            if (!this.canUseDatabasePersistence) {
-                return "IndexedDB local obligatorio";
-            }
-
-            if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
-                return "API no configurada";
-            }
-
-            return this.persistenceEffectiveMode === "cloud"
-                ? "Servidor Thorondor activo"
-                : "IndexedDB local activo";
-        },
-
-        persistenceModeDescription() {
-            if (!this.canUseDatabasePersistence) {
-                return this.persistenceStatus.cloudAccessReason || "Usuario no autorizado para usar BBDD por API.";
-            }
-
-            if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
-                return "API sin configurar. Thorondor usa IndexedDB local.";
-            }
-
-            if (this.persistenceEffectiveMode === "cloud") {
-                return "Logs, eventos, alertas y agentes se guardan en la BBDD del servidor. IndexedDB queda como caché local.";
-            }
-
-            return "Agentes, reglas, eventos y borradores se guardan en este navegador.";
-        },
-
-        persistenceOptions() {
-            const cloudConfigured = Boolean(this.persistenceStatus.cloudConfigured);
-            const effectiveMode = this.persistenceEffectiveMode;
-            const cloudDisabledReason = !this.isCurrentUserAuthorized
-                ? "Usuario no autorizado"
-                : !this.persistenceStatus.cloudAllowed
-                    ? "Sin permiso"
-                    : !cloudConfigured
-                        ? "Sin API"
-                        : "";
-
-            return [
-                {
-                    value: "local",
-                    label: "IndexedDB local",
-                    copy: "Guarda logs y eventos en este navegador. El instalador no sincroniza contra la API central.",
-                    status: effectiveMode === "local" ? "Activo" : "Disponible",
-                    disabled: false
-                },
-                {
-                    value: "cloud",
-                    label: "Servidor Thorondor",
-                    copy: cloudDisabledReason
-                        ? "Requiere usuario autorizado por un admin."
-                        : "Guarda logs y eventos en la BBDD del servidor mediante API autenticada.",
-                    status: cloudDisabledReason || (effectiveMode === "cloud" ? "Activo" : "Disponible"),
-                    disabled: Boolean(cloudDisabledReason)
-                }
-            ];
+        normalizedDraftPort() {
+            return normalizeAgentPort(this.agentDraft.port);
         },
 
         generatedUninstallPath() {
@@ -557,6 +374,13 @@ export default {
     },
 
     watch: {
+        targetOs(value) {
+            const normalizedTargetOs = this.normalizeTargetOs(value);
+            if (normalizedTargetOs && normalizedTargetOs !== this.agentDraft.targetOs) {
+                this.setTargetOs(normalizedTargetOs);
+            }
+        },
+
         agentDraft: {
             deep: true,
             handler(value) {
@@ -568,26 +392,29 @@ export default {
     async mounted() {
         const persistedDraft = this.thorondorState.generatorDraft || buildThorondorAgentDraft();
         if (isLegacyThorondorAgentDraft(persistedDraft)) {
-            this.agentDraft = buildThorondorAgentDraft();
+            this.agentDraft = this.normalizeDraftShape({
+                ...buildThorondorAgentDraft(),
+                targetOs: this.normalizeTargetOs(this.targetOs) || "linux"
+            });
             await this.$store.dispatch("clearThorondorGeneratorDraft");
         } else {
-            this.agentDraft = this.normalizeDraftShape(persistedDraft);
+            this.agentDraft = this.normalizeDraftShape({
+                ...persistedDraft,
+                targetOs: this.normalizeTargetOs(this.targetOs) || persistedDraft.targetOs
+            });
         }
-
-        if (typeof document !== "undefined") {
-            document.addEventListener("click", this.handleOutsideHelpClick);
-        }
-    },
-
-    beforeUnmount() {
-        if (typeof document !== "undefined") {
-            document.removeEventListener("click", this.handleOutsideHelpClick);
-        }
+        this.$emit("update:targetOs", this.agentDraft.targetOs);
     },
 
     methods: {
+        normalizeTargetOs(targetOs) {
+            if (targetOs === "windows") return "windows";
+            if (targetOs === "linux") return "linux";
+            return "";
+        },
+
         setTargetOs(targetOs) {
-            const normalizedTargetOs = targetOs === "windows" ? "windows" : "linux";
+            const normalizedTargetOs = this.normalizeTargetOs(targetOs) || "linux";
             const nextDistro = normalizedTargetOs === "windows"
                 ? "Windows"
                 : (THORONDOR_DISTRO_OPTIONS.includes(this.agentDraft.distro)
@@ -608,6 +435,7 @@ export default {
                 autoStart: true,
                 generateSystemd: normalizedTargetOs !== "windows"
             };
+            this.$emit("update:targetOs", normalizedTargetOs);
         },
 
         handleDistroChange() {
@@ -619,14 +447,11 @@ export default {
 
         getMissingRequiredFields(source = this.agentDraft) {
             const draft = this.normalizeDraftShape(source);
-            const baseFields = draft.targetOs === "windows" ? REQUIRED_GENERATION_FIELDS_WINDOWS : REQUIRED_GENERATION_FIELDS_LINUX;
-            const fields = [...baseFields];
+            const fields = [...REQUIRED_GENERATION_FIELDS];
 
             return fields.filter(({ key }) => {
-                if (key === "hostIp") return !hasTrimmedText(normalizeHostAddress(draft.hostIp));
                 if (key === "port") {
-                    const rawPort = source?.port
-                        ?? (extractPortFromAddress(source?.hostIp) || extractPortFromAddress(source?.receiverUrl) || draft.port);
+                    const rawPort = source?.port ?? draft.port;
                     return !isValidAgentPort(rawPort);
                 }
                 return !hasTrimmedText(draft[key]);
@@ -657,12 +482,12 @@ export default {
             const normalizedOsVersion = versionOptions.includes(requestedOsVersion)
                 ? requestedOsVersion
                 : getThorondorDefaultOsVersionForTarget(targetOs, normalizedDistro);
-            const displayName = String(draft.displayName ?? base.displayName);
-            const hostIp = normalizeHostAddress(draft.hostIp || draft.receiverUrl || base.hostIp);
+            const displayName = INSTALLER_INTERNAL_HOST_NAME;
+            const hostIp = INSTALLER_INTERNAL_HOST_ADDRESS;
             const port = normalizeAgentPort(
-                draft.port || extractPortFromAddress(draft.hostIp) || extractPortFromAddress(draft.receiverUrl) || base.port
+                draft.port || extractPortFromAddress(draft.receiverUrl) || base.port
             );
-            const receiverUrl = hostIp ? buildReceiverUrlFromHost(hostIp, port) : "";
+            const receiverUrl = buildReceiverUrlFromHost(hostIp, port);
 
             return {
                 ...base,
@@ -673,7 +498,7 @@ export default {
                 osVersion: normalizedOsVersion,
                 receiverUrl,
                 centralApiBaseUrl: String(draft.centralApiBaseUrl ?? base.centralApiBaseUrl),
-                networkScope: hostIp ? inferNetworkScopeFromHost(hostIp) : base.networkScope,
+                networkScope: "lan",
                 corsOrigin: String(draft.corsOrigin ?? base.corsOrigin),
                 hostIp,
                 installUser: String(draft.installUser ?? base.installUser),
@@ -681,7 +506,7 @@ export default {
                 keyAgents: String(draft.keyAgents ?? draft.agentToken ?? base.keyAgents ?? this.currentUserKeyAgents ?? ""),
                 agentToken: String(draft.keyAgents ?? draft.agentToken ?? base.agentToken ?? this.currentUserKeyAgents ?? ""),
                 centralEnrollmentToken: String(draft.centralEnrollmentToken ?? base.centralEnrollmentToken ?? ""),
-                persistenceMode: draft.persistenceMode === "cloud" ? "cloud" : "local",
+                persistenceMode: "local",
                 notes: String(draft.notes ?? base.notes),
                 port,
                 intervalSeconds: draft.intervalSeconds === "" || draft.intervalSeconds === null || draft.intervalSeconds === undefined
@@ -697,9 +522,7 @@ export default {
         normalizeDraftForOutput(source = this.agentDraft) {
             const draft = this.normalizeDraftShape(source);
             const record = this.buildAgentRecordFromDraft(draft);
-            const persistenceMode = this.canUseDatabasePersistence && this.persistenceEffectiveMode === "cloud"
-                ? "cloud"
-                : "local";
+            const persistenceMode = "local";
             const keyAgents = String(draft.keyAgents || draft.agentToken || this.currentUserKeyAgents || generateSecretToken()).trim();
             const centralEnrollmentToken = "";
 
@@ -710,13 +533,13 @@ export default {
                 distro: draft.distro || "Otra",
                 osVersion: draft.osVersion.trim(),
                 receiverUrl: record.receiverUrl,
-                centralApiBaseUrl: persistenceMode === "cloud" ? record.centralApiBaseUrl : "",
+                centralApiBaseUrl: "",
                 centralEnrollmentToken,
                 keyAgents,
                 agentToken: keyAgents,
                 persistenceMode,
-                centralSyncEnabled: persistenceMode === "cloud",
-                networkScope: record.networkScope,
+                centralSyncEnabled: false,
+                networkScope: "lan",
                 corsOrigin: record.corsOrigin,
                 hostIp: record.hostIp,
                 port: record.port,
@@ -768,41 +591,6 @@ export default {
             };
         },
 
-        async registerCurrentDraft() {
-            if (this.getMissingRequiredFields().length) {
-                this.focusFirstMissingField();
-                return;
-            }
-
-            const normalizedDraft = this.normalizeDraftForOutput();
-            this.agentDraft = this.normalizeDraftShape({
-                ...this.agentDraft,
-                keyAgents: normalizedDraft.keyAgents,
-                agentToken: normalizedDraft.keyAgents,
-                centralEnrollmentToken: normalizedDraft.centralEnrollmentToken,
-                persistenceMode: normalizedDraft.persistenceMode
-            });
-            const record = this.buildAgentRecordFromDraft(normalizedDraft);
-            await this.$store.dispatch("registerThorondorAgent", record);
-            this.$store.commit("setThorondorSelectedAgent", record.id);
-        },
-
-        async setPersistenceMode(mode) {
-            if (mode === this.selectedPersistenceMode) return;
-            const option = this.persistenceOptions.find((item) => item.value === mode);
-            if (option?.disabled) return;
-            this.persistenceModeChanging = true;
-            try {
-                await this.$store.dispatch("setThorondorPersistenceMode", mode);
-                this.agentDraft = this.normalizeDraftShape({
-                    ...this.agentDraft,
-                    persistenceMode: mode === "cloud" ? "cloud" : "local"
-                });
-            } finally {
-                this.persistenceModeChanging = false;
-            }
-        },
-
         async generateAndDownload() {
             if (!this.isGenerateReady) {
                 this.focusFirstMissingField();
@@ -835,16 +623,6 @@ export default {
             await this.$store.dispatch("clearThorondorGeneratorDraft");
         },
 
-        togglePinnedHelp(key) {
-            this.pinnedHelpKey = this.pinnedHelpKey === key ? null : key;
-        },
-
-        handleOutsideHelpClick(event) {
-            if (!event.target?.closest(".context-help")) {
-                this.pinnedHelpKey = null;
-            }
-        },
-
         downloadTextFile(filename, content) {
             const blob = new Blob([content], { type: "text/plain;charset=utf-8" });
             const url = URL.createObjectURL(blob);
@@ -864,6 +642,15 @@ export default {
 </script>
 
 <style scoped>
+.agent-installer-builder {
+    display: grid;
+    gap: 1rem;
+}
+
+.agent-installer-builder .generator-action-panel {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .generator-builder-section {
     gap: 1.15rem;
     padding-bottom: 1.05rem;
@@ -887,6 +674,10 @@ export default {
     margin-top: 1rem;
 }
 
+.generator-intake-grid-minimal {
+    grid-template-columns: minmax(0, 1fr);
+}
+
 .generator-hero-summary {
     display: grid;
     gap: 0.35rem;
@@ -899,7 +690,7 @@ export default {
     padding: 0.28rem 0.55rem;
     border: 1px solid rgba(176, 184, 194, 0.24);
     border-radius: 3px;
-    background: var(--thorondor-soft-background);
+    background: var(--thorondor-flat-soft-background);
     color: #dce6f2;
     font-size: 0.68rem;
     font-weight: 850;
@@ -920,10 +711,6 @@ export default {
 .deployment-summary {
     display: grid;
     gap: 0.85rem;
-}
-
-.generator-form-section {
-    overflow: visible;
 }
 
 .deployment-steps-grid {
@@ -1025,57 +812,11 @@ export default {
     margin-top: 0.75rem;
 }
 
-.control-grid {
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
-    column-gap: 0.85rem;
-    row-gap: 0.95rem;
-    align-items: start;
-    margin-top: 1.05rem;
-    padding-top: 1rem;
-    border-top: 1px solid rgba(176, 184, 194, 0.16);
-}
-
-.form-section-label {
-    display: flex;
-    grid-column: 1 / -1;
-    align-items: center;
-    gap: 0.75rem;
-    margin: 0.15rem 0 -0.05rem;
-    color: #e8edf4;
-    font-size: 0.72rem;
-    font-weight: 800;
-    letter-spacing: 0.12em;
-    line-height: 1.2;
-    text-transform: uppercase;
-}
-
-.form-section-label:first-child {
-    margin-top: 0;
-}
-
-.form-section-label::after {
-    content: "";
-    flex: 1 1 auto;
-    height: 1px;
-    background: linear-gradient(90deg, rgba(176, 184, 194, 0.32), rgba(176, 184, 194, 0.03));
-}
-
 .generator-setup-panel {
     display: grid;
     grid-template-columns: minmax(0, 1fr) minmax(320px, 0.55fr);
     gap: 1rem 1.2rem;
     align-items: start;
-    padding: 1rem;
-    border: 1px solid rgba(176, 184, 194, 0.24);
-    border-radius: 4px;
-    background: var(--thorondor-nested-background);
-}
-
-.generator-persistence-panel {
-    display: grid;
-    gap: 0.9rem;
-    align-content: start;
     padding: 1rem;
     border: 1px solid rgba(176, 184, 194, 0.24);
     border-radius: 4px;
@@ -1106,6 +847,10 @@ export default {
     display: grid;
     grid-template-columns: minmax(220px, 1fr);
     gap: 0.72rem;
+}
+
+.installer-control-grid {
+    grid-template-columns: repeat(2, minmax(180px, 1fr));
 }
 
 .log-preset-actions {
@@ -1219,9 +964,9 @@ export default {
 .diagnostic-log-option:focus-within,
 .diagnostic-log-option.is-help-open {
     z-index: 650;
-    border-color: rgba(203, 213, 225, 0.42);
-    background: var(--thorondor-nested-background);
-    box-shadow: 0 12px 26px rgba(0, 0, 0, 0.24);
+    border-color: rgba(236, 194, 119, 0.34);
+    background: var(--thorondor-flat-background);
+    box-shadow: 0 5px 14px rgba(5, 9, 8, 0.14);
 }
 
 .diagnostic-log-option input {
@@ -1290,7 +1035,7 @@ export default {
     padding: 0.62rem 0.72rem;
     border: 1px solid rgba(176, 184, 194, 0.22);
     border-radius: 4px;
-    background: var(--thorondor-soft-background);
+    background: var(--thorondor-flat-soft-background);
     line-height: 1.35;
 }
 
@@ -1321,8 +1066,8 @@ export default {
     height: 1.08rem;
     border-radius: 4px;
     border: 1px solid rgba(176, 184, 194, 0.32);
-    background: var(--thorondor-nested-background);
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18);
+    background: var(--thorondor-flat-background);
+    box-shadow: none;
     color: #dbe5ef;
     font-size: 0.58rem;
     font-weight: 700;
@@ -1333,10 +1078,10 @@ export default {
 .help-trigger:hover,
 .help-trigger.is-pinned {
     z-index: 41;
-    border-color: rgba(203, 213, 225, 0.62);
-    background: var(--thorondor-soft-background);
+    border-color: rgba(236, 194, 119, 0.44);
+    background: var(--thorondor-flat-soft-background);
     color: #ffffff;
-    box-shadow: 0 10px 22px rgba(0, 0, 0, 0.28);
+    box-shadow: 0 0 0 3px rgba(218, 166, 92, 0.1);
 }
 
 .help-popover {
@@ -1348,7 +1093,7 @@ export default {
     border-radius: 4px;
     border: 1px solid rgba(176, 184, 194, 0.36);
     background: var(--thorondor-panel-background);
-    box-shadow: 0 18px 38px rgba(0, 0, 0, 0.42);
+    box-shadow: 0 12px 28px rgba(5, 9, 8, 0.26);
     color: rgba(225, 234, 244, 0.95);
     font-size: 0.84rem;
     line-height: 1.65;
@@ -1433,10 +1178,6 @@ export default {
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
-.persistence-action-group {
-    grid-column: 1 / -1;
-}
-
 .action-group-copy {
     display: grid;
     gap: 0.32rem;
@@ -1476,86 +1217,6 @@ export default {
     filter: saturate(0.7);
 }
 
-.persistence-mode-grid {
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 0.75rem;
-}
-
-.persistence-mode-grid-compact {
-    grid-template-columns: 1fr;
-    gap: 0.62rem;
-}
-
-.persistence-mode-card {
-    position: relative;
-    display: grid;
-    grid-template-columns: auto minmax(0, 1fr) auto;
-    gap: 0.7rem;
-    align-items: center;
-    min-height: 5rem;
-    padding: 0.78rem;
-    border: 1px solid rgba(176, 184, 194, 0.22);
-    border-radius: 4px;
-    background: var(--thorondor-soft-background);
-    color: #e7edf5;
-    cursor: var(--cursor-pointer), pointer;
-    transition: border-color 0.18s ease, background 0.18s ease, transform 0.18s ease;
-}
-
-.persistence-mode-card:hover {
-    border-color: rgba(229, 236, 246, 0.42);
-    background: var(--thorondor-nested-background);
-    transform: translateY(-1px);
-}
-
-.persistence-mode-card.is-active {
-    border-color: rgba(234, 242, 252, 0.62);
-    background: var(--thorondor-nested-background);
-}
-
-.persistence-mode-card.is-disabled {
-    opacity: 0.56;
-    cursor: var(--cursor-not-allowed), not-allowed;
-    transform: none;
-}
-
-.persistence-mode-card input {
-    width: 1rem;
-    height: 1rem;
-    accent-color: #d8e3ef;
-}
-
-.mode-card-main {
-    display: grid;
-    gap: 0.22rem;
-    min-width: 0;
-}
-
-.mode-card-main strong {
-    color: #f7fbff;
-    font-size: 0.9rem;
-}
-
-.mode-card-main small {
-    color: rgba(203, 213, 225, 0.76);
-    font-size: 0.78rem;
-    line-height: 1.45;
-}
-
-.mode-card-status {
-    justify-self: end;
-    padding: 0.28rem 0.48rem;
-    border: 1px solid rgba(176, 184, 194, 0.24);
-    border-radius: 3px;
-    background: var(--thorondor-soft-background);
-    color: #e7edf5;
-    font-size: 0.67rem;
-    font-weight: 800;
-    letter-spacing: 0.08em;
-    text-transform: uppercase;
-}
-
 .btn-main:disabled {
     opacity: 0.56;
     cursor: var(--cursor-not-allowed), not-allowed;
@@ -1567,10 +1228,6 @@ export default {
 @media (max-width: 1180px) {
     .generator-intake-grid {
         grid-template-columns: 1fr;
-    }
-
-    .persistence-mode-grid-compact {
-        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -1584,17 +1241,6 @@ export default {
         padding: 0.85rem 0 0;
         border-top: 1px solid rgba(176, 184, 194, 0.18);
         border-left: 0;
-    }
-
-    .control-grid {
-        grid-template-columns: 1fr;
-        row-gap: 0.85rem;
-        padding-top: 0.8rem;
-    }
-
-    .form-section-label {
-        margin-top: 0.25rem;
-        font-size: 0.68rem;
     }
 
     .field-heading {
@@ -1621,7 +1267,7 @@ export default {
     }
 
     .generator-action-panel,
-    .persistence-mode-grid {
+    .installer-control-grid {
         grid-template-columns: 1fr;
     }
 
@@ -1637,15 +1283,6 @@ export default {
     .action-button-row .btn {
         width: 100%;
         justify-content: center;
-    }
-
-    .persistence-mode-card {
-        grid-template-columns: auto minmax(0, 1fr);
-    }
-
-    .mode-card-status {
-        grid-column: 2;
-        justify-self: start;
     }
 
     .deployment-steps-grid,

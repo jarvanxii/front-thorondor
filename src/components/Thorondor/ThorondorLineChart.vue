@@ -1,5 +1,5 @@
 <template>
-    <div class="chart-shell">
+    <div class="chart-shell" :style="chartStyle">
         <canvas ref="canvas"></canvas>
         <div v-if="showFallback" class="chart-fallback">
             Chart.js no está disponible en este navegador. La tabla de métricas sigue operativa.
@@ -27,6 +27,22 @@ export default {
         title: {
             type: String,
             default: ""
+        },
+        type: {
+            type: String,
+            default: "line"
+        },
+        height: {
+            type: [Number, String],
+            default: 320
+        },
+        stacked: {
+            type: Boolean,
+            default: false
+        },
+        beginAtZero: {
+            type: Boolean,
+            default: true
         }
     },
 
@@ -41,6 +57,13 @@ export default {
     computed: {
         chartData() {
             return { labels: this.labels, datasets: this.datasets };
+        },
+
+        chartStyle() {
+            const height = Number(this.height);
+            return {
+                "--chart-height": Number.isFinite(height) ? `${height}px` : String(this.height)
+            };
         }
     },
 
@@ -105,8 +128,9 @@ export default {
             this.showFallback = false;
 
             try {
+                const hasCartesianScales = !["doughnut", "pie", "polarArea"].includes(this.type);
                 this.chart = new ChartLib(canvas, {
-                    type: "line",
+                    type: this.type,
                     data: {
                         labels: this.labels,
                         datasets: this.datasets
@@ -131,8 +155,9 @@ export default {
                                 color: "#f8fafc"
                             }
                         },
-                        scales: {
+                        scales: hasCartesianScales ? {
                             x: {
+                                stacked: this.stacked,
                                 ticks: {
                                     color: "#9aa6b3"
                                 },
@@ -141,6 +166,8 @@ export default {
                                 }
                             },
                             y: {
+                                beginAtZero: this.beginAtZero,
+                                stacked: this.stacked,
                                 ticks: {
                                     color: "#9aa6b3"
                                 },
@@ -148,7 +175,7 @@ export default {
                                     color: "rgba(176, 184, 194, 0.16)"
                                 }
                             }
-                        }
+                        } : {}
                     }
                 });
             } catch {
@@ -162,18 +189,18 @@ export default {
 <style scoped>
 .chart-shell {
     position: relative;
-    min-height: 320px;
+    min-height: var(--chart-height, 320px);
 }
 
 .chart-shell canvas {
     width: 100% !important;
-    height: 320px !important;
+    height: var(--chart-height, 320px) !important;
 }
 
 .chart-fallback {
     display: grid;
     place-items: center;
-    min-height: 320px;
+    min-height: var(--chart-height, 320px);
     color: #9aa6b3;
     font-size: 0.95rem;
     text-align: center;

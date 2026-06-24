@@ -1,7 +1,7 @@
 export const THORONDOR_TOP_NAV_ITEMS = [
   { label: 'Inicio', routeName: 'thorondor-information' },
   { label: 'Instalación', routeName: 'thorondor-installation-guide' },
-  { label: 'Generador de Agentes', routeName: 'thorondor-agent-generator' },
+  { label: 'Registro', routeName: 'thorondor-agent-registration' },
   { label: 'Dashboard', routeName: 'thorondor-dashboard' },
   { label: 'Eventos', routeName: 'thorondor-events' },
   { label: 'Agentes', routeName: 'thorondor-agents' },

@@ -109,6 +109,13 @@ export function createThorondorCentralCommand(agentId, command) {
   })
 }
 
+export function pollThorondorCentralAgentTelemetry(agentId, payload = {}) {
+  return requestCentral(`/console/agents/${encodeURIComponent(agentId)}/telemetry/poll`, {
+    method: 'POST',
+    body: JSON.stringify(payload || {}),
+  })
+}
+
 export function updateThorondorCentralAgent(agentId, payload) {
   return requestCentral(`/console/agents/${encodeURIComponent(agentId)}`, {
     method: 'PATCH',

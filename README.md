@@ -4,7 +4,7 @@ Frontend Vue de Thorondor, extraído desde El Anillo como aplicación independie
 
 Incluye:
 
-- Vistas de información, guía, generador de agentes, dashboard, detalle de hosts, reglas, bloqueo de IPs, auditoría de comandos y agentes.
+- Vistas de información, instalación con descarga de instaladores, registro de agentes, dashboard, detalle de hosts, reglas, bloqueo de IPs, auditoría de comandos y agentes.
 - Estado Vuex con persistencia IndexedDB y capa opcional de sincronización con base de datos.
 - Assets, favicons, tema visual y navegación secundaria propios de Thorondor.
 - Integración con Bootstrap CSS, Marked y Chart.js por CDN.

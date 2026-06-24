@@ -1079,8 +1079,8 @@ export default {
 }
 
 .permission-pill.is-admin {
-  border-color: rgba(96, 165, 250, 0.36);
-  color: #bfdbfe;
+  border-color: rgba(236, 194, 119, 0.36);
+  color: #f3cf8c;
 }
 
 .permission-pill.is-authorized {

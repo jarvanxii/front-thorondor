@@ -90,7 +90,7 @@
         </article>
       </section>
       <p v-else class="empty-box">
-        Sin agentes registrados. Usa el generador para crear el primero.
+        Sin agentes registrados. Usa Instalación y Registro para crear el primero.
       </p>
     </section>
 

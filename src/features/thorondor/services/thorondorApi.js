@@ -164,7 +164,7 @@ function buildNetworkError(errorLabel, error, context, timeoutMs) {
 }
 
 async function fetchJsonWithTimeout(url, agent, errorLabel) {
-  const timeoutMs = Math.max(3000, Number(agent?.requestTimeoutMs) || 10000);
+  const timeoutMs = Math.max(30000, Number(agent?.requestTimeoutMs) || 30000);
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   const context = { method: "GET", endpoint: url };
@@ -195,7 +195,7 @@ async function fetchJsonWithTimeout(url, agent, errorLabel) {
 }
 
 async function postJsonWithTimeout(url, agent, payload, errorLabel) {
-  const timeoutMs = Math.max(3000, Number(agent?.requestTimeoutMs) || 10000);
+  const timeoutMs = Math.max(30000, Number(agent?.requestTimeoutMs) || 30000);
   const controller = new AbortController();
   const timeoutId = window.setTimeout(() => controller.abort(), timeoutMs);
   const context = { method: "POST", endpoint: url };

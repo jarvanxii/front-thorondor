@@ -43,7 +43,7 @@
                 </button>
 
                 <p v-if="!dashboardCards.length" class="empty-box">
-                    Todavía no hay agentes registrados. Genera un instalador y registra el primer host.
+                    Todavía no hay agentes registrados. Instala el agente y registra el primer host.
                 </p>
             </aside>
 
@@ -143,7 +143,7 @@
 
             <article v-else class="agent-editor agent-editor-empty">
                 <h2 class="module-title">Sin agente seleccionado</h2>
-                <p class="module-copy">Registra un agente desde el generador para editar su IP, puerto y key agents.</p>
+                <p class="module-copy">Registra un agente desde Registro para editar su IP, puerto y key agents.</p>
             </article>
         </section>
 
@@ -450,7 +450,10 @@ export default {
             this.testingAgentId = agent.id;
             try {
                 this.selectAgent(agent.id);
-                await this.$store.dispatch("pollThorondorAgents");
+                await this.$store.dispatch("pollThorondorAgents", {
+                    forceLocal: true,
+                    agentIds: [agent.id]
+                });
                 this.agentFeedback = {
                     type: "success",
                     message: "Prueba lanzada. Revisa el historial de conexión para ver el resultado."
@@ -648,7 +651,7 @@ export default {
 
 .agent-endpoint-preview code,
 .endpoint-code {
-    color: #bfdbfe;
+    color: #c6f6d8;
 }
 
 .agent-editor-actions {

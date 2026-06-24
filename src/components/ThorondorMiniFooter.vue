@@ -30,10 +30,10 @@ export default {
   padding: 16px clamp(22px, 2.6vw, 40px);
   border-top: 1px solid rgba(214, 161, 92, 0.2);
   background:
-    linear-gradient(135deg, rgba(20, 27, 32, 0.94), rgba(13, 18, 23, 0.96)),
-    var(--thorondor-panel-background);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-  color: #aeb8c4;
+    linear-gradient(135deg, rgba(31, 40, 35, 0.96), rgba(22, 30, 26, 0.98)),
+    #202923;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.026);
+  color: #b7c2b9;
   font-family: 'Inter', sans-serif;
 }
 
@@ -54,7 +54,7 @@ export default {
 }
 
 .footer-brand span {
-  color: #aeb8c4;
+  color: #b9c5bc;
   font-size: 0.76rem;
   line-height: 1.4;
 }
@@ -65,7 +65,7 @@ export default {
   justify-content: flex-end;
   gap: 0;
   align-items: center;
-  color: #9eaab7;
+  color: #aeb9b0;
   font-size: 0.72rem;
   line-height: 1.5;
 }

@@ -152,7 +152,7 @@ export default {
   background: var(--thorondor-panel-background);
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 28px 60px rgba(0, 0, 0, 0.34);
+    0 14px 34px rgba(5, 9, 8, 0.24);
 }
 
 .auth-callback-brand,
@@ -182,8 +182,8 @@ export default {
   width: 48px;
   height: 48px;
   object-fit: contain;
-  background: var(--thorondor-soft-background);
-  filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.42));
+  background: var(--thorondor-flat-soft-background);
+  filter: drop-shadow(0 7px 12px rgba(5, 9, 8, 0.28));
 }
 
 .auth-callback-status {

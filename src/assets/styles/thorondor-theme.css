@@ -4,7 +4,7 @@
   --thorondor-content-gap-mobile: 14px;
   --thorondor-surface: var(--thorondor-panel);
   --thorondor-surface-strong: var(--thorondor-panel-strong);
-  --thorondor-line: rgba(236, 194, 119, 0.22);
+  --thorondor-line: var(--thorondor-border-strong);
   --thorondor-text: #f8fafc;
   --thorondor-muted: #9aa6b3;
   width: min(100%, 1480px);
@@ -20,13 +20,13 @@
   position: relative;
   overflow: hidden;
   background: var(--thorondor-panel-background);
-  border: 1px solid var(--thorondor-line);
+  border: 1px solid var(--thorondor-border-strong);
   border-radius: 4px;
   padding: 20px;
   margin-bottom: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 12px 28px rgba(6, 10, 12, 0.2);
+    inset 0 1px 0 rgba(255, 255, 255, 0.035),
+    var(--thorondor-surface-shadow);
   min-width: 0;
 }
 
@@ -35,7 +35,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.36), transparent);
+  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.28), transparent);
   pointer-events: none;
 }
 
@@ -196,13 +196,11 @@
 .thorondor-page .tool-card {
   position: relative;
   overflow: hidden;
-  background: var(--thorondor-nested-background);
-  border: 1px solid rgba(236, 194, 119, 0.17);
+  background: var(--thorondor-flat-background);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 4px;
   min-width: 0;
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 8px 18px rgba(6, 10, 12, 0.12);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
 }
 
 .thorondor-page .guide-card::before,
@@ -212,16 +210,16 @@
   content: '';
   position: absolute;
   inset: 0 auto 0 0;
-  width: 2px;
-  background: linear-gradient(180deg, rgba(236, 194, 119, 0.38), rgba(236, 194, 119, 0.1));
+  width: 1px;
+  background: linear-gradient(180deg, rgba(236, 194, 119, 0.28), rgba(143, 214, 173, 0.08));
 }
 
 .thorondor-page .guide-card:hover,
 .thorondor-page .metric-card:hover,
 .thorondor-page .signal-card:hover,
 .thorondor-page .tool-card:hover {
-  border-color: rgba(236, 194, 119, 0.28);
-  background: var(--thorondor-nested-background);
+  border-color: rgba(236, 194, 119, 0.26);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .thorondor-page .guide-card,
@@ -272,7 +270,7 @@
   justify-content: center;
   padding: 6px 12px;
   border-radius: 4px;
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   border: 1px solid rgba(236, 194, 119, 0.3);
   color: #f0c77e;
   font-size: 0.76rem;
@@ -295,7 +293,7 @@
 }
 
 .thorondor-page .verdict-neutral {
-  background: var(--thorondor-nested-background);
+  background: var(--thorondor-flat-background);
 }
 
 .thorondor-page .verdict-icon {
@@ -306,7 +304,7 @@
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   color: #e4e9ef;
   font-size: 0.72rem;
   font-weight: 700;
@@ -350,7 +348,7 @@
 }
 
 .thorondor-page .input-dark {
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   border: 1px solid rgba(205, 213, 210, 0.28);
   color: #f8fafc !important;
   caret-color: #f8fafc;
@@ -369,11 +367,9 @@
     linear-gradient(135deg, var(--thorondor-gold-strong) 50%, transparent 50%)
       calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
     linear-gradient(90deg, transparent calc(100% - 34px), rgba(236, 194, 119, 0.11) calc(100% - 34px)),
-    var(--thorondor-soft-background);
+    var(--thorondor-flat-soft-background);
   border-color: rgba(236, 194, 119, 0.3);
-  box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.045),
-    0 8px 16px rgba(6, 10, 12, 0.11);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
 }
 
 .thorondor-page select:hover,
@@ -387,12 +383,12 @@
     linear-gradient(135deg, #ffe0a6 50%, transparent 50%)
       calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
     linear-gradient(90deg, transparent calc(100% - 34px), rgba(236, 194, 119, 0.16) calc(100% - 34px)),
-    var(--thorondor-nested-background);
+    var(--thorondor-flat-background);
 }
 
 .thorondor-page select option,
 .thorondor-page select.input-dark option {
-  background: #1f282b;
+  background: #1f2a25;
   color: #f8fafc;
 }
 
@@ -424,11 +420,9 @@
 }
 
 .thorondor-page .input-dark:focus {
-  background: var(--thorondor-nested-background);
+  background: var(--thorondor-flat-background);
   border-color: rgba(236, 194, 119, 0.58);
-  box-shadow:
-    0 0 0 0.18rem rgba(218, 166, 92, 0.12),
-    0 10px 18px rgba(6, 10, 12, 0.16);
+  box-shadow: 0 0 0 0.16rem rgba(218, 166, 92, 0.12);
 }
 
 .thorondor-page select:focus,
@@ -441,7 +435,7 @@
     linear-gradient(135deg, #ffe0a6 50%, transparent 50%)
       calc(100% - 14px) calc(50% - 3px) / 6px 6px no-repeat,
     linear-gradient(90deg, transparent calc(100% - 34px), rgba(236, 194, 119, 0.18) calc(100% - 34px)),
-    var(--thorondor-nested-background);
+    var(--thorondor-flat-background);
 }
 
 .thorondor-page .textarea-dark {
@@ -497,7 +491,7 @@
   background: linear-gradient(180deg, #f3cf8c, #c88935);
   border: 1px solid rgba(236, 194, 119, 0.82);
   color: #10100d;
-  box-shadow: 0 8px 16px rgba(0, 0, 0, 0.16);
+  box-shadow: 0 3px 8px rgba(0, 0, 0, 0.12);
 }
 
 .thorondor-page .btn-main:hover,
@@ -507,7 +501,7 @@
 }
 
 .thorondor-page .btn-subtle {
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   border: 1px solid rgba(236, 194, 119, 0.22);
   color: #cfd6de;
 }
@@ -516,7 +510,7 @@
 .thorondor-page .btn-subtle:focus,
 .thorondor-page .btn-quiet:hover,
 .thorondor-page .btn-quiet:focus {
-  background: var(--thorondor-nested-background);
+  background: var(--thorondor-flat-background);
   color: #f8fafc;
 }
 
@@ -564,7 +558,7 @@
   padding: 5px 10px;
   border-radius: 4px;
   border: 1px solid rgba(176, 184, 194, 0.26);
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   color: #cfd6de;
   font-size: 0.74rem;
   font-weight: 800;
@@ -574,8 +568,8 @@
 }
 
 .thorondor-page .output-box {
-  background: var(--thorondor-nested-background);
-  border: 1px solid rgba(190, 198, 209, 0.22);
+  background: var(--thorondor-flat-background);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 4px;
   padding: 14px;
   overflow: auto;
@@ -603,7 +597,7 @@
 }
 
 .thorondor-page .inline-code {
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   border: 1px solid rgba(176, 184, 194, 0.25);
   border-radius: 3px;
   color: #e4e9ef;
@@ -654,7 +648,7 @@
 }
 
 .thorondor-page .chip-muted {
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
   color: #cfd6de;
 }
 
@@ -668,7 +662,7 @@
   padding: 11px;
   border-radius: 4px;
   border: 1px solid rgba(176, 184, 194, 0.16);
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .thorondor-page .mini-stat label {
@@ -703,14 +697,14 @@
   text-align: left;
   border-radius: 4px;
   border: 1px solid rgba(176, 184, 194, 0.24);
-  background: var(--thorondor-nested-background);
+  background: var(--thorondor-flat-background);
   color: #dbe5ef;
   padding: 12px 14px;
 }
 
 .thorondor-page .detail-tab.active {
   border-color: rgba(213, 219, 226, 0.42);
-  background: var(--thorondor-nested-background);
+  background: var(--thorondor-flat-background);
   color: #f8fafc;
 }
 
@@ -729,7 +723,7 @@
   width: 10px;
   height: 10px;
   border-radius: 2px;
-  background: #aeb8c4;
+  background: #8fa09a;
   margin-top: 7px;
 }
 
@@ -792,7 +786,7 @@
   padding: 18px;
   color: #9aa6b3;
   text-align: center;
-  background: var(--thorondor-soft-background);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .thorondor-page .compact-empty {
@@ -816,7 +810,7 @@
 }
 
 .thorondor-page .tone-blue {
-  color: #b6c4d2 !important;
+  color: #c7d3cb !important;
 }
 
 .thorondor-page .tone-neutral {
@@ -882,7 +876,7 @@
     border-color: rgba(190, 198, 209, 0.16);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.026),
-      0 14px 30px rgba(0, 0, 0, 0.2);
+      0 6px 14px rgba(0, 0, 0, 0.12);
   }
 
   .thorondor-page .intro-box {
@@ -922,7 +916,7 @@
 
   .thorondor-page .table-wrap {
     border: 1px solid rgba(176, 184, 194, 0.12);
-    background: var(--thorondor-soft-background);
+    background: var(--thorondor-flat-soft-background);
   }
 
   .thorondor-page .table {
@@ -1013,7 +1007,7 @@
 
   .thorondor-page .output-box {
     padding: 10px;
-    background: var(--thorondor-nested-background);
+    background: var(--thorondor-flat-background);
   }
 
   .thorondor-page .result-pre {

@@ -16,30 +16,6 @@
             </div>
         </section>
 
-        <section class="section-box">
-            <div class="control-grid compact-grid">
-                <div class="control-field">
-                    <span class="field-label">Sistema</span>
-                    <strong>{{ selectedAgent ? selectedAgent.displayName : "Sin sistema seleccionado" }}</strong>
-                    <small>{{ selectedAgent ? agentEndpoint(selectedAgent) : "Elige un sistema desde la barra lateral." }}</small>
-                </div>
-                <div class="control-field">
-                    <label class="field-label" for="history-range">Rango histórico</label>
-                    <select id="history-range" v-model.number="historyRangeDays" class="form-select input-dark">
-                        <option :value="1">Ultimas 24 horas</option>
-                        <option :value="7">Últimos 7 días</option>
-                        <option :value="30">Últimos 30 días</option>
-                    </select>
-                </div>
-            </div>
-
-            <div v-if="selectedAgent" class="detail-tabs">
-                <button v-for="tab in detailTabs" :key="tab.id" class="detail-tab" :class="{ active: detailTab === tab.id }" @click="setDetailTab(tab.id)">
-                    {{ tab.label }}
-                </button>
-            </div>
-        </section>
-
         <section v-if="selectedAgent && detailTab === 'overview'" class="section-box">
             <div class="row g-3 mb-4">
                 <div class="col-md-6 col-xl-3" v-for="item in selectedOverviewCards" :key="item.label">
@@ -119,8 +95,8 @@
                         </div>
                         <dl class="kv-list">
                             <div class="kv-row"><dt>Modelo CPU</dt><dd>{{ snapshotHardware.cpuModel || 'N/D' }}</dd></div>
-                            <div class="kv-row"><dt>Nucleos fisicos</dt><dd>{{ snapshotHardware.cpuCoresPhysical }}</dd></div>
-                            <div class="kv-row"><dt>Nucleos logicos</dt><dd>{{ snapshotHardware.cpuCoresLogical }}</dd></div>
+                            <div class="kv-row"><dt>Núcleos físicos</dt><dd>{{ snapshotHardware.cpuCoresPhysical }}</dd></div>
+                            <div class="kv-row"><dt>Núcleos lógicos</dt><dd>{{ snapshotHardware.cpuCoresLogical }}</dd></div>
                             <div class="kv-row"><dt>Frecuencia actual</dt><dd>{{ snapshotHardware.cpuFreqMhz ? snapshotHardware.cpuFreqMhz + ' MHz' : 'N/D' }}</dd></div>
                             <div class="kv-row"><dt>RAM total</dt><dd>{{ snapshotHardware.totalRamGb }} GB</dd></div>
                         </dl>
@@ -138,7 +114,7 @@
                                 <div class="kv-row" v-if="gpu.vramMb"><dt>VRAM</dt><dd>{{ gpu.vramMb }} MB</dd></div>
                                 <div class="kv-row" v-if="gpu.vramBytes"><dt>VRAM</dt><dd>{{ formatBytes(gpu.vramBytes) }}</dd></div>
                                 <div class="kv-row" v-if="gpu.tempC"><dt>Temperatura</dt><dd :class="tempColorClass(gpu.tempC)">{{ gpu.tempC }}°C</dd></div>
-                                <div class="kv-row" v-if="gpu.utilPercent != null"><dt>Utilizacion</dt><dd>{{ gpu.utilPercent }}%</dd></div>
+                                <div class="kv-row" v-if="gpu.utilPercent != null"><dt>Utilización</dt><dd>{{ gpu.utilPercent }}%</dd></div>
                                 <div class="kv-row" v-if="gpu.driver"><dt>Driver</dt><dd>{{ gpu.driver }}</dd></div>
                             </div>
                         </div>
@@ -176,7 +152,7 @@
 
             <div class="tool-card mb-4">
                 <div class="card-head">
-                    <h5>Evolucion temporal del sistema seleccionado</h5>
+                    <h5>Evolución temporal del sistema seleccionado</h5>
                     <span class="mini-badge">{{ historyRangeDays }}d</span>
                 </div>
                 <div v-if="uniqueDiskMountpoints.length > 1" class="disk-toggles">
@@ -227,7 +203,7 @@
                 <div class="col-xl-6">
                     <div class="tool-card">
                         <div class="card-head">
-                            <h5>Interfaces de red y trafico</h5>
+                            <h5>Interfaces de red y tráfico</h5>
                             <span class="mini-badge">NIC</span>
                         </div>
                         <div class="table-wrap">
@@ -742,7 +718,7 @@
                                 <td>{{ formatBytes(rate.recvBytesPerSec) }}/s</td>
                             </tr>
                             <tr v-if="!snapshotNetworkRates.length">
-                                <td colspan="3" class="text-muted text-center">Sin datos de velocidad de red. Activa el módulo networkRates en el generador.</td>
+                                <td colspan="3" class="text-muted text-center">Sin datos de velocidad de red. El agente enviará esta métrica cuando el host la tenga disponible.</td>
                             </tr>
                         </tbody>
                     </table>
@@ -1684,7 +1660,7 @@
                     <thead>
                         <tr>
                             <th>Tipo</th>
-                            <th>Descripcion</th>
+                            <th>Descripción</th>
                             <th>Fecha</th>
                             <th>Estado</th>
                             <th>Acciones</th>
@@ -1752,8 +1728,302 @@
             </div>
         </section>
 
-        <section v-else class="section-box">
-            <div class="empty-box">No hay hosts seleccionados. Registra uno desde el generador o elige un agente en dashboard.</div>
+        <section v-else-if="!selectedAgent && detailTab === 'overview'" class="section-box host-screen-preview host-screen-preview--overview">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Dashboard del host</span>
+                    <h2 class="section-name">Resumen operativo pendiente</h2>
+                    <p class="section-copy">Cuando selecciones un agente, este panel mostrará salud, recursos, errores de recogida, cambios relevantes y alertas abiertas del host.</p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">Sin host</span>
+                    <small>{{ dashboardCards.length ? "Selecciona un agente en la barra lateral." : "Registra un agente para iniciar el panel." }}</small>
+                </div>
+            </div>
+
+            <div class="host-preview-control-grid">
+                <label class="control-field" for="empty-overview-range">
+                    <span class="field-label">Ventana</span>
+                    <select id="empty-overview-range" v-model="emptyHostFilters.overview.range" class="form-select input-dark">
+                        <option value="24h">Últimas 24 horas</option>
+                        <option value="7d">Últimos 7 días</option>
+                        <option value="30d">Últimos 30 días</option>
+                    </select>
+                    <small>Define el periodo del resumen cuando haya telemetría.</small>
+                </label>
+                <label class="control-field" for="empty-overview-report">
+                    <span class="field-label">Prioridad</span>
+                    <select id="empty-overview-report" v-model="emptyHostFilters.overview.report" class="form-select input-dark">
+                        <option value="health">Salud del host</option>
+                        <option value="performance">Rendimiento</option>
+                        <option value="security">Seguridad</option>
+                    </select>
+                    <small>Ordena los bloques principales del dashboard.</small>
+                </label>
+            </div>
+
+            <dl class="host-overview-preview-list">
+                <div>
+                    <dt>Estado del agente</dt>
+                    <dd>Heartbeat, latencia, versión, endpoint y errores de colección.</dd>
+                </div>
+                <div>
+                    <dt>Recursos</dt>
+                    <dd>CPU, RAM, swap, disco, sensores y tendencia histórica.</dd>
+                </div>
+                <div>
+                    <dt>Riesgo operativo</dt>
+                    <dd>Servicios caídos, cambios de baseline, actualizaciones pendientes y alertas.</dd>
+                </div>
+                <div>
+                    <dt>Actividad reciente</dt>
+                    <dd>Usuarios conectados, logs relevantes, accesos fallidos y acciones ejecutadas.</dd>
+                </div>
+            </dl>
+        </section>
+
+        <section v-else-if="!selectedAgent && detailTab === 'logs'" class="section-box host-screen-preview host-screen-preview--logs">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Logs</span>
+                    <h2 class="section-name">Consulta de logs preparada</h2>
+                    <p class="section-copy">Esta pantalla tendrá filtros de lectura, exportación y búsqueda sobre las fuentes que el agente detecte en el host.</p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">Tail</span>
+                    <small>Solo fuentes existentes en el sistema monitorizado.</small>
+                </div>
+            </div>
+
+            <div class="host-preview-control-grid host-preview-control-grid--three">
+                <label class="control-field" for="empty-log-source">
+                    <span class="field-label">Fuente</span>
+                    <select id="empty-log-source" v-model="emptyHostFilters.logs.source" class="form-select input-dark">
+                        <option value="all">Todas</option>
+                        <option value="system">Sistema</option>
+                        <option value="auth">Autenticación</option>
+                        <option value="web">Web / proxy</option>
+                        <option value="firewall">Firewall / IDS</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-log-level">
+                    <span class="field-label">Nivel</span>
+                    <select id="empty-log-level" v-model="emptyHostFilters.logs.level" class="form-select input-dark">
+                        <option value="all">Todos</option>
+                        <option value="INFO">INFO</option>
+                        <option value="WARNING">WARNING</option>
+                        <option value="ERROR">ERROR</option>
+                        <option value="CRITICAL">CRITICAL</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-log-text">
+                    <span class="field-label">Texto</span>
+                    <input id="empty-log-text" class="form-control input-dark" placeholder="IP, usuario, servicio o mensaje" disabled />
+                </label>
+            </div>
+
+            <div class="host-preview-table">
+                <table>
+                    <thead><tr><th>Fecha</th><th>Fuente</th><th>Nivel</th><th>Mensaje</th></tr></thead>
+                    <tbody>
+                        <tr><td colspan="4">Selecciona un agente para cargar líneas normalizadas de syslog, auth, nginx/apache, firewall, PHP, base de datos o IDS.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="host-preview-actions">
+                <button class="btn btn-subtle" disabled>Exportar JSON</button>
+                <button class="btn btn-subtle" disabled>Exportar CSV</button>
+                <span>Los botones se activan cuando exista un host seleccionado y logs filtrados.</span>
+            </div>
+        </section>
+
+        <section v-else-if="!selectedAgent && detailTab === 'hardware'" class="section-box host-screen-preview host-screen-preview--hardware">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Hardware</span>
+                    <h2 class="section-name">Inventario físico pendiente</h2>
+                    <p class="section-copy">La pantalla de hardware separa uso actual, inventario físico, almacenamiento, sensores, GPU y estado SMART.</p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">Sensores</span>
+                    <small>El agente mostrará solo lo que el host exponga.</small>
+                </div>
+            </div>
+
+            <div class="host-preview-control-grid">
+                <label class="control-field" for="empty-hardware-component">
+                    <span class="field-label">Componente</span>
+                    <select id="empty-hardware-component" v-model="emptyHostFilters.hardware.component" class="form-select input-dark">
+                        <option value="all">Todo</option>
+                        <option value="cpu">CPU</option>
+                        <option value="memory">RAM</option>
+                        <option value="disk">Discos</option>
+                        <option value="sensors">Sensores / GPU</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-hardware-view">
+                    <span class="field-label">Vista</span>
+                    <select id="empty-hardware-view" v-model="emptyHostFilters.hardware.view" class="form-select input-dark">
+                        <option value="usage">Uso actual</option>
+                        <option value="inventory">Inventario</option>
+                        <option value="health">Salud física</option>
+                    </select>
+                </label>
+            </div>
+
+            <ul class="host-hardware-preview-list">
+                <li><strong>CPU</strong><span>Modelo, fabricante, núcleos, frecuencia, carga total y uso por núcleo.</span></li>
+                <li><strong>RAM</strong><span>Total, usada, libre, módulos físicos, velocidad y fabricante cuando esté disponible.</span></li>
+                <li><strong>Discos</strong><span>Particiones, libre/ocupado, discos físicos, tipo, serie y SMART.</span></li>
+                <li><strong>Sensores</strong><span>Temperaturas, ventiladores, batería/UPS, GPU, VRAM, driver y uso.</span></li>
+            </ul>
+        </section>
+
+        <section v-else-if="!selectedAgent && detailTab === 'processes'" class="section-box host-screen-preview host-screen-preview--processes">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Procesos</span>
+                    <h2 class="section-name">Procesos vivos del host</h2>
+                    <p class="section-copy">Esta pantalla cruza procesos con consumo, usuario propietario, comando de arranque y actividad de red asociada.</p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">PID</span>
+                    <small>CPU, RAM, usuario, estado y sockets vinculados.</small>
+                </div>
+            </div>
+
+            <div class="host-preview-control-grid host-preview-control-grid--three">
+                <label class="control-field" for="empty-process-sort">
+                    <span class="field-label">Orden</span>
+                    <select id="empty-process-sort" v-model="emptyHostFilters.processes.sort" class="form-select input-dark">
+                        <option value="cpu">Mayor CPU</option>
+                        <option value="memory">Mayor memoria</option>
+                        <option value="ports">Actividad de red</option>
+                        <option value="name">Nombre</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-process-state">
+                    <span class="field-label">Estado</span>
+                    <select id="empty-process-state" v-model="emptyHostFilters.processes.state" class="form-select input-dark">
+                        <option value="all">Todos</option>
+                        <option value="running">Running</option>
+                        <option value="sleeping">Sleeping</option>
+                        <option value="zombie">Zombie</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-process-search">
+                    <span class="field-label">Buscar</span>
+                    <input id="empty-process-search" class="form-control input-dark" placeholder="Proceso, PID, usuario o comando" disabled />
+                </label>
+            </div>
+
+            <div class="host-preview-table">
+                <table>
+                    <thead><tr><th>Proceso</th><th>PID</th><th>Usuario</th><th>CPU</th><th>RAM</th><th>Red</th></tr></thead>
+                    <tbody>
+                        <tr><td colspan="6">Selecciona un agente para ver procesos reales, consumo, RSS, hilos, cmdline y relación con puertos/conexiones.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section v-else-if="!selectedAgent && detailTab === 'network'" class="section-box host-screen-preview host-screen-preview--network">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Red</span>
+                    <h2 class="section-name">Puertos, conexiones y firewall</h2>
+                    <p class="section-copy">La vista de red separa interfaces, velocidades, puertos abiertos, conexiones establecidas y reglas de firewall.</p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">Sockets</span>
+                    <small>TCP LISTEN, UDP, ESTABLISHED e inventario de reglas.</small>
+                </div>
+            </div>
+
+            <div class="host-preview-control-grid">
+                <label class="control-field" for="empty-network-view">
+                    <span class="field-label">Informe</span>
+                    <select id="empty-network-view" v-model="emptyHostFilters.network.view" class="form-select input-dark">
+                        <option value="ports">Puertos abiertos</option>
+                        <option value="connections">Conexiones</option>
+                        <option value="interfaces">Interfaces</option>
+                        <option value="firewall">Firewall</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-network-protocol">
+                    <span class="field-label">Protocolo</span>
+                    <select id="empty-network-protocol" v-model="emptyHostFilters.network.protocol" class="form-select input-dark">
+                        <option value="all">Todos</option>
+                        <option value="tcp">TCP</option>
+                        <option value="udp">UDP</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="host-network-preview-layout">
+                <dl>
+                    <div><dt>Interfaces</dt><dd>IP, tráfico RX/TX, adaptador y velocidad si el host la reporta.</dd></div>
+                    <div><dt>Puertos</dt><dd>Dirección local, puerto, protocolo, proceso, PID, usuario y estado.</dd></div>
+                    <div><dt>Conexiones</dt><dd>Local/remoto, estado, proceso y PID de sesiones activas.</dd></div>
+                    <div><dt>Firewall</dt><dd>Reglas del sistema separadas de reglas propias de Thorondor.</dd></div>
+                </dl>
+            </div>
+        </section>
+
+        <section v-else-if="!selectedAgent && detailTab === 'users'" class="section-box host-screen-preview host-screen-preview--users">
+            <div class="section-topline">
+                <div class="module-header">
+                    <span class="section-kicker">Usuarios</span>
+                    <h2 class="section-name">Usuarios, grupos y accesos</h2>
+                    <p class="section-copy">Esta pantalla mostrará inventario local, grupos sensibles, sesiones conectadas e historial de autenticación.</p>
+                </div>
+                <div class="phase-badge-block">
+                    <span class="phase-badge">Identidad</span>
+                    <small>Inventario local y actividad de acceso.</small>
+                </div>
+            </div>
+
+            <div class="host-preview-control-grid">
+                <label class="control-field" for="empty-users-view">
+                    <span class="field-label">Informe</span>
+                    <select id="empty-users-view" v-model="emptyHostFilters.users.view" class="form-select input-dark">
+                        <option value="inventory">Inventario</option>
+                        <option value="sessions">Sesiones activas</option>
+                        <option value="logins">Historial de logins</option>
+                        <option value="privileged">Privilegios</option>
+                    </select>
+                </label>
+                <label class="control-field" for="empty-users-scope">
+                    <span class="field-label">Ámbito</span>
+                    <select id="empty-users-scope" v-model="emptyHostFilters.users.scope" class="form-select input-dark">
+                        <option value="all">Todos</option>
+                        <option value="privileged">Privilegiados</option>
+                        <option value="disabled">Bloqueados</option>
+                        <option value="connected">Conectados</option>
+                    </select>
+                </label>
+            </div>
+
+            <div class="host-preview-table">
+                <table>
+                    <thead><tr><th>Usuario</th><th>Estado</th><th>Grupos</th><th>Último acceso</th><th>Acción</th></tr></thead>
+                    <tbody>
+                        <tr><td colspan="5">Selecciona un agente para consultar usuarios reales, grupos, sesiones, logins fallidos y acciones auditadas.</td></tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="host-preview-actions">
+                <button class="btn btn-subtle" disabled>Actualizar inventario</button>
+                <button class="btn btn-subtle" disabled>Bloquear usuario</button>
+                <button class="btn btn-subtle" disabled>Gestionar grupo</button>
+                <span>Las acciones se activan con host seleccionado, JWT válido y permisos de administrador.</span>
+            </div>
+        </section>
+
+        <section v-else class="section-box host-screen-preview">
+            <div class="empty-box">Selecciona un agente en la barra lateral para cargar esta pantalla.</div>
         </section>
     </ThorondorPageShell>
 </template>
@@ -1785,6 +2055,19 @@ export default {
                 level: "all",
                 text: "",
                 source: "all"
+            },
+            emptyHostFilters: {
+                overview: { range: "24h", report: "health" },
+                logs: { source: "all", level: "all" },
+                hardware: { component: "all", view: "usage" },
+                processes: { sort: "cpu", state: "all" },
+                network: { view: "ports", protocol: "all" },
+                users: { view: "inventory", scope: "all" },
+                infra: { view: "services", scope: "all" },
+                access: { view: "failed", range: "24h" },
+                security: { view: "baseline", severity: "all" },
+                alerts: { status: "active", severity: "all" },
+                history: { range: "7d", metric: "resources" }
             },
             processFilters: {
                 text: "",
@@ -1837,7 +2120,7 @@ export default {
 
         detailTabs() {
             return [
-                { id: "overview", label: "Dashboard" },
+                { id: "overview", label: "Dashboard del host" },
                 { id: "hardware", label: "Hardware" },
                 { id: "processes", label: "Procesos" },
                 { id: "network", label: "Red" },
@@ -3129,9 +3412,9 @@ export default {
 }
 
 .protocol-badge--tcp {
-    border-color: rgba(96, 165, 250, 0.28);
-    color: #bfdbfe;
-    background: rgba(37, 99, 235, 0.12);
+    border-color: rgba(143, 214, 173, 0.28);
+    color: #c6f6d8;
+    background: rgba(33, 118, 80, 0.12);
 }
 
 .protocol-badge--udp {
@@ -3663,6 +3946,130 @@ export default {
     border: 1px solid rgba(239, 68, 68, 0.25);
 }
 
+.host-screen-preview {
+    display: grid;
+    gap: 1rem;
+}
+
+.host-preview-control-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.85rem;
+    padding: 1rem;
+    border: 1px solid rgba(205, 213, 210, 0.14);
+    border-radius: 4px;
+    background: var(--thorondor-flat-soft-background, var(--thorondor-soft-background));
+}
+
+.host-preview-control-grid--three {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+
+.host-overview-preview-list,
+.host-network-preview-layout dl {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+}
+
+.host-overview-preview-list div,
+.host-network-preview-layout dl div {
+    display: grid;
+    gap: 0.35rem;
+    min-height: 104px;
+    padding: 0.9rem;
+    border: 1px solid rgba(205, 213, 210, 0.14);
+    border-radius: 4px;
+    background: var(--thorondor-nested-background);
+}
+
+.host-overview-preview-list dt,
+.host-network-preview-layout dt,
+.host-hardware-preview-list strong {
+    color: #f0bc6a;
+    font-size: 0.74rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.host-overview-preview-list dd,
+.host-network-preview-layout dd,
+.host-hardware-preview-list span {
+    margin: 0;
+    color: rgba(220, 230, 241, 0.86);
+    font-size: 0.88rem;
+    line-height: 1.45;
+}
+
+.host-preview-table {
+    overflow: auto;
+    border: 1px solid rgba(205, 213, 210, 0.14);
+    border-radius: 4px;
+    background: var(--thorondor-nested-background);
+}
+
+.host-preview-table table {
+    width: 100%;
+    min-width: 720px;
+    border-collapse: collapse;
+}
+
+.host-preview-table th,
+.host-preview-table td {
+    padding: 0.75rem 0.85rem;
+    border-bottom: 1px solid rgba(205, 213, 210, 0.12);
+    vertical-align: top;
+}
+
+.host-preview-table th {
+    color: #b7c9bd;
+    font-size: 0.72rem;
+    font-weight: 900;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.host-preview-table td {
+    color: rgba(220, 230, 241, 0.86);
+    font-size: 0.86rem;
+    line-height: 1.45;
+}
+
+.host-preview-table tr:last-child td {
+    border-bottom: none;
+}
+
+.host-preview-actions {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.6rem;
+    color: rgba(220, 230, 241, 0.78);
+    font-size: 0.84rem;
+}
+
+.host-hardware-preview-list {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.host-hardware-preview-list li {
+    display: grid;
+    gap: 0.35rem;
+    min-height: 112px;
+    padding: 0.9rem;
+    border: 1px solid rgba(205, 213, 210, 0.14);
+    border-radius: 4px;
+    background: var(--thorondor-nested-background);
+}
+
 @media (max-width: 1200px) {
     .process-summary-grid {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -3670,6 +4077,11 @@ export default {
 
     .hardware-usage-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+
+    .host-preview-control-grid--three,
+    .host-hardware-preview-list {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
@@ -3682,7 +4094,12 @@ export default {
     .hardware-usage-grid,
     .cpu-core-grid,
     .safe-action-grid,
-    .maintenance-grid {
+    .maintenance-grid,
+    .host-preview-control-grid,
+    .host-preview-control-grid--three,
+    .host-overview-preview-list,
+    .host-network-preview-layout dl,
+    .host-hardware-preview-list {
         grid-template-columns: 1fr;
     }
 

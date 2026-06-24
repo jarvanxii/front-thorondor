@@ -1576,7 +1576,7 @@ export default {
   border-bottom: 1px solid rgba(236, 194, 119, 0.2);
   background: var(--thorondor-panel-background);
   box-shadow:
-    0 18px 38px rgba(0, 0, 0, 0.34),
+    0 10px 24px rgba(4, 8, 7, 0.2),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px);
 }
@@ -1607,7 +1607,7 @@ export default {
   height: 44px;
   object-fit: contain;
   object-position: left center;
-  filter: contrast(1.08) drop-shadow(0 8px 14px rgba(0, 0, 0, 0.34));
+  filter: contrast(1.06) drop-shadow(0 5px 10px rgba(0, 0, 0, 0.24));
 }
 
 .thorondor-top-nav {
@@ -1648,7 +1648,7 @@ export default {
   padding: 0 12px;
   border: 0;
   border-left: 1px solid rgba(236, 194, 119, 0.12);
-  border-right: 1px solid rgba(154, 169, 187, 0.08);
+  border-right: 1px solid rgba(205, 213, 210, 0.08);
   border-radius: 0;
   background: transparent;
   color: rgba(226, 234, 244, 0.78);
@@ -1771,15 +1771,15 @@ export default {
   align-items: center;
   justify-content: center;
   height: 44px;
-  border: 1px solid rgba(168, 177, 188, 0.22);
+  border: 1px solid rgba(205, 213, 210, 0.18);
   border-radius: 4px;
-  background: var(--thorondor-nested-background);
-  color: #e5eef8;
+  background: var(--thorondor-flat-background);
+  color: #e8eee7;
   flex: 0 0 auto;
   cursor: var(--cursor-pointer), pointer;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 10px 18px rgba(0, 0, 0, 0.22);
+    0 4px 10px rgba(5, 9, 8, 0.12);
   transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
 }
 
@@ -1822,7 +1822,7 @@ export default {
 }
 
 .error-square.is-empty {
-  border-color: rgba(176, 184, 194, 0.24);
+  border-color: rgba(205, 213, 210, 0.24);
   background: var(--thorondor-nested-background);
   color: #d9e2ec;
 }
@@ -1842,8 +1842,8 @@ export default {
 
 .settings-square:hover,
 .settings-square[aria-expanded='true'] {
-  border-color: rgba(213, 219, 226, 0.36);
-  background: var(--thorondor-soft-background);
+  border-color: rgba(236, 194, 119, 0.34);
+  background: var(--thorondor-flat-soft-background);
   color: #f8fafc;
 }
 
@@ -1863,23 +1863,23 @@ export default {
   right: 24px;
   z-index: 9100;
   display: grid;
-  width: min(376px, calc(100vw - 48px));
+  width: min(344px, calc(100vw - 48px));
   max-height: calc(100vh - var(--main-header-height));
   overflow: auto;
-  border: 1px solid rgba(236, 194, 119, 0.22);
-  border-top-color: rgba(236, 194, 119, 0.34);
-  border-radius: 0 0 6px 6px;
+  border: 1px solid rgba(236, 194, 119, 0.2);
+  border-top-color: rgba(236, 194, 119, 0.3);
+  border-radius: 0 0 4px 4px;
   background:
-    linear-gradient(145deg, rgba(236, 194, 119, 0.025), transparent 44%),
-    linear-gradient(145deg, #171c22, #080c11);
+    linear-gradient(145deg, rgba(236, 194, 119, 0.018), transparent 44%),
+    linear-gradient(145deg, #273129, #202922 62%, #1b241e);
   box-shadow:
-    0 30px 70px rgba(0, 0, 0, 0.52),
-    inset 0 1px 0 rgba(255, 255, 255, 0.06);
+    0 12px 28px rgba(5, 9, 8, 0.2),
+    inset 0 1px 0 rgba(255, 255, 255, 0.026);
   transform-origin: top right;
   clip-path: inset(0 0 0 0);
   will-change: max-height, opacity, clip-path;
   scrollbar-width: thin;
-  scrollbar-color: rgba(176, 184, 194, 0.35) transparent;
+  scrollbar-color: rgba(186, 196, 188, 0.34) transparent;
 }
 
 .settings-dropdown-header,
@@ -1890,31 +1890,30 @@ export default {
 }
 
 .settings-dropdown-header {
-  border-bottom: 1px solid rgba(176, 184, 194, 0.16);
-  background: var(--thorondor-soft-background);
+  border-bottom: 1px solid rgba(205, 213, 210, 0.13);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .settings-account-dropdown {
   gap: 0;
-  padding: 10px;
+  padding: 8px;
 }
 
 .settings-profile-card {
   display: grid;
-  grid-template-columns: 46px minmax(0, 1fr) auto;
-  gap: 12px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 10px;
   align-items: center;
-  padding: 12px;
-  border: 1px solid rgba(236, 194, 119, 0.16);
-  border-radius: 5px;
-  background:
-    linear-gradient(135deg, rgba(236, 194, 119, 0.09), transparent 46%),
-    #0f151d;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  padding: 11px 8px 12px;
+  border: 0;
+  border-bottom: 1px solid rgba(205, 213, 210, 0.12);
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
 }
 
 .settings-profile-avatar {
-  display: grid;
+  display: none;
   width: 46px;
   height: 46px;
   place-items: center;
@@ -1934,9 +1933,9 @@ export default {
 
 .settings-profile-kicker {
   color: #d6a15c;
-  font-size: 0.68rem;
+  font-size: 0.64rem;
   font-weight: 900;
-  letter-spacing: 0;
+  letter-spacing: 0.08em;
   line-height: 1;
   text-transform: uppercase;
 }
@@ -1944,7 +1943,7 @@ export default {
 .settings-profile-main strong {
   overflow: hidden;
   color: #f8fafc;
-  font-size: 1rem;
+  font-size: 0.98rem;
   line-height: 1.18;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -1952,7 +1951,7 @@ export default {
 
 .settings-profile-main small {
   overflow: hidden;
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.78rem;
   line-height: 1.3;
   text-overflow: ellipsis;
@@ -1961,26 +1960,26 @@ export default {
 
 .settings-profile-status {
   align-self: start;
-  padding: 5px 7px;
-  border: 1px solid rgba(248, 113, 113, 0.26);
+  padding: 4px 7px;
+  border: 1px solid rgba(248, 113, 113, 0.2);
   border-radius: 999px;
-  background: rgba(69, 24, 27, 0.38);
-  color: #fecaca;
-  font-size: 0.64rem;
+  background: transparent;
+  color: #efb2b2;
+  font-size: 0.62rem;
   font-weight: 900;
   line-height: 1;
   white-space: nowrap;
 }
 
 .settings-profile-status.is-authorized {
-  border-color: rgba(74, 222, 128, 0.28);
-  background: rgba(18, 83, 49, 0.32);
-  color: #bbf7d0;
+  border-color: rgba(143, 214, 173, 0.24);
+  background: transparent;
+  color: #aee8c4;
 }
 
 .settings-dropdown-header span,
 .settings-menu-footer > span {
-  color: #9aa6b3;
+  color: #aab6ad;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1995,53 +1994,54 @@ export default {
 .settings-dropdown-header small,
 .settings-menu-footer small,
 .settings-menu-copy span {
-  color: #96a1ad;
+  color: #aab6ad;
   line-height: 1.45;
 }
 
 .settings-menu-list {
   display: grid;
-  gap: 6px;
-  padding: 10px 0;
+  gap: 1px;
+  padding: 7px 0;
 }
 
 .settings-menu-item {
   display: grid;
-  grid-template-columns: 34px minmax(0, 1fr) 18px;
+  grid-template-columns: 7px minmax(0, 1fr) 14px;
   width: 100%;
-  gap: 10px;
+  gap: 11px;
   align-items: center;
-  padding: 10px;
-  border: 1px solid rgba(176, 184, 194, 0.1);
-  border-radius: 5px;
-  background: #0b1118;
-  color: #e5eef8;
+  min-height: 48px;
+  padding: 8px 9px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: transparent;
+  color: #e8eee7;
   cursor: var(--cursor-pointer), pointer;
   font: inherit;
   text-align: left;
   transition:
     border-color 0.16s ease,
-    background 0.16s ease,
-    transform 0.16s ease;
+    background 0.16s ease;
 }
 
 .settings-menu-accent {
   position: relative;
-  display: grid;
-  width: 34px;
-  height: 34px;
-  place-items: center;
-  border: 1px solid rgba(236, 194, 119, 0.18);
-  border-radius: 5px;
-  background: rgba(236, 194, 119, 0.07);
+  display: block;
+  width: 4px;
+  height: 24px;
+  border: 0;
+  border-radius: 999px;
+  background: transparent;
 }
 
 .settings-menu-accent::before {
-  width: 8px;
-  height: 8px;
-  border-radius: 50%;
+  position: absolute;
+  inset: 0;
+  width: 4px;
+  height: 100%;
+  border-radius: inherit;
   background: #d6a15c;
-  box-shadow: 0 0 0 5px rgba(214, 161, 92, 0.12);
+  opacity: 0.72;
   content: '';
 }
 
@@ -2050,23 +2050,19 @@ export default {
 }
 
 .settings-menu-accent--preferences::before {
-  background: #93c5fd;
-  box-shadow: 0 0 0 5px rgba(147, 197, 253, 0.11);
+  background: #8fd6ad;
 }
 
 .settings-menu-accent--email::before {
-  background: #c4b5fd;
-  box-shadow: 0 0 0 5px rgba(196, 181, 253, 0.11);
+  background: #e0b875;
 }
 
 .settings-menu-accent--persistence::before {
   background: #86efac;
-  box-shadow: 0 0 0 5px rgba(134, 239, 172, 0.11);
 }
 
 .settings-menu-accent--admin::before {
   background: #fbbf24;
-  box-shadow: 0 0 0 5px rgba(251, 191, 36, 0.12);
 }
 
 .settings-menu-copy {
@@ -2097,22 +2093,22 @@ export default {
 }
 
 .settings-menu-item strong {
-  color: #edf5ff;
-  font-size: 0.86rem;
+  color: #f3f7f1;
+  font-size: 0.84rem;
   line-height: 1.2;
 }
 
 .settings-menu-copy span {
   overflow: hidden;
-  font-size: 0.78rem;
+  font-size: 0.75rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .settings-menu-arrow {
   position: relative;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
 }
 
@@ -2120,20 +2116,19 @@ export default {
   position: absolute;
   top: 50%;
   left: 50%;
-  width: 7px;
-  height: 7px;
-  border-top: 2px solid #8997a8;
-  border-right: 2px solid #8997a8;
+  width: 6px;
+  height: 6px;
+  border-top: 1.5px solid #9ba89e;
+  border-right: 1.5px solid #9ba89e;
   content: '';
   transform: translate(-62%, -50%) rotate(45deg);
 }
 
 .settings-menu-item:hover,
 .settings-menu-item:focus-visible {
-  border-color: rgba(236, 194, 119, 0.28);
-  background: rgba(236, 194, 119, 0.07);
+  border-color: rgba(236, 194, 119, 0.18);
+  background: rgba(236, 194, 119, 0.045);
   outline: none;
-  transform: translateX(-2px);
 }
 
 .settings-menu-item:hover .settings-menu-arrow::before,
@@ -2142,30 +2137,30 @@ export default {
 }
 
 .settings-menu-footer {
-  border-top: 1px solid rgba(176, 184, 194, 0.12);
+  border-top: 1px solid rgba(205, 213, 210, 0.11);
   background: transparent;
 }
 
 .settings-menu-footer--action {
   gap: 0;
-  padding: 10px 0 0;
+  padding: 8px 0 0;
 }
 
 .settings-logout-button {
   display: inline-flex;
   width: 100%;
-  min-height: 40px;
+  min-height: 38px;
   align-items: center;
   justify-content: center;
   gap: 9px;
-  border: 1px solid rgba(248, 113, 113, 0.28);
+  border: 1px solid rgba(248, 113, 113, 0.2);
   border-radius: 4px;
-  background: rgba(69, 24, 27, 0.38);
-  color: #fee2e2;
+  background: transparent;
+  color: #efb2b2;
   cursor: var(--cursor-pointer), pointer;
   font: inherit;
-  font-size: 0.86rem;
-  font-weight: 900;
+  font-size: 0.82rem;
+  font-weight: 850;
   transition:
     border-color 0.16s ease,
     background 0.16s ease,
@@ -2209,9 +2204,9 @@ export default {
 
 .settings-logout-button:hover,
 .settings-logout-button:focus-visible {
-  border-color: rgba(254, 202, 202, 0.58);
-  background: rgba(96, 34, 38, 0.66);
-  color: #fff7f7;
+  border-color: rgba(248, 113, 113, 0.34);
+  background: rgba(127, 29, 29, 0.14);
+  color: #fee2e2;
   outline: none;
 }
 
@@ -2223,14 +2218,12 @@ export default {
 .settings-menu-enter-active,
 .settings-menu-leave-active {
   transition:
-    opacity 0.18s ease,
     max-height 0.24s cubic-bezier(0.22, 1, 0.36, 1),
     clip-path 0.24s cubic-bezier(0.22, 1, 0.36, 1);
 }
 
 .settings-menu-enter-from,
 .settings-menu-leave-to {
-  opacity: 0;
   max-height: 0;
   clip-path: inset(0 0 100% 0);
 }
@@ -2242,7 +2235,7 @@ export default {
   display: grid;
   place-items: center;
   padding: clamp(12px, 2.4vw, 28px);
-  background: rgba(5, 8, 12, 0.72);
+  background: rgba(12, 18, 15, 0.72);
   backdrop-filter: blur(10px);
 }
 
@@ -2252,11 +2245,11 @@ export default {
   width: min(940px, 100%);
   max-height: min(760px, calc(100dvh - var(--main-header-height) - 24px));
   overflow: hidden;
-  border: 1px solid rgba(176, 184, 194, 0.22);
+  border: 1px solid rgba(205, 213, 210, 0.22);
   border-radius: 4px;
   background: var(--thorondor-panel-background);
   box-shadow:
-    0 30px 70px rgba(0, 0, 0, 0.58),
+    0 20px 52px rgba(4, 8, 7, 0.34),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
 }
 
@@ -2274,7 +2267,7 @@ export default {
 }
 
 .settings-modal-header {
-  border-bottom: 1px solid rgba(176, 184, 194, 0.16);
+  border-bottom: 1px solid rgba(205, 213, 210, 0.16);
   background: var(--thorondor-soft-background);
 }
 
@@ -2303,7 +2296,7 @@ export default {
 .settings-modal-header p,
 .modal-panel-heading small {
   margin: 0;
-  color: #9fb0c3;
+  color: #aab6ad;
   line-height: 1.5;
 }
 
@@ -2314,10 +2307,10 @@ export default {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(176, 184, 194, 0.24);
+  border: 1px solid rgba(205, 213, 210, 0.24);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
-  color: #e5eef8;
+  color: #edf3eb;
   cursor: var(--cursor-pointer), pointer;
   font-weight: 900;
 }
@@ -2332,7 +2325,7 @@ export default {
   overflow: auto;
   padding: 18px 20px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(176, 184, 194, 0.35) transparent;
+  scrollbar-color: rgba(205, 213, 210, 0.35) transparent;
 }
 
 .settings-modal-grid {
@@ -2347,7 +2340,7 @@ export default {
   align-content: start;
   min-width: 0;
   padding: 16px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid rgba(205, 213, 210, 0.16);
   border-radius: 4px;
   background: var(--thorondor-nested-background);
 }
@@ -2411,7 +2404,7 @@ export default {
 .settings-readonly-value {
   width: 100%;
   min-height: 40px;
-  border: 1px solid rgba(176, 184, 194, 0.2);
+  border: 1px solid rgba(205, 213, 210, 0.2);
   border-radius: 3px;
   background: var(--thorondor-soft-background);
   color: #f8fafc;
@@ -2446,7 +2439,7 @@ export default {
 }
 
 .settings-field select option {
-  background: #10141a;
+  background: #1f2a25;
   color: #f8fafc;
 }
 
@@ -2483,7 +2476,7 @@ export default {
   gap: 10px;
   align-items: start;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid rgba(205, 213, 210, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2498,7 +2491,7 @@ export default {
   position: relative;
   width: 38px;
   height: 21px;
-  border: 1px solid rgba(176, 184, 194, 0.28);
+  border: 1px solid rgba(205, 213, 210, 0.28);
   border-radius: 999px;
   background: var(--thorondor-nested-background);
   transition: background 0.16s ease, border-color 0.16s ease;
@@ -2532,12 +2525,12 @@ export default {
 }
 
 .settings-switch-row strong {
-  color: #edf5ff;
+  color: #f3f7f1;
   font-size: 0.9rem;
 }
 
 .settings-switch-row small {
-  color: #9fb0c3;
+  color: #aab6ad;
   line-height: 1.45;
 }
 
@@ -2589,7 +2582,7 @@ export default {
   justify-content: space-between;
   gap: 14px;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid rgba(205, 213, 210, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2606,7 +2599,7 @@ export default {
 }
 
 .admin-toolbar span {
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.82rem;
 }
 
@@ -2628,13 +2621,13 @@ export default {
   gap: 4px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid rgba(205, 213, 210, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
 
 .admin-stat-grid span {
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.7rem;
   font-weight: 850;
   text-transform: uppercase;
@@ -2664,10 +2657,10 @@ export default {
   gap: 3px;
   min-height: 48px;
   padding: 10px 12px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid rgba(205, 213, 210, 0.16);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
-  color: #dce6f2;
+  color: #dde7df;
   cursor: var(--cursor-pointer), pointer;
   font: inherit;
   text-align: left;
@@ -2684,7 +2677,7 @@ export default {
 }
 
 .admin-tabs span {
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.76rem;
 }
 
@@ -2700,7 +2693,7 @@ export default {
   gap: 10px;
   align-items: end;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid rgba(205, 213, 210, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2728,7 +2721,7 @@ export default {
   align-items: center;
   min-width: 1040px;
   padding: 10px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid rgba(205, 213, 210, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2764,14 +2757,14 @@ export default {
 .admin-user-main small,
 .admin-user-meta small {
   overflow: hidden;
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.76rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .admin-user-meta strong {
-  color: #dce6f2;
+  color: #dde7df;
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -2787,9 +2780,9 @@ export default {
   min-height: 26px;
   align-items: center;
   padding: 0 8px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid rgba(205, 213, 210, 0.16);
   border-radius: 999px;
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.72rem;
   font-style: normal;
   font-weight: 850;
@@ -2862,9 +2855,9 @@ export default {
 .admin-empty-state {
   margin: 0;
   padding: 14px;
-  border: 1px dashed rgba(176, 184, 194, 0.22);
+  border: 1px dashed rgba(205, 213, 210, 0.22);
   border-radius: 4px;
-  color: #9fb0c3;
+  color: #aab6ad;
   text-align: center;
 }
 
@@ -2883,7 +2876,7 @@ export default {
   align-items: center;
   min-width: 920px;
   padding: 10px;
-  border: 1px solid rgba(176, 184, 194, 0.12);
+  border: 1px solid rgba(205, 213, 210, 0.12);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2893,11 +2886,11 @@ export default {
   top: 0;
   z-index: 1;
   min-height: 34px;
-  background: #0d131b;
+  background: var(--thorondor-flat-background);
 }
 
 .admin-log-row--head span {
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -2920,7 +2913,7 @@ export default {
 
 .admin-log-row small {
   overflow: hidden;
-  color: #9fb0c3;
+  color: #aab6ad;
   font-size: 0.72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2932,10 +2925,10 @@ export default {
   min-height: 22px;
   align-items: center;
   padding: 0 8px;
-  border: 1px solid rgba(147, 197, 253, 0.28);
+  border: 1px solid rgba(143, 214, 173, 0.28);
   border-radius: 999px;
-  background: rgba(29, 78, 216, 0.16);
-  color: #bfdbfe;
+  background: rgba(33, 118, 80, 0.16);
+  color: #c6f6d8;
   font-size: 0.68rem;
   font-style: normal;
   font-weight: 900;
@@ -2965,7 +2958,7 @@ export default {
   gap: 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid rgba(205, 213, 210, 0.16);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
   cursor: var(--cursor-pointer), pointer;
@@ -2984,7 +2977,7 @@ export default {
 .settings-persistence-card input {
   width: 16px;
   height: 16px;
-  accent-color: #d8e3ef;
+  accent-color: #d5dfd7;
 }
 
 .settings-persistence-card span {
@@ -2998,16 +2991,16 @@ export default {
 }
 
 .settings-persistence-card small {
-  color: #9fb0c3;
+  color: #aab6ad;
   line-height: 1.42;
 }
 
 .settings-persistence-card em {
   justify-self: end;
   padding: 0.25rem 0.46rem;
-  border: 1px solid rgba(176, 184, 194, 0.22);
+  border: 1px solid rgba(205, 213, 210, 0.22);
   border-radius: 3px;
-  color: #dce6f2;
+  color: #dde7df;
   font-size: 0.66rem;
   font-style: normal;
   font-weight: 850;
@@ -3026,7 +3019,7 @@ export default {
   gap: 5px;
   min-width: 0;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid rgba(205, 213, 210, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -3048,7 +3041,7 @@ export default {
 }
 
 .settings-modal-footer {
-  border-top: 1px solid rgba(176, 184, 194, 0.16);
+  border-top: 1px solid rgba(205, 213, 210, 0.16);
   background: var(--thorondor-soft-background);
 }
 
@@ -3068,15 +3061,15 @@ export default {
 }
 
 .settings-modal-secondary {
-  border: 1px solid rgba(176, 184, 194, 0.2);
+  border: 1px solid rgba(205, 213, 210, 0.2);
   background: var(--thorondor-soft-background);
-  color: #dce6f2;
+  color: #dde7df;
 }
 
 .settings-modal-primary {
   border: 1px solid rgba(229, 236, 246, 0.34);
-  background: linear-gradient(180deg, rgba(226, 232, 240, 0.92), rgba(168, 177, 188, 0.9));
-  color: #070a0e;
+  background: linear-gradient(180deg, rgba(232, 236, 228, 0.92), rgba(205, 213, 210, 0.9));
+  color: #101410;
 }
 
 .settings-modal-primary:disabled {
@@ -3120,7 +3113,7 @@ export default {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid rgba(168, 177, 188, 0.22);
+  border: 1px solid rgba(205, 213, 210, 0.22);
   border-radius: 4px;
   background: var(--thorondor-nested-background);
 }
@@ -3148,7 +3141,7 @@ export default {
 
   .settings-dropdown {
     right: 14px;
-    width: min(360px, calc(100vw - 28px));
+    width: min(344px, calc(100vw - 28px));
   }
 
   .error-dropdown {

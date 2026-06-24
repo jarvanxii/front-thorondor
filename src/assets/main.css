@@ -3,26 +3,31 @@
 :root {
   --main-header-height: 68px;
   --sidebar-width: 248px;
-  --thorondor-ink: #1a2324;
-  --thorondor-ink-soft: #253033;
-  --thorondor-panel: #253033;
-  --thorondor-panel-strong: #1b2427;
+  --thorondor-ink: #18211d;
+  --thorondor-ink-soft: #222c27;
+  --thorondor-panel: #242d28;
+  --thorondor-panel-strong: #1c2520;
   --thorondor-gold: #d6a15c;
   --thorondor-gold-strong: #f3cf8c;
   --thorondor-gold-soft: rgba(218, 166, 92, 0.18);
   --thorondor-gold-line: rgba(236, 194, 119, 0.24);
-  --thorondor-line: rgba(205, 213, 210, 0.2);
+  --thorondor-line: rgba(205, 213, 210, 0.18);
+  --thorondor-border-subtle: rgba(205, 213, 210, 0.14);
+  --thorondor-border-strong: rgba(236, 194, 119, 0.22);
+  --thorondor-flat-background: rgba(30, 39, 34, 0.88);
+  --thorondor-flat-soft-background: rgba(36, 46, 40, 0.66);
+  --thorondor-surface-shadow: 0 7px 18px rgba(5, 9, 8, 0.11);
   --thorondor-text: #f8fafc;
   --thorondor-muted: #9aa6b3;
   --thorondor-panel-background:
-    linear-gradient(145deg, rgba(48, 58, 59, 0.96), rgba(32, 41, 44, 0.985) 56%, rgba(25, 33, 37, 0.992)),
-    #253033;
+    linear-gradient(145deg, rgba(43, 53, 47, 0.96), rgba(32, 41, 36, 0.985) 58%, rgba(25, 33, 30, 0.992)),
+    #242d28;
   --thorondor-nested-background:
-    linear-gradient(145deg, rgba(40, 49, 51, 0.78), rgba(28, 36, 40, 0.84)),
-    rgba(31, 40, 43, 0.68);
+    linear-gradient(145deg, rgba(36, 45, 40, 0.72), rgba(28, 36, 32, 0.78)),
+    rgba(30, 39, 34, 0.72);
   --thorondor-soft-background:
-    linear-gradient(145deg, rgba(55, 65, 66, 0.5), rgba(32, 41, 44, 0.62)),
-    rgba(36, 45, 48, 0.5);
+    linear-gradient(145deg, rgba(49, 60, 53, 0.42), rgba(32, 41, 36, 0.54)),
+    rgba(36, 46, 40, 0.5);
   --thorondor-grid-background:
     radial-gradient(circle at 1px 1px, rgba(126, 211, 173, 0.12) 0.8px, transparent 1.8px),
     radial-gradient(circle at 21px 17px, rgba(236, 194, 119, 0.07) 0.75px, transparent 1.7px),

@@ -265,7 +265,8 @@ MAX_CUSTOM_LOG_FILES = 8
 HEADERS = {
     "Access-Control-Allow-Origin": CORS_ORIGIN,
     "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-    "Access-Control-Allow-Headers": "Content-Type, X-Thorondor-Key-Agents, X-Thorondor-Agent-Token",
+    "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Thorondor-Key-Agents, X-Thorondor-Agent-Token",
+    "Access-Control-Allow-Private-Network": "true",
     "Access-Control-Max-Age": "600",
     "Cache-Control": "no-store",
     "Content-Type": "application/json; charset=utf-8"
@@ -273,6 +274,13 @@ HEADERS = {
 CENTRAL_WARNING_INTERVAL_SECONDS = 300
 _CENTRAL_LAST_WARNING_AT = 0
 _CENTRAL_LAST_WARNING_MESSAGE = ""
+TELEMETRY_CACHE_TTL_SECONDS = max(120, min(300, POLL_INTERVAL_SECONDS * 4))
+TELEMETRY_INITIAL_WAIT_SECONDS = 8
+_TELEMETRY_CACHE = None
+_TELEMETRY_CACHE_AT = 0
+_TELEMETRY_CACHE_REFRESHING = False
+_TELEMETRY_CACHE_ERROR = ""
+_TELEMETRY_CACHE_LOCK = threading.Lock()
 
 
 def now_iso():
@@ -2333,7 +2341,7 @@ def collect_linux_service_inventory():
     if not shutil.which("systemctl"):
         return []
     startup = {}
-    unit_files = run_command_result(["systemctl", "list-unit-files", "--type=service", "--no-pager", "--no-legend"], timeout=14)
+    unit_files = run_command_result(["systemctl", "list-unit-files", "--type=service", "--no-pager", "--no-legend"], timeout=5)
     if unit_files.get("ok"):
         for line in unit_files.get("stdout", "").splitlines():
             parts = line.split()
@@ -2341,7 +2349,7 @@ def collect_linux_service_inventory():
                 startup[parts[0]] = parts[1]
 
     services = []
-    units = run_command_result(["systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend", "--plain"], timeout=16)
+    units = run_command_result(["systemctl", "list-units", "--type=service", "--all", "--no-pager", "--no-legend", "--plain"], timeout=6)
     if units.get("ok"):
         for line in units.get("stdout", "").splitlines():
             parts = line.split(None, 4)
@@ -2453,7 +2461,7 @@ Get-ScheduledTask |
 def collect_linux_scheduled_tasks():
     tasks = []
     if shutil.which("systemctl"):
-        result = run_command_result(["systemctl", "list-timers", "--all", "--no-pager", "--no-legend", "--plain"], timeout=14)
+        result = run_command_result(["systemctl", "list-timers", "--all", "--no-pager", "--no-legend", "--plain"], timeout=5)
         if result.get("ok"):
             for line in result.get("stdout", "").splitlines()[:140]:
                 parts = line.split()
@@ -2495,7 +2503,7 @@ def collect_linux_scheduled_tasks():
             })
             if len(tasks) >= 220:
                 return tasks
-    user_cron = run_command_result(["sh", "-c", "crontab -l 2>/dev/null"], timeout=8)
+    user_cron = run_command_result(["sh", "-c", "crontab -l 2>/dev/null"], timeout=3)
     if user_cron.get("ok"):
         for index, line in enumerate(user_cron.get("stdout", "").splitlines()):
             text = line.strip()
@@ -2664,7 +2672,7 @@ try {
             parts = line.split()
             if len(parts) >= 2 and parts[1] == "disk":
                 dev = f"/dev/{parts[0]}"
-                result = run_command_result(with_admin([smartctl_binary, "-A", "-j", dev]), timeout=15)
+                result = run_command_result(with_admin([smartctl_binary, "-H", "-A", "-j", dev]), timeout=5)
                 out = result["stdout"] if result["ok"] else ""
                 try:
                     data = json.loads(out)
@@ -3804,6 +3812,317 @@ def collect_payload():
     return payload
 
 
+def build_warming_payload(message="telemetry_cache_warming"):
+    return {
+        "agent": {
+            "id": AGENT_ID,
+            "version": AGENT_VERSION,
+            "hostLabel": HOST_LABEL,
+            "systemName": SYSTEM_NAME,
+            "distro": DISTRO,
+            "osVersion": OS_VERSION,
+            "targetOs": "windows" if IS_WINDOWS else "linux",
+            "installUser": INSTALL_USER,
+            "listenPort": LISTEN_PORT,
+            "networkScope": NETWORK_SCOPE,
+            "modules": MODULES,
+            "persistenceMode": PERSISTENCE_MODE,
+            "centralSyncEnabled": bool(CENTRAL_API_BASE_URL),
+            "generatedAt": now_iso()
+        },
+        "heartbeat": now_iso(),
+        "system": {
+            "hostname": socket.gethostname(),
+            "localIp": find_local_ip(),
+            "os": platform.system(),
+            "kernel": platform.release(),
+            "architecture": platform.machine(),
+            "uptimeSeconds": int(time.time() - psutil.boot_time()),
+            "connectedUsers": [],
+            "loadAverage": list(os.getloadavg()) if hasattr(os, "getloadavg") else [0, 0, 0]
+        },
+        "metrics": {
+            "cpuTotal": psutil.cpu_percent(interval=0),
+            "cpuPerCore": [],
+            "memoryPercent": psutil.virtual_memory().percent,
+            "disks": [],
+            "processes": [],
+            "openPorts": [],
+            "interfaces": [],
+            "agentStatus": collect_agent_operational_status([{
+                "name": "telemetryCache",
+                "error": message,
+                "timestamp": now_iso()
+            }]),
+            "collectionStatus": {
+                "os": "windows" if IS_WINDOWS else "linux",
+                "modules": MODULES,
+                "errors": [{
+                    "name": "telemetryCache",
+                    "error": message,
+                    "timestamp": now_iso()
+                }],
+                "counts": {}
+            }
+        },
+        "security": {"events": [], "authTail": [], "authLogPath": ""},
+        "logs": {"syslogPath": "", "syslogTail": [], "journalTail": [], "kernelErrors": [], "customLogs": []},
+        "commands": {}
+    }
+
+
+def collect_browser_payload():
+    collection_errors = []
+    vm = psutil.virtual_memory()
+    swap = psutil.swap_memory()
+    partitions = []
+    for partition in psutil.disk_partitions():
+        if not partition.fstype or partition.fstype in VIRTUAL_FSTYPES:
+            continue
+        try:
+            usage = psutil.disk_usage(partition.mountpoint)
+            partitions.append({
+                "device": partition.device,
+                "mountpoint": partition.mountpoint,
+                "fstype": partition.fstype,
+                "percent": usage.percent,
+                "usedPercent": usage.percent,
+                "freePercent": round(100 - usage.percent, 1),
+                "used": usage.used,
+                "free": usage.free,
+                "total": usage.total
+            })
+        except Exception:
+            continue
+
+    def collect_fast_processes(limit=100):
+        rows = []
+        for process in psutil.process_iter(["pid", "name", "username", "memory_percent", "status", "create_time"]):
+            try:
+                info = process.info
+                rows.append({
+                    "pid": info.get("pid"),
+                    "ppid": process.ppid(),
+                    "name": info.get("name") or "",
+                    "username": info.get("username") or "",
+                    "memoryPercent": round(info.get("memory_percent") or 0, 2),
+                    "memoryRss": process.memory_info().rss,
+                    "cpuPercent": 0,
+                    "status": info.get("status") or "",
+                    "createTime": info.get("create_time") or 0,
+                    "cmdline": "",
+                    "exe": "",
+                    "numThreads": info.get("num_threads") or 0
+                })
+            except Exception:
+                continue
+        rows.sort(key=lambda item: (item["memoryRss"], item["memoryPercent"]), reverse=True)
+        return rows[:limit]
+
+    def collect_fast_open_ports(limit=160):
+        ports = []
+        for connection in psutil.net_connections(kind="inet"):
+            try:
+                if connection.status != psutil.CONN_LISTEN or not connection.laddr:
+                    continue
+                ports.append({
+                    "proto": "tcp" if connection.type == socket.SOCK_STREAM else "udp",
+                    "ip": connection.laddr.ip,
+                    "port": connection.laddr.port,
+                    "pid": connection.pid or 0,
+                    "process": "",
+                    "user": "",
+                    "cmdline": ""
+                })
+            except Exception:
+                continue
+        ports.sort(key=lambda item: (item["port"], item["ip"]))
+        return ports[:limit]
+
+    processes = safe_collect("processes", [], collect_fast_processes, collection_errors)
+    interfaces = safe_collect("interfaces", [], collect_network_interfaces, collection_errors)
+    open_ports = safe_collect("openPorts", [], collect_fast_open_ports, collection_errors)
+    established_connections = []
+    temperatures = safe_collect("temperatures", [], collect_temperatures, collection_errors) if MODULES.get("hardwareMonitor") else []
+    user_inventory = safe_collect("userInventory", {"collectedAt": now_iso(), "os": "windows" if IS_WINDOWS else "linux", "users": [], "groups": [], "privilegedGroups": []}, collect_user_inventory, collection_errors)
+    hardware = {
+        "cpuModel": platform.processor() or platform.machine(),
+        "cpuPhysicalCores": psutil.cpu_count(logical=False) or 0,
+        "cpuLogicalCores": psutil.cpu_count(logical=True) or 0,
+        "memoryTotal": vm.total,
+        "disks": [],
+        "gpu": []
+    }
+    loadavg = os.getloadavg() if hasattr(os, "getloadavg") else (0, 0, 0)
+
+    return {
+        "agent": {
+            "id": AGENT_ID,
+            "version": AGENT_VERSION,
+            "hostLabel": HOST_LABEL,
+            "systemName": SYSTEM_NAME,
+            "distro": DISTRO,
+            "osVersion": OS_VERSION,
+            "targetOs": "windows" if IS_WINDOWS else "linux",
+            "installUser": INSTALL_USER,
+            "listenPort": LISTEN_PORT,
+            "networkScope": NETWORK_SCOPE,
+            "modules": MODULES,
+            "persistenceMode": PERSISTENCE_MODE,
+            "centralSyncEnabled": bool(CENTRAL_API_BASE_URL),
+            "generatedAt": now_iso()
+        },
+        "heartbeat": now_iso(),
+        "system": {
+            "hostname": socket.gethostname(),
+            "localIp": find_local_ip(),
+            "os": platform.system(),
+            "kernel": platform.release(),
+            "architecture": platform.machine(),
+            "uptimeSeconds": int(time.time() - psutil.boot_time()),
+            "connectedUsers": collect_users(),
+            "loadAverage": list(loadavg)
+        },
+        "metrics": {
+            "cpuTotal": psutil.cpu_percent(interval=0.1),
+            "cpuPerCore": psutil.cpu_percent(interval=0, percpu=True),
+            "memoryPercent": vm.percent,
+            "memoryUsed": vm.used,
+            "memoryAvailable": vm.available,
+            "memoryFree": vm.free,
+            "memoryTotal": vm.total,
+            "swapPercent": swap.percent,
+            "swapUsed": swap.used,
+            "swapTotal": swap.total,
+            "disks": partitions,
+            "processes": processes,
+            "processCount": len(psutil.pids()),
+            "processSampleLimit": len(processes),
+            "interfaces": interfaces,
+            "temperatures": temperatures,
+            "openPorts": open_ports,
+            "networkRates": [],
+            "establishedConnections": established_connections,
+            "failedServices": [],
+            "serviceInventory": [],
+            "scheduledTasks": [],
+            "fans": [],
+            "battery": None,
+            "gpu": [],
+            "hardware": hardware,
+            "userInventory": user_inventory,
+            "docker": [],
+            "dns": [],
+            "firewallRules": [],
+            "firewallSummary": {"total": 0, "thorondor": 0, "system": 0},
+            "smartData": [],
+            "loginHistory": [],
+            "pendingUpdates": {"count": 0, "updates": []},
+            "inventoryChanges": {"initialized": True, "events": [], "counts": {}},
+            "hostBaseline": {"initialized": True, "events": [], "counts": {}},
+            "securityAccess": build_security_access_summary({"events": []}, []),
+            "agentStatus": {
+                "keyAgentsPresent": bool(KEY_AGENTS),
+                "keyAgentsFingerprint": sha256(KEY_AGENTS.encode("utf-8")).hexdigest()[:12] if KEY_AGENTS else "",
+                "commandsAccepted": ["collect-telemetry", "collect-logs", "check-host-health"],
+                "collectionErrors": collection_errors
+            },
+            "collectionStatus": {
+                "os": "windows" if IS_WINDOWS else "linux",
+                "modules": MODULES,
+                "errors": collection_errors,
+                "counts": {
+                    "processes": len(processes),
+                    "openPorts": len(open_ports),
+                    "establishedConnections": len(established_connections),
+                    "interfaces": len(interfaces),
+                    "temperatures": len(temperatures),
+                    "users": len(user_inventory.get("users", [])) if isinstance(user_inventory, dict) else 0
+                }
+            }
+        },
+        "security": {"events": [], "authTail": [], "authLogPath": ""},
+        "logs": {"syslogPath": "", "syslogTail": [], "journalTail": [], "kernelErrors": [], "customLogs": []},
+        "commands": {}
+    }
+
+
+def telemetry_cache_is_fresh():
+    with _TELEMETRY_CACHE_LOCK:
+        return bool(_TELEMETRY_CACHE) and (time.time() - _TELEMETRY_CACHE_AT) <= TELEMETRY_CACHE_TTL_SECONDS
+
+
+def mark_telemetry_refresh_finished(payload=None, error=""):
+    global _TELEMETRY_CACHE, _TELEMETRY_CACHE_AT, _TELEMETRY_CACHE_REFRESHING, _TELEMETRY_CACHE_ERROR
+    with _TELEMETRY_CACHE_LOCK:
+        if payload is not None:
+            _TELEMETRY_CACHE = payload
+            _TELEMETRY_CACHE_AT = time.time()
+        _TELEMETRY_CACHE_ERROR = str(error or "")
+        _TELEMETRY_CACHE_REFRESHING = False
+
+
+def refresh_telemetry_cache_worker():
+    try:
+        mark_telemetry_refresh_finished(collect_browser_payload(), "")
+    except Exception as exc:
+        mark_telemetry_refresh_finished(None, str(exc))
+
+
+def schedule_telemetry_refresh(force=False):
+    global _TELEMETRY_CACHE_REFRESHING
+    with _TELEMETRY_CACHE_LOCK:
+        if _TELEMETRY_CACHE_REFRESHING:
+            return
+        if not force and _TELEMETRY_CACHE and (time.time() - _TELEMETRY_CACHE_AT) <= TELEMETRY_CACHE_TTL_SECONDS:
+            return
+        _TELEMETRY_CACHE_REFRESHING = True
+    threading.Thread(target=refresh_telemetry_cache_worker, daemon=True).start()
+
+
+def cached_payload_copy(payload, cache_status):
+    try:
+        copy = json.loads(json.dumps(payload))
+    except Exception:
+        copy = payload
+    if isinstance(copy, dict):
+        copy["cache"] = cache_status
+    return copy
+
+
+def get_cached_payload(wait_seconds=TELEMETRY_INITIAL_WAIT_SECONDS):
+    with _TELEMETRY_CACHE_LOCK:
+        has_cache = bool(_TELEMETRY_CACHE)
+    if not has_cache:
+        schedule_telemetry_refresh()
+    deadline = time.time() + max(0, wait_seconds)
+    while time.time() < deadline:
+        with _TELEMETRY_CACHE_LOCK:
+            if _TELEMETRY_CACHE:
+                age = max(0, int(time.time() - _TELEMETRY_CACHE_AT))
+                return cached_payload_copy(_TELEMETRY_CACHE, {
+                    "status": "ready",
+                    "ageSeconds": age,
+                    "refreshing": _TELEMETRY_CACHE_REFRESHING,
+                    "ttlSeconds": TELEMETRY_CACHE_TTL_SECONDS,
+                    "error": _TELEMETRY_CACHE_ERROR
+                })
+        time.sleep(0.15)
+
+    with _TELEMETRY_CACHE_LOCK:
+        if _TELEMETRY_CACHE:
+            age = max(0, int(time.time() - _TELEMETRY_CACHE_AT))
+            return cached_payload_copy(_TELEMETRY_CACHE, {
+                "status": "stale" if age > TELEMETRY_CACHE_TTL_SECONDS else "ready",
+                "ageSeconds": age,
+                "refreshing": _TELEMETRY_CACHE_REFRESHING,
+                "ttlSeconds": TELEMETRY_CACHE_TTL_SECONDS,
+                "error": _TELEMETRY_CACHE_ERROR
+            })
+        error = _TELEMETRY_CACHE_ERROR
+    return build_warming_payload(error or "telemetry_cache_warming")
+
+
 def execute_central_command(command):
     command_type = str(command.get("type", ""))
     payload = command.get("payload") or {}
@@ -3815,7 +4134,8 @@ def execute_central_command(command):
         return unblock_ip(payload.get("ip"))
 
     if command_type == "collect-telemetry":
-        return {"ok": True, "telemetry": collect_payload(), "message": "Telemetría recogida"}
+        schedule_telemetry_refresh(force=True)
+        return {"ok": True, "telemetry": get_cached_payload(wait_seconds=10), "message": "Telemetría recogida"}
 
     if command_type == "collect-logs":
         if not MODULES["applicationLogs"]:
@@ -3879,7 +4199,7 @@ def central_agent_loop():
             if central_response_paused(registration):
                 time.sleep(max(10, POLL_INTERVAL_SECONDS))
                 continue
-            central_request("POST", f"/agents/{AGENT_ID}/telemetry", collect_payload())
+            central_request("POST", f"/agents/{AGENT_ID}/telemetry", get_cached_payload(wait_seconds=10))
             process_central_commands()
         except Exception as exc:
             log_central_warning(exc)
@@ -3947,7 +4267,7 @@ class ThorondorHandler(BaseHTTPRequestHandler):
             if not self._is_local_authorized():
                 self._write_unauthorized()
                 return
-            payload = collect_payload()
+            payload = get_cached_payload()
             if parsed.path == "/logs":
                 self._write_json(200, payload["logs"])
             else:
@@ -4019,6 +4339,7 @@ def main():
 
     refresh_active_modules()
     print(f"[thorondor] iniciando agente {SYSTEM_NAME} en {LISTEN_HOST}:{LISTEN_PORT}")
+    schedule_telemetry_refresh(force=True)
     if central_api_root():
         print(f"[thorondor] modo central activo: {central_api_root()}")
         threading.Thread(target=central_agent_loop, daemon=True).start()
@@ -4116,7 +4437,8 @@ UNIT
 
 $SUDO cp "/tmp/$SERVICE_FILE" "/etc/systemd/system/$SERVICE_FILE"
 $SUDO systemctl daemon-reload
-$SUDO systemctl enable --now "$SERVICE_FILE"
+$SUDO systemctl enable "$SERVICE_FILE"
+$SUDO systemctl restart "$SERVICE_FILE"
 `;
   const completionMessage = `echo "Instalación completada. Comprueba el servicio con:"
 echo "sudo systemctl status $SERVICE_FILE"`;
@@ -4146,8 +4468,9 @@ echo "=== Thorondor Agent Installer para Linux ==="
 echo "[1/6] Preparando dependencias del sistema..."
 
 if command -v apt >/dev/null 2>&1; then
-  $SUDO apt update
-  $SUDO apt install -y python3 python3-venv python3-pip lm-sensors smartmontools dmidecode pciutils
+  export DEBIAN_FRONTEND=noninteractive
+  $SUDO apt-get update
+  $SUDO apt-get install -y python3 python3-venv python3-pip lm-sensors smartmontools dmidecode pciutils
 elif command -v dnf >/dev/null 2>&1; then
   $SUDO dnf install -y python3 python3-pip python3-virtualenv lm_sensors smartmontools dmidecode pciutils
 elif command -v pacman >/dev/null 2>&1; then
@@ -4183,8 +4506,8 @@ fi
 
 echo "[3/6] Creando entorno Python aislado..."
 $SUDO python3 -m venv "$INSTALL_DIR/venv"
-$SUDO "$INSTALL_DIR/venv/bin/python" -m pip install --upgrade pip
-$SUDO "$INSTALL_DIR/venv/bin/python" -m pip install psutil
+$SUDO env PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 "$INSTALL_DIR/venv/bin/python" -m pip install --upgrade pip
+$SUDO env PIP_NO_CACHE_DIR=1 PIP_DISABLE_PIP_VERSION_CHECK=1 "$INSTALL_DIR/venv/bin/python" -m pip install psutil
 
 echo "[4/6] Ajustando permisos de lectura y firewall operativo..."
 $SUDO chown -R "$INSTALL_USER:$INSTALL_USER" "$INSTALL_DIR"
@@ -4212,8 +4535,9 @@ $SUDO chown "$INSTALL_USER:$INSTALL_USER" "$INSTALL_DIR/.thorondor-modules.json"
 
 ${systemdBlock}
 
-echo "[5/6] Red sin configuración manual desde el instalador."
-echo "El agente queda listo; la operación real se realiza con token y API central cuando esté configurada."
+echo "[5/6] Red y registro."
+echo "El agente escucha en el puerto $PORT. Regístralo en Thorondor con la IP o DNS por la que lo consultarás."
+echo "Si el host usa firewall, permite ese puerto de forma controlada o usa un túnel local hacia 127.0.0.1:$PORT."
 
 echo "[6/6] Validación local:"
 echo "curl http://127.0.0.1:$PORT/health"
@@ -4446,16 +4770,11 @@ Write-Host "Valida el agente con: Invoke-RestMethod http://127.0.0.1:${Number(co
 
 export function buildThorondorInstallInstructions(config) {
   const isWindows = config.targetOs === "windows";
-  const baseUrl = normalizeReceiverBaseUrl(config);
   const port = Number(config.port) || THORONDOR_AGENT_FIXED_PORT;
   const keyAgents = String(config.keyAgents || config.agentToken || "");
   const installerName = isWindows ? "thorondor-installer.ps1" : "thorondor-installer.sh";
   const targetLabel = isWindows ? "Windows" : "Linux";
   const installFence = isWindows ? "powershell" : "bash";
-  const persistenceMode = config.persistenceMode === "cloud" ? "cloud" : "local";
-  const persistenceNote = persistenceMode === "cloud"
-    ? "Persistencia en servidor Thorondor: el agente sincroniza telemetría con la API central y la consola lee la BBDD autorizada."
-    : "Persistencia local: la consola guarda logs, eventos y alertas en IndexedDB. El agente no sincroniza telemetría con la API central.";
   const permissionNote = isWindows
     ? "Ejecuta el instalador desde PowerShell. Si no está elevado, solicita permisos de administrador y continúa en una consola elevada."
     : "Ejecuta el instalador como root o con sudo. Si no hay sudo y no eres root, el script se detiene.";
@@ -4464,8 +4783,8 @@ export function buildThorondorInstallInstructions(config) {
     : "Con apt, dnf o pacman instala Python, venv/pip, lm-sensors, smartmontools, dmidecode y pciutils. Si no detecta gestor, intenta usar el Python disponible.";
   const serviceNote = isWindows
     ? "Instala los ficheros en ProgramData y registra la tarea programada ThorondorAgent como SYSTEM, RunLevel Highest, al inicio del sistema."
-    : `Crea /opt/thorondor-agent, usuario de sistema, entorno venv, ${buildServiceFileName(config)} en systemd y lo habilita con enable --now.`;
-  const networkNote = "El agente queda escuchando en el puerto configurado. Si necesitas acceso remoto, expón ese puerto con túnel, proxy o redirección controlada.";
+    : `Crea /opt/thorondor-agent, usuario de sistema, entorno venv, ${buildServiceFileName(config)} en systemd, lo habilita y reinicia el servicio.`;
+  const networkNote = "El agente queda escuchando en el puerto configurado. Si necesitas acceso remoto, registra una IP/DNS alcanzable y permite el puerto con túnel, proxy, NAT o firewall controlado.";
   const uninstallPermissionNote = isWindows
     ? "Ejecuta el desinstalador; si no está elevado, pedirá permisos de administrador."
     : "Ejecuta el desinstalador con sudo o como root.";
@@ -4508,8 +4827,8 @@ sudo ls -la /opt/thorondor-agent`;
 - Carpeta recomendada para ejecutarlo: \`${installFolder}\`.
 - Carpeta real de instalación: \`${isWindows ? "C:\\ProgramData\\Thorondor-Agent" : "/opt/thorondor-agent"}\`.
 - Desinstalador generado automáticamente: \`${generatedUninstaller}\`.
-- Puerto local de salud: \`${port}\`.
-- ${persistenceNote}
+- Puerto del agente: \`${port}\`.
+- Key agents incluida en el instalador para validar las peticiones al agente.
 
 ### Requisitos reales
 - Permisos: ${permissionNote}
@@ -4533,11 +4852,8 @@ ${validationCommand}
 \`\`\`
 
 ### 4. Registrar en Thorondor
-Usa esta URL base para registrar el host:
-
-\`\`\`text
-${baseUrl}
-\`\`\`
+Abre **Registro** y crea el agente con un nombre visible, la IP o DNS por la que Thorondor lo consultará y el puerto \`${port}\`.
+Para validar en el propio host puedes usar \`http://127.0.0.1:${port}\`; para operación real registra la dirección alcanzable desde la consola.
 
 ### Desinstalar
 El instalador deja preparado un fichero de desinstalación. ${uninstallPermissionNote} Para retirar el agente completo:
@@ -5042,6 +5358,7 @@ Write-Host ""
 Write-Host "=== Instalacion completada ===" -ForegroundColor Green
 Write-Host "Verifica el agente con:"
 Write-Host "  ${verifyCommand}"
+Write-Host "Registra el agente en Thorondor con la IP o DNS por la que lo consultarás y el puerto $PORT."
 Write-Host "Desinstalador:"
 Write-Host ('  powershell.exe -NoProfile -ExecutionPolicy Bypass -File "' + (Join-Path $INSTALL_DIR $UNINSTALL_FILE) + '"')
 Write-Host ""

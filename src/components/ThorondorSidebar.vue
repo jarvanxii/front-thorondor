@@ -274,7 +274,7 @@ export default {
 }
 
 .sidebar-system select option {
-  background: #10141a;
+  background: #1f2a25;
   color: #f4f6f8;
 }
 
@@ -346,11 +346,11 @@ export default {
 
 .sidebar-nav-item.is-active {
   border-color: rgba(236, 194, 119, 0.28);
-  background: linear-gradient(90deg, rgba(126, 93, 42, 0.34), rgba(35, 40, 47, 0.72));
+  background: linear-gradient(90deg, rgba(126, 93, 42, 0.28), rgba(31, 40, 35, 0.62));
   color: #ffffff;
   box-shadow:
     inset 3px 0 0 var(--thorondor-gold),
-    0 10px 18px rgba(0, 0, 0, 0.16);
+    0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
 .sidebar-nav-item.is-disabled {
@@ -391,7 +391,7 @@ export default {
     gap: 10px;
     padding: 14px 12px;
     background: var(--thorondor-panel-background);
-    box-shadow: 24px 0 54px rgba(0, 0, 0, 0.46);
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
     transform: translateX(-104%);
     transition: transform 180ms ease;
   }

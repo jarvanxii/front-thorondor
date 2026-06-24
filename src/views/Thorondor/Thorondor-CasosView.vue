@@ -954,11 +954,11 @@ export default {
   gap: 12px;
   align-items: center;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
   color: #e8eef6;
   text-align: left;
-  background: rgba(6, 11, 18, 0.56);
+  background: var(--thorondor-flat-background);
   transition:
     border-color 0.16s ease,
     background 0.16s ease,
@@ -967,8 +967,8 @@ export default {
 
 .case-list-item:hover,
 .case-list-item.is-selected {
-  border-color: rgba(214, 161, 92, 0.62);
-  background: rgba(214, 161, 92, 0.08);
+  border-color: rgba(214, 161, 92, 0.46);
+  background: var(--thorondor-flat-soft-background);
   transform: translateY(-1px);
 }
 
@@ -1044,9 +1044,9 @@ export default {
   display: grid;
   gap: 4px;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
-  background: rgba(5, 9, 15, 0.5);
+  background: var(--thorondor-flat-background);
 }
 
 .case-meta-grid strong {
@@ -1065,9 +1065,9 @@ export default {
   gap: 12px;
   min-width: 0;
   padding: 14px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
-  background: rgba(5, 9, 15, 0.44);
+  background: var(--thorondor-flat-background);
 }
 
 .case-panel-head {
@@ -1123,9 +1123,9 @@ export default {
   display: grid;
   gap: 6px;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
-  background: rgba(7, 13, 21, 0.58);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .case-timeline header,
@@ -1157,9 +1157,9 @@ export default {
   gap: 10px;
   align-items: start;
   padding: 10px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
-  background: rgba(7, 13, 21, 0.5);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .case-task-list li label span {
@@ -1181,9 +1181,9 @@ export default {
   grid-template-columns: 14px minmax(0, 1fr) auto;
   align-items: center;
   padding: 12px;
-  border: 1px solid rgba(176, 184, 194, 0.14);
+  border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
-  background: rgba(7, 13, 21, 0.52);
+  background: var(--thorondor-flat-soft-background);
 }
 
 .host-activity-list article {
@@ -1213,7 +1213,7 @@ export default {
 }
 
 .timeline-info {
-  background: #9eb7d8;
+  background: #8fd6ad;
 }
 
 .timeline-note {

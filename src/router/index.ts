@@ -47,9 +47,9 @@ const routes = [
     component: () => import('../views/Thorondor/Thorondor-GuiaInstalacionView.vue'),
   },
   {
-    path: '/generador',
-    name: 'thorondor-agent-generator',
-    component: () => import('../views/Thorondor/Thorondor-GeneradorAgentesView.vue'),
+    path: '/registro',
+    name: 'thorondor-agent-registration',
+    component: () => import('../views/Thorondor/Thorondor-RegistroAgentesView.vue'),
   },
   {
     path: '/dashboard',
