@@ -8,12 +8,6 @@
       <img class="brand-logo" :src="thorondorHeaderLogo" alt="Thorondor SIEM" />
     </RouterLink>
 
-    <nav class="thorondor-top-nav" aria-label="Navegación principal">
-      <RouterLink v-for="item in navItems" :key="item.routeName" :to="routeFor(item)" class="top-nav-link">
-        {{ item.label }}
-      </RouterLink>
-    </nav>
-
     <nav class="thorondor-account-nav" aria-label="Ajustes de usuario">
       <span
         class="authorization-status"
@@ -287,18 +281,19 @@
                     <strong>{{ persistenceModeTitle }}</strong>
                     <small>{{ persistenceModeDescription }}</small>
                   </div>
-                  <div class="settings-persistence-grid" role="radiogroup" aria-label="Persistencia de Thorondor">
-                    <label v-for="option in persistenceOptions" :key="option.value" class="settings-persistence-card"
-                      :class="{ 'is-active': selectedPersistenceMode === option.value, 'is-disabled': option.disabled }">
-                      <input type="radio" name="thorondor-header-persistence-mode" :value="option.value"
-                        :checked="selectedPersistenceMode === option.value"
-                        :disabled="option.disabled || persistenceChanging" @change="setPersistenceMode(option.value)" />
+                  <div class="settings-persistence-grid" aria-label="Persistencia de Thorondor">
+                    <article
+                      v-for="item in persistenceSummaryCards"
+                      :key="item.label"
+                      class="settings-persistence-card"
+                      :class="{ 'is-active': item.active, 'is-disabled': item.muted }"
+                    >
                       <span>
-                        <strong>{{ option.label }}</strong>
-                        <small>{{ option.copy }}</small>
+                        <strong>{{ item.label }}</strong>
+                        <small>{{ item.copy }}</small>
                       </span>
-                      <em>{{ option.status }}</em>
-                    </label>
+                      <em>{{ item.status }}</em>
+                    </article>
                   </div>
                 </article>
 
@@ -559,7 +554,6 @@
 
 <script>
 import thorondorHeaderLogo from '@/assets/images/brand/thorondor_header.png'
-import { THORONDOR_TOP_NAV_ITEMS } from '@/features/thorondor/data/thorondorNavigation'
 import {
   fetchThorondorAdminLogs,
   fetchThorondorAdminUsers,
@@ -646,7 +640,6 @@ export default {
   data() {
     return {
       thorondorHeaderLogo,
-      navItems: THORONDOR_TOP_NAV_ITEMS,
       settingsMenuOpen: false,
       errorMenuOpen: false,
       activeSettingsModal: null,
@@ -654,7 +647,6 @@ export default {
       settingsFeedback: '',
       settingsFeedbackTone: 'success',
       logoutLoading: false,
-      persistenceChanging: false,
       operatorSettings: buildDefaultOperatorSettings(),
       keyAgentsDraft: '',
       keyAgentsVisible: false,
@@ -829,10 +821,6 @@ export default {
       return this.thorondorState.persistence || {}
     },
 
-    selectedPersistenceMode() {
-      return this.persistenceStatus.requestedMode || this.persistenceStatus.effectiveMode || 'local'
-    },
-
     persistenceEffectiveMode() {
       return this.persistenceStatus.effectiveMode || 'local'
     },
@@ -894,24 +882,24 @@ export default {
 
     persistenceModeTitle() {
       if (!this.canUseDatabasePersistence) {
-        return 'IndexedDB local obligatorio'
+        return 'Usuario no autorizado'
       }
 
-      if (this.selectedPersistenceMode === 'cloud' && !this.persistenceStatus.cloudConfigured) {
+      if (!this.persistenceStatus.cloudConfigured) {
         return 'API no configurada'
       }
 
       return this.persistenceEffectiveMode === 'cloud'
         ? 'API del back activa'
-        : 'IndexedDB local activo'
+        : 'Sin sincronización BBDD'
     },
 
     persistenceModeDescription() {
       if (!this.canUseDatabasePersistence) {
-        return this.persistenceStatus.cloudAccessReason || 'Usuario no autorizado para usar BBDD por API.'
+        return this.persistenceStatus.cloudAccessReason || 'La BBDD por API se activa solo al autorizar este usuario.'
       }
 
-      if (this.selectedPersistenceMode === 'cloud' && !this.persistenceStatus.cloudConfigured) {
+      if (!this.persistenceStatus.cloudConfigured) {
         return 'Falta configurar la URL de la API. La consola mantiene IndexedDB para no perder datos.'
       }
 
@@ -919,36 +907,37 @@ export default {
         return 'Los cambios se guardan en IndexedDB como caché y se sincronizan con la API del back.'
       }
 
-      return 'Agentes, reglas, eventos y preferencias se guardan solo en este navegador mediante IndexedDB.'
+      return 'Este usuario no está autorizado para BBDD por API; agentes, reglas, eventos y preferencias quedan en IndexedDB.'
     },
 
-    persistenceOptions() {
-      const cloudConfigured = Boolean(this.persistenceStatus.cloudConfigured)
+    persistenceSummaryCards() {
       const effectiveMode = this.persistenceEffectiveMode
-      const cloudDisabledReason = !this.isCurrentUserAuthorized
-        ? 'Usuario no autorizado'
-        : !this.persistenceStatus.cloudAllowed
-          ? 'Sin permiso'
-          : !cloudConfigured
-            ? 'Sin API'
+      const serverBlockedReason = !this.isCurrentUserAuthorized
+        ? 'Cuenta sin autorizar'
+        : !this.persistenceStatus.cloudConfigured
+          ? 'API no configurada'
+          : !this.persistenceStatus.cloudAllowed
+            ? 'Sin permiso'
             : ''
 
       return [
         {
-          value: 'local',
-          label: 'IndexedDB local',
-          copy: 'Datos en este navegador. Útil para pruebas, laboratorio y uso sin servidor central.',
-          status: effectiveMode === 'local' ? 'Activo' : 'Disponible',
-          disabled: false,
+          label: 'IndexedDB',
+          copy: this.isCurrentUserAuthorized
+            ? 'Cache local de respaldo para que la consola siga siendo fluida.'
+            : 'Datos guardados solo en este navegador.',
+          status: effectiveMode === 'local' ? 'Activo' : 'Cache',
+          active: effectiveMode === 'local',
+          muted: effectiveMode !== 'local',
         },
         {
-          value: 'cloud',
-          label: 'API del back',
-          copy: cloudDisabledReason
-            ? 'Requiere usuario autorizado por un admin.'
-            : 'Persistencia centralizada en la API, con IndexedDB como caché local.',
-          status: cloudDisabledReason || (effectiveMode === 'cloud' ? 'Activo' : 'Disponible'),
-          disabled: Boolean(cloudDisabledReason),
+          label: 'BBDD por API',
+          copy: serverBlockedReason
+            ? 'Se activara automaticamente cuando la cuenta tenga autorizacion y API disponible.'
+            : 'Agentes, logs, reglas, alertas y preferencias se sincronizan con la base de datos.',
+          status: serverBlockedReason || (effectiveMode === 'cloud' ? 'Activo' : 'Preparado'),
+          active: effectiveMode === 'cloud',
+          muted: effectiveMode !== 'cloud',
         },
       ]
     },
@@ -1152,7 +1141,6 @@ export default {
     closeSettingsModal() {
       this.activeSettingsModal = null
       this.settingsSaving = false
-      this.persistenceChanging = false
       this.settingsFeedback = ''
     },
 
@@ -1510,45 +1498,6 @@ export default {
       }
     },
 
-    async setPersistenceMode(mode) {
-      if (mode === this.selectedPersistenceMode || this.persistenceChanging) return
-      const option = this.persistenceOptions.find((item) => item.value === mode)
-      if (option?.disabled) {
-        this.settingsFeedbackTone = 'error'
-        this.settingsFeedback = option.status || 'Usuario no autorizado para usar BBDD por API.'
-        return
-      }
-
-      this.persistenceChanging = true
-      this.settingsFeedback = ''
-
-      try {
-        await this.$store.dispatch('setThorondorPersistenceMode', mode)
-        this.settingsFeedbackTone = 'success'
-        this.settingsFeedback =
-          mode === 'cloud'
-            ? 'Persistencia con API activada.'
-            : 'Persistencia local con IndexedDB activada.'
-      } catch (error) {
-        this.settingsFeedbackTone = 'error'
-        this.settingsFeedback = `No se pudo cambiar la persistencia: ${error.message}`
-      } finally {
-        this.persistenceChanging = false
-      }
-    },
-
-    routeFor(item) {
-      const query = { ...(item.query || {}) }
-
-      if (item.agentScoped && this.selectedAgentId) {
-        query.agent = this.selectedAgentId
-      }
-
-      return Object.keys(query).length
-        ? { name: item.routeName, query }
-        : { name: item.routeName }
-    },
-
     formatErrorTime(timestamp) {
       if (!timestamp) return 'Sin hora'
       return new Intl.DateTimeFormat('es-ES', {
@@ -1567,7 +1516,7 @@ export default {
   inset: 0 0 auto;
   z-index: 9000;
   display: grid;
-  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr) minmax(92px, auto);
+  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
   width: 100%;
   height: var(--main-header-height);
   align-items: center;
@@ -1610,114 +1559,6 @@ export default {
   object-fit: contain;
   object-position: left center;
   filter: contrast(1.06) drop-shadow(0 5px 10px rgba(0, 0, 0, 0.24));
-}
-
-.thorondor-top-nav {
-  --top-nav-button-width: 148px;
-  --top-nav-button-height: var(--main-header-height);
-  --top-nav-gap: 0px;
-  display: grid;
-  grid-auto-flow: column;
-  grid-auto-columns: minmax(112px, var(--top-nav-button-width));
-  justify-self: center;
-  width: min(100%, calc((var(--top-nav-button-width) * 6) + (var(--top-nav-gap) * 5)));
-  min-width: 0;
-  align-items: center;
-  justify-content: center;
-  gap: var(--top-nav-gap);
-  overflow-x: auto;
-  min-height: var(--main-header-height);
-  padding: 0;
-  border: 0;
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-  scrollbar-width: none;
-}
-
-.thorondor-top-nav::-webkit-scrollbar {
-  display: none;
-}
-
-.top-nav-link {
-  position: relative;
-  display: inline-flex;
-  width: var(--top-nav-button-width);
-  height: var(--top-nav-button-height);
-  align-items: center;
-  justify-content: center;
-  overflow: hidden;
-  padding: 0 12px;
-  border: 0;
-  border-left: 1px solid rgba(236, 194, 119, 0.12);
-  border-right: 1px solid rgba(190, 205, 218, 0.08);
-  border-radius: 0;
-  background: transparent;
-  color: rgba(226, 234, 244, 0.78);
-  font-size: 0.74rem;
-  font-weight: 800;
-  letter-spacing: 0.01em;
-  line-height: 1.15;
-  text-decoration: none;
-  text-align: center;
-  white-space: nowrap;
-  box-shadow: none;
-  transition:
-    border-color 0.16s ease,
-    background 0.16s ease,
-    color 0.16s ease,
-    transform 0.16s ease,
-    box-shadow 0.16s ease;
-}
-
-.top-nav-link::after {
-  position: absolute;
-  right: 12%;
-  bottom: 0;
-  left: 12%;
-  height: 2px;
-  border-radius: 999px;
-  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.92), transparent);
-  opacity: 0;
-  transform: scaleX(0.35);
-  transform-origin: center;
-  content: "";
-  transition:
-    opacity 0.18s ease,
-    transform 0.22s ease,
-    box-shadow 0.18s ease;
-}
-
-.top-nav-link:hover {
-  border-left-color: rgba(236, 194, 119, 0.24);
-  border-right-color: rgba(236, 194, 119, 0.18);
-  background:
-    radial-gradient(circle at 50% 0%, rgba(236, 194, 119, 0.12), transparent 72%),
-    linear-gradient(180deg, rgba(236, 194, 119, 0.06), rgba(255, 255, 255, 0));
-  color: #f5d99d;
-  transform: translateY(-1px);
-  box-shadow:
-    inset 0 0 18px rgba(236, 194, 119, 0.1),
-    inset 0 1px 0 rgba(255, 240, 180, 0.04);
-}
-
-.top-nav-link.router-link-active {
-  border-left-color: rgba(236, 194, 119, 0.32);
-  border-right-color: rgba(236, 194, 119, 0.22);
-  background:
-    radial-gradient(circle at 50% -10%, rgba(236, 194, 119, 0.16), transparent 72%),
-    linear-gradient(180deg, rgba(236, 194, 119, 0.09), rgba(236, 194, 119, 0.025));
-  color: #fff2cf;
-  box-shadow:
-    inset 0 0 22px rgba(236, 194, 119, 0.12),
-    inset 0 1px 0 rgba(255, 240, 180, 0.05);
-}
-
-.top-nav-link:hover::after,
-.top-nav-link.router-link-active::after {
-  opacity: 1;
-  transform: scaleX(1);
-  box-shadow: 0 0 12px rgba(236, 194, 119, 0.46);
 }
 
 .thorondor-account-nav {
@@ -3131,7 +2972,7 @@ export default {
 
 @media (max-width: 1040px) {
   .thorondor-primary-header {
-    grid-template-columns: 42px minmax(146px, 190px) minmax(0, 1fr) auto;
+    grid-template-columns: 42px minmax(146px, 190px) minmax(0, 1fr);
     gap: 10px;
     padding: 0 14px;
   }
@@ -3154,32 +2995,15 @@ export default {
     display: grid;
   }
 
-  .thorondor-top-nav {
-    --top-nav-button-width: 126px;
-    justify-self: center;
-    width: 100%;
-    min-width: 0;
-    justify-content: flex-start;
-  }
 }
 
 @media (max-width: 900px) {
   .thorondor-primary-header {
-    grid-template-columns: 38px minmax(118px, 146px) minmax(0, 1fr) auto;
+    grid-template-columns: 38px minmax(118px, 146px) minmax(0, 1fr);
     align-items: center;
     gap: 8px;
     height: var(--main-header-height);
     padding: 0 12px;
-  }
-
-  .thorondor-top-nav {
-    --top-nav-button-width: 118px;
-    --top-nav-button-height: 34px;
-    --top-nav-gap: 6px;
-    width: 100%;
-    justify-content: flex-start;
-    min-height: var(--top-nav-button-height);
-    padding: 0 1px;
   }
 
   .settings-menu-copy span,
@@ -3190,12 +3014,6 @@ export default {
   .brand-logo {
     width: min(100%, 140px);
     height: 36px;
-  }
-
-  .top-nav-link {
-    padding: 0 8px;
-    border-radius: 4px;
-    font-size: 0.68rem;
   }
 
   .settings-square,
@@ -3261,9 +3079,8 @@ export default {
 @media (max-width: 720px) {
   .thorondor-primary-header {
     grid-template-columns: 38px minmax(0, 1fr) auto;
-    grid-template-rows: 54px 42px;
-    align-content: start;
-    gap: 0 8px;
+    grid-template-rows: none;
+    gap: 8px;
     height: var(--main-header-height);
     padding: 0 10px;
   }
@@ -3274,25 +3091,6 @@ export default {
     grid-row: 1;
   }
 
-  .thorondor-top-nav {
-    --top-nav-button-width: 112px;
-    --top-nav-button-height: 32px;
-    --top-nav-gap: 6px;
-    grid-column: 1 / -1;
-    grid-row: 2;
-    display: grid;
-    width: calc(100% + 20px);
-    min-height: 42px;
-    margin: 0 -10px;
-    padding: 5px 10px;
-    align-self: stretch;
-    border-top: 1px solid rgba(190, 205, 218, 0.12);
-    background: rgba(8, 13, 21, 0.72);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
-    scroll-padding-inline: 10px;
-    scroll-snap-type: x proximity;
-  }
-
   .thorondor-brand {
     width: auto;
     min-width: 0;
@@ -3301,30 +3099,6 @@ export default {
   .brand-logo {
     width: min(156px, 44vw);
     height: 34px;
-  }
-
-  .top-nav-link {
-    width: var(--top-nav-button-width);
-    min-width: var(--top-nav-button-width);
-    height: var(--top-nav-button-height);
-    border: 1px solid rgba(190, 205, 218, 0.12);
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.018);
-    font-size: 0.68rem;
-    scroll-snap-align: start;
-  }
-
-  .top-nav-link.router-link-active {
-    border-color: rgba(236, 194, 119, 0.34);
-    background:
-      linear-gradient(180deg, rgba(236, 194, 119, 0.12), rgba(236, 194, 119, 0.035)),
-      rgba(255, 255, 255, 0.024);
-  }
-
-  .top-nav-link::after {
-    right: 18%;
-    bottom: 3px;
-    left: 18%;
   }
 
   .thorondor-account-nav {
@@ -3343,8 +3117,8 @@ export default {
 @media (max-width: 520px) {
   .thorondor-primary-header {
     grid-template-columns: 36px minmax(0, 1fr) auto;
-    grid-template-rows: 52px 42px;
-    gap: 0 6px;
+    grid-template-rows: none;
+    gap: 6px;
     padding: 0 8px;
   }
 
@@ -3355,14 +3129,6 @@ export default {
   .brand-logo {
     width: min(142px, 43vw);
     height: 32px;
-  }
-
-  .thorondor-top-nav {
-    --top-nav-button-width: 104px;
-    width: calc(100% + 16px);
-    margin: 0 -8px;
-    padding-inline: 8px;
-    scroll-padding-inline: 8px;
   }
 
   .settings-square,

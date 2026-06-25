@@ -26,6 +26,12 @@ export default {
     },
   },
 
+  watch: {
+    $route() {
+      this.sidebarOpen = false
+    },
+  },
+
   mounted() {
     this.$store.dispatch('bootstrapThorondor')
   },

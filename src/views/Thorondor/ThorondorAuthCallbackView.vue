@@ -22,7 +22,7 @@
 
       <div class="auth-callback-actions">
         <RouterLink :to="{ name: 'thorondor-login' }" class="secondary-link">Volver al inicio de sesión</RouterLink>
-        <RouterLink :to="{ name: 'thorondor-information' }" class="primary-link">Continuar en modo local</RouterLink>
+        <RouterLink :to="{ name: 'thorondor-information' }" class="primary-link">Continuar sin sincronización</RouterLink>
       </div>
     </section>
   </main>

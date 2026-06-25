@@ -16,6 +16,7 @@ import {
 } from '@/features/thorondor/data/thorondorDefaults'
 import {
   STORE_NAMES,
+  clearThorondorPersistenceModePreference,
   deleteByIndex,
   deleteOne,
   getThorondorPersistenceStatus,
@@ -25,7 +26,6 @@ import {
   putOne,
   setThorondorCloudPersistenceAccess,
   setMeta,
-  setThorondorPersistenceMode as saveThorondorPersistenceMode,
   sweepThorondorPersistence,
 } from '@/features/thorondor/services/thorondorPersistence'
 import {
@@ -859,7 +859,7 @@ function isThorondorUserAdmin(user) {
 
 function disableThorondorCloudPersistence(reason) {
   setThorondorCloudPersistenceAccess(false, reason)
-  saveThorondorPersistenceMode('local')
+  clearThorondorPersistenceModePreference()
 }
 
 async function refreshThorondorTokenForSession(session) {
@@ -877,6 +877,8 @@ async function refreshThorondorTokenForSession(session) {
 }
 
 function configureThorondorCloudAccess(session, token) {
+  clearThorondorPersistenceModePreference()
+
   const authenticated = Boolean(session?.authenticated)
   const authorized = isThorondorUserAuthorizedForCloudPersistence(session?.user)
 
@@ -1585,29 +1587,25 @@ export default createStore({
       }
     },
 
-    async setThorondorPersistenceMode({ commit, state }, mode) {
-      const nextMode = mode === 'cloud' ? 'cloud' : 'local'
+    async setThorondorPersistenceMode({ commit, state }) {
       const currentDraft = state.thorondor.generatorDraft || buildThorondorAgentDraft()
 
       if (
-        nextMode === 'cloud' &&
-        (
-          !isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user) ||
-          !hasThorondorApiToken(state.thorondor.token) ||
-          !state.thorondor.persistence?.cloudAllowed
-        )
+        !isThorondorUserAuthorizedForCloudPersistence(state.thorondor.session?.user) ||
+        !hasThorondorApiToken(state.thorondor.token) ||
+        !state.thorondor.persistence?.cloudAllowed
       ) {
         disableThorondorCloudPersistence(
           'Un usuario admin debe autorizar esta cuenta para usar BBDD por API.',
         )
         const fallbackStatus = getThorondorPersistenceStatus({
-          syncStatus: 'cloud-blocked',
+          syncStatus: 'local-only',
         })
         commit('setThorondorPersistenceStatus', fallbackStatus)
         return fallbackStatus
       }
 
-      saveThorondorPersistenceMode(nextMode)
+      clearThorondorPersistenceModePreference()
 
       try {
         const openedStatus = await openThorondorPersistence()

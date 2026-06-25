@@ -3,6 +3,9 @@
     <section class="login-layout">
       <section class="login-visual" aria-label="Thorondor SIEM">
         <img class="login-banner" :src="loginBanner" alt="Thorondor SIEM" />
+        <div class="login-mobile-brand" aria-hidden="true">
+          <img :src="loginLogo" alt="" />
+        </div>
       </section>
 
       <section class="login-card" aria-labelledby="login-title">
@@ -328,6 +331,7 @@
 
 <script>
 import loginBanner from '@/assets/images/brand/banner_login.png'
+import loginLogo from '@/assets/images/brand/thorondor_header.png'
 import { getMeta, setMeta } from '@/features/thorondor/services/thorondorIndexedDb'
 import {
   THORONDOR_SOCIAL_AUTH_PROVIDERS,
@@ -350,6 +354,7 @@ export default {
   data() {
     return {
       loginBanner,
+      loginLogo,
       authMode: 'login',
       providerAvailability: {},
       providersLoaded: false,
@@ -649,6 +654,17 @@ export default {
   object-fit: cover;
   object-position: center;
   filter: saturate(1.04) contrast(1.05);
+}
+
+.login-mobile-brand {
+  display: none;
+}
+
+.login-mobile-brand img {
+  display: block;
+  width: 100%;
+  height: auto;
+  object-fit: contain;
 }
 
 .login-card,
@@ -1118,47 +1134,82 @@ export default {
 @media (max-width: 980px) {
   .login-page {
     --login-mobile-visual-height: min(300px, calc(100vw * 0.6667));
+    height: auto;
+    min-height: 100vh;
+    min-height: 100svh;
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .login-layout {
     position: relative;
     display: block;
+    height: auto;
     min-height: 100vh;
     min-height: 100svh;
-    padding-top: var(--login-mobile-visual-height);
+    overflow: visible;
+    padding-top: 0;
   }
 
   .login-visual {
-    position: fixed;
-    top: 0;
-    right: 0;
-    left: 0;
+    position: relative;
+    display: grid;
+    place-items: center;
     z-index: 0;
-    height: var(--login-mobile-visual-height);
+    height: auto;
     min-height: 0;
-    padding: 0;
-    background: #020607;
+    padding: 22px 20px 18px;
+    background:
+      radial-gradient(circle at 22% 0%, rgba(244, 208, 143, 0.14), transparent 11rem),
+      linear-gradient(135deg, rgba(244, 208, 143, 0.04) 1px, transparent 1px),
+      linear-gradient(45deg, rgba(176, 184, 194, 0.035) 1px, transparent 1px),
+      #020607;
+    background-size: auto, 34px 34px, 34px 34px, auto;
+  }
+
+  .login-visual::after {
+    z-index: 1;
+    background:
+      radial-gradient(circle at 50% 28%, rgba(244, 208, 143, 0.1), transparent 9rem),
+      linear-gradient(180deg, rgba(2, 6, 7, 0.18), rgba(2, 6, 7, 0.74));
   }
 
   .login-banner {
-    width: 100%;
-    height: 100%;
-    max-width: none;
-    max-height: none;
-    object-fit: contain;
-    object-position: top center;
+    display: none;
+  }
+
+  .login-mobile-brand {
+    position: relative;
+    z-index: 2;
+    display: grid;
+    width: min(84vw, 304px);
+    min-height: 94px;
+    place-items: center;
+    padding: 18px 20px;
+    border: 1px solid rgba(236, 194, 119, 0.22);
+    border-radius: 8px;
+    background:
+      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
+      rgba(7, 13, 12, 0.78);
+    box-shadow:
+      0 22px 44px rgba(0, 0, 0, 0.24),
+      inset 0 1px 0 rgba(255, 255, 255, 0.08);
+  }
+
+  .login-mobile-brand img {
+    max-height: 66px;
+    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.36));
   }
 
   .login-card {
     position: relative;
     z-index: 1;
-    height: calc(100svh - var(--login-mobile-visual-height));
+    height: auto;
     justify-items: center;
     gap: 11px;
     padding: clamp(18px, 3.2vw, 28px);
-    min-height: calc(100svh - var(--login-mobile-visual-height));
-    overflow-x: hidden;
-    overflow-y: auto;
+    min-height: 0;
+    overflow: visible;
     border-top: 1px solid rgba(236, 194, 119, 0.24);
     border-left: 0;
     box-shadow: 0 -16px 42px rgba(5, 9, 8, 0.3);
@@ -1180,6 +1231,20 @@ export default {
   .login-card {
     gap: 9px;
     padding: 16px 18px 18px;
+  }
+
+  .login-visual {
+    padding: 16px 18px 14px;
+  }
+
+  .login-mobile-brand {
+    width: min(82vw, 276px);
+    min-height: 82px;
+    padding: 15px 18px;
+  }
+
+  .login-mobile-brand img {
+    max-height: 58px;
   }
 
   .cookie-modal-backdrop {
@@ -1280,20 +1345,37 @@ export default {
 @media (max-width: 620px) and (max-height: 680px) {
   .login-page {
     --login-mobile-visual-height: min(158px, calc(100vw * 0.48));
+    overflow-x: hidden;
+    overflow-y: auto;
   }
 
   .login-layout {
-    height: 100svh;
+    height: auto;
     min-height: 100svh;
-    overflow: hidden;
+    overflow: visible;
+    padding-top: 0;
   }
 
   .login-card {
-    height: calc(100svh - var(--login-mobile-visual-height));
-    min-height: calc(100svh - var(--login-mobile-visual-height));
+    height: auto;
+    min-height: 0;
     gap: 6px;
     padding: 10px 16px 8px;
-    overflow: clip;
+    overflow: visible;
+  }
+
+  .login-visual {
+    padding: 10px 16px 8px;
+  }
+
+  .login-mobile-brand {
+    width: min(78vw, 236px);
+    min-height: 62px;
+    padding: 10px 14px;
+  }
+
+  .login-mobile-brand img {
+    max-height: 44px;
   }
 
   .login-card-header {

@@ -57,13 +57,13 @@
 
 @media (max-width: 720px) {
   :root {
-    --main-header-height: 96px;
+    --main-header-height: 56px;
   }
 }
 
 @media (max-width: 520px) {
   :root {
-    --main-header-height: 94px;
+    --main-header-height: 54px;
   }
 }
 

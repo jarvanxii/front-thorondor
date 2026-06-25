@@ -46,27 +46,19 @@
                         <strong>{{ persistenceModeTitle }}</strong>
                         <p>{{ persistenceModeDescription }}</p>
                     </div>
-                    <div class="persistence-mode-grid persistence-mode-grid-compact" role="radiogroup" aria-label="Modo de persistencia de Thorondor">
-                        <label
-                            v-for="option in persistenceOptions"
-                            :key="option.value"
+                    <div class="persistence-mode-grid persistence-mode-grid-compact" aria-label="Persistencia automatica de Thorondor">
+                        <article
+                            v-for="item in persistenceSummaryCards"
+                            :key="item.label"
                             class="persistence-mode-card"
-                            :class="{ 'is-active': selectedPersistenceMode === option.value, 'is-disabled': option.disabled || persistenceModeChanging }"
+                            :class="{ 'is-active': item.active, 'is-disabled': item.muted }"
                         >
-                            <input
-                                type="radio"
-                                name="thorondor-persistence-mode"
-                                :value="option.value"
-                                :checked="selectedPersistenceMode === option.value"
-                                :disabled="option.disabled || persistenceModeChanging"
-                                @change="setPersistenceMode(option.value)"
-                            />
                             <span class="mode-card-main">
-                                <strong>{{ option.label }}</strong>
-                                <small>{{ option.copy }}</small>
+                                <strong>{{ item.label }}</strong>
+                                <small>{{ item.copy }}</small>
                             </span>
-                            <span class="mode-card-status">{{ option.status }}</span>
-                        </label>
+                            <span class="mode-card-status">{{ item.status }}</span>
+                        </article>
                     </div>
                 </article>
             </div>
@@ -304,8 +296,7 @@ export default {
 
     data() {
         return {
-            agentDraft: buildThorondorAgentDraft(),
-            persistenceModeChanging: false
+            agentDraft: buildThorondorAgentDraft()
         };
     },
 
@@ -382,10 +373,6 @@ export default {
             );
         },
 
-        selectedPersistenceMode() {
-            return this.persistenceStatus.requestedMode || this.persistenceStatus.effectiveMode || "local";
-        },
-
         persistenceEffectiveMode() {
             return this.persistenceStatus.effectiveMode || "local";
         },
@@ -396,24 +383,24 @@ export default {
 
         persistenceModeTitle() {
             if (!this.canUseDatabasePersistence) {
-                return "IndexedDB local obligatorio";
+                return "Usuario no autorizado";
             }
 
-            if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
+            if (!this.persistenceStatus.cloudConfigured) {
                 return "API no configurada";
             }
 
             return this.persistenceEffectiveMode === "cloud"
-                ? "Servidor Thorondor activo"
-                : "IndexedDB local activo";
+                ? "BBDD por API activa"
+                : "Sin sincronización BBDD";
         },
 
         persistenceModeDescription() {
             if (!this.canUseDatabasePersistence) {
-                return this.persistenceStatus.cloudAccessReason || "Usuario no autorizado para usar BBDD por API.";
+                return this.persistenceStatus.cloudAccessReason || "La BBDD por API se activa solo al autorizar este usuario.";
             }
 
-            if (this.selectedPersistenceMode === "cloud" && !this.persistenceStatus.cloudConfigured) {
+            if (!this.persistenceStatus.cloudConfigured) {
                 return "API sin configurar. Thorondor usa IndexedDB local.";
             }
 
@@ -421,36 +408,37 @@ export default {
                 return "Logs, eventos, alertas y agentes se guardan en la BBDD del servidor. IndexedDB queda como caché local.";
             }
 
-            return "Agentes, reglas, eventos y borradores se guardan en este navegador.";
+            return "Este usuario no está autorizado para BBDD por API; agentes, reglas, eventos y borradores quedan en IndexedDB.";
         },
 
-        persistenceOptions() {
-            const cloudConfigured = Boolean(this.persistenceStatus.cloudConfigured);
+        persistenceSummaryCards() {
             const effectiveMode = this.persistenceEffectiveMode;
-            const cloudDisabledReason = !this.isCurrentUserAuthorized
-                ? "Usuario no autorizado"
-                : !this.persistenceStatus.cloudAllowed
-                    ? "Sin permiso"
-                    : !cloudConfigured
-                        ? "Sin API"
+            const serverBlockedReason = !this.isCurrentUserAuthorized
+                ? "Cuenta sin autorizar"
+                : !this.persistenceStatus.cloudConfigured
+                    ? "API no configurada"
+                    : !this.persistenceStatus.cloudAllowed
+                        ? "Sin permiso"
                         : "";
 
             return [
                 {
-                    value: "local",
-                    label: "IndexedDB local",
-                    copy: "Guarda logs y eventos en este navegador. El instalador no sincroniza contra la API central.",
-                    status: effectiveMode === "local" ? "Activo" : "Disponible",
-                    disabled: false
+                    label: "IndexedDB",
+                    copy: this.isCurrentUserAuthorized
+                        ? "Cache local de respaldo para la consola."
+                        : "Agentes, reglas y eventos se guardaran solo en este navegador.",
+                    status: effectiveMode === "local" ? "Activo" : "Cache",
+                    active: effectiveMode === "local",
+                    muted: effectiveMode !== "local"
                 },
                 {
-                    value: "cloud",
-                    label: "Servidor Thorondor",
-                    copy: cloudDisabledReason
-                        ? "Requiere usuario autorizado por un admin."
-                        : "Guarda logs y eventos en la BBDD del servidor mediante API autenticada.",
-                    status: cloudDisabledReason || (effectiveMode === "cloud" ? "Activo" : "Disponible"),
-                    disabled: Boolean(cloudDisabledReason)
+                    label: "BBDD por API",
+                    copy: serverBlockedReason
+                        ? "Se activara automaticamente al autorizar la cuenta y tener API disponible."
+                        : "El agente quedara preparado para sincronizar datos con el servidor.",
+                    status: serverBlockedReason || (effectiveMode === "cloud" ? "Activo" : "Preparado"),
+                    active: effectiveMode === "cloud",
+                    muted: effectiveMode !== "cloud"
                 }
             ];
         },
@@ -680,22 +668,6 @@ export default {
             const record = this.buildAgentRecordFromDraft(normalizedDraft);
             await this.$store.dispatch("registerThorondorAgent", record);
             this.$store.commit("setThorondorSelectedAgent", record.id);
-        },
-
-        async setPersistenceMode(mode) {
-            if (mode === this.selectedPersistenceMode) return;
-            const option = this.persistenceOptions.find((item) => item.value === mode);
-            if (option?.disabled) return;
-            this.persistenceModeChanging = true;
-            try {
-                await this.$store.dispatch("setThorondorPersistenceMode", mode);
-                this.agentDraft = this.normalizeDraftShape({
-                    ...this.agentDraft,
-                    persistenceMode: mode === "cloud" ? "cloud" : "local"
-                });
-            } finally {
-                this.persistenceModeChanging = false;
-            }
         },
 
         async clearFormData() {

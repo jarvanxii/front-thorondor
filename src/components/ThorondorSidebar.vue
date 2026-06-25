@@ -80,7 +80,7 @@ export default {
     sidebarNavGroups() {
       return [
         {
-          label: 'Navegación',
+          label: 'Principal',
           primary: true,
           items: THORONDOR_TOP_NAV_ITEMS.map((item) => ({
             ...item,
@@ -173,6 +173,8 @@ export default {
           query: { ...this.$route.query, agent: agentId },
         })
       }
+
+      this.closeSidebar()
     },
 
     closeSidebar() {
@@ -323,10 +325,6 @@ export default {
   gap: 5px;
 }
 
-.sidebar-nav-group--primary {
-  display: none;
-}
-
 .sidebar-nav-group h2 {
   position: relative;
   padding: 0 10px 8px;
@@ -405,13 +403,11 @@ export default {
 
 @media (max-width: 1040px) {
   .thorondor-sidebar {
-    display: flex;
-    width: min(332px, 90vw);
-    flex-direction: column;
+    width: min(312px, 86vw);
     gap: 9px;
     padding: 12px 10px;
     background: var(--thorondor-panel-background);
-    box-shadow: 22px 0 46px rgba(0, 0, 0, 0.38);
+    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.32);
     overscroll-behavior: contain;
     transform: translateX(-104%);
     transition: transform 180ms ease;
@@ -424,116 +420,13 @@ export default {
 
   .sidebar-identity,
   .sidebar-system {
-    flex: 0 0 auto;
     padding: 10px;
   }
 
   .sidebar-nav {
-    order: 1;
-    flex: 1 1 auto;
     gap: 12px;
-    min-height: 0;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
-  }
-
-  .sidebar-system {
-    order: 2;
-  }
-
-  .sidebar-identity {
-    order: 3;
-  }
-
-  .sidebar-nav-group--primary {
-    position: sticky;
-    top: 0;
-    z-index: 2;
-    display: grid;
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    padding: 8px;
-    border: 1px solid rgba(190, 205, 218, 0.13);
-    border-radius: 6px;
-    background: rgba(8, 13, 21, 0.48);
-    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
-  }
-
-  .sidebar-nav-group--primary h2 {
-    grid-column: 1 / -1;
-    padding-inline: 4px;
-  }
-
-  .sidebar-nav-group--primary h2::after {
-    right: 4px;
-    left: 4px;
-  }
-
-  .sidebar-nav-group--primary .sidebar-nav-item {
-    grid-template-columns: minmax(0, 1fr) auto;
-    min-height: 36px;
-    gap: 4px;
-    padding-inline: 8px;
-    border-color: rgba(190, 205, 218, 0.08);
-    background: rgba(255, 255, 255, 0.025);
-    font-size: 0.74rem;
-  }
-
-  .sidebar-nav-group--primary .nav-label {
-    text-align: center;
-  }
-
-  .sidebar-nav-group--primary .sidebar-nav-item:hover {
-    border-color: rgba(236, 194, 119, 0.24);
-    background: rgba(236, 194, 119, 0.08);
-    transform: none;
-  }
-
-  .sidebar-nav-group--primary .sidebar-nav-item.is-active {
-    border-color: rgba(236, 194, 119, 0.38);
-    background: linear-gradient(135deg, rgba(214, 161, 92, 0.22), rgba(143, 179, 199, 0.1));
-    box-shadow: inset 0 -2px 0 var(--thorondor-gold);
-  }
-
-  .sidebar-nav-group--primary .nav-marker {
-    display: none;
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) {
-    grid-template-columns: repeat(2, minmax(0, 1fr));
-    gap: 6px;
-    padding: 8px;
-    border: 1px solid rgba(190, 205, 218, 0.1);
-    border-radius: 6px;
-    background: rgba(8, 13, 21, 0.24);
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) h2 {
-    grid-column: 1 / -1;
-    padding-inline: 4px;
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) h2::after {
-    right: 4px;
-    left: 4px;
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) .sidebar-nav-item {
-    grid-template-columns: minmax(0, 1fr);
-    min-height: 40px;
-    padding: 7px 8px;
-    border-color: rgba(190, 205, 218, 0.08);
-    background: rgba(255, 255, 255, 0.018);
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) .nav-marker {
-    display: none;
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) .nav-label {
-    white-space: normal;
-    text-align: center;
-    line-height: 1.15;
   }
 
   .sidebar-nav-item {
@@ -543,7 +436,7 @@ export default {
 
 @media (max-width: 520px) {
   .thorondor-sidebar {
-    width: min(326px, 90vw);
+    width: min(304px, 84vw);
     gap: 8px;
     padding: 10px 8px;
   }
@@ -559,7 +452,7 @@ export default {
   }
 
   .sidebar-nav {
-    gap: 9px;
+    gap: 10px;
     padding-right: 2px;
   }
 
@@ -572,27 +465,6 @@ export default {
     min-height: 38px;
     padding-inline: 8px;
     font-size: 0.78rem;
-  }
-
-  .sidebar-nav-group--primary {
-    gap: 5px;
-    padding: 7px;
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) {
-    gap: 5px;
-    padding: 7px;
-  }
-
-  .sidebar-nav-group--primary .sidebar-nav-item {
-    min-height: 35px;
-    padding-inline: 7px;
-    font-size: 0.71rem;
-  }
-
-  .sidebar-nav-group:not(.sidebar-nav-group--primary) .sidebar-nav-item {
-    min-height: 38px;
-    font-size: 0.72rem;
   }
 }
 </style>

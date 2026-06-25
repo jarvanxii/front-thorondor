@@ -32,36 +32,16 @@ export const THORONDOR_CLOUD_SYNC_META_KEY = 'cloudSyncState'
 
 let cloudPersistenceAccess = {
   allowed: false,
-  reason: 'Sesión no verificada para persistencia cloud.',
+  reason: 'Sesión no verificada para BBDD por API.',
 }
 
-function getEnvValue(key) {
-  return import.meta.env[key]?.trim?.() || ''
-}
-
-function getStoredMode() {
-  if (typeof window === 'undefined') return ''
-
-  try {
-    return window.localStorage.getItem(THORONDOR_PERSISTENCE_MODE_KEY)?.trim?.() || ''
-  } catch {
-    return ''
-  }
-}
-
-function normalizePersistenceMode(value) {
-  return value === THORONDOR_PERSISTENCE_MODES.cloud || value === 'cloud'
-    ? THORONDOR_PERSISTENCE_MODES.cloud
-    : THORONDOR_PERSISTENCE_MODES.local
-}
-
-export function setThorondorPersistenceMode(mode) {
+export function clearThorondorPersistenceModePreference() {
   if (typeof window === 'undefined') return
 
   try {
-    window.localStorage.setItem(THORONDOR_PERSISTENCE_MODE_KEY, normalizePersistenceMode(mode))
+    window.localStorage.removeItem(THORONDOR_PERSISTENCE_MODE_KEY)
   } catch {
-    // Local storage can be unavailable in hardened browsers; the env fallback still works.
+    // Local storage can be unavailable in hardened browsers; the automatic mode still works.
   }
 }
 
@@ -73,18 +53,15 @@ export function setThorondorCloudPersistenceAccess(allowed, reason = '') {
 }
 
 export function getThorondorPersistenceStatus(overrides = {}) {
-  const requestedMode = normalizePersistenceMode(
-    getStoredMode() || getEnvValue('VITE_THORONDOR_PERSISTENCE_MODE'),
-  )
   const cloudConfig = getThorondorCloudPersistenceConfig()
   const cloudAllowed = Boolean(cloudPersistenceAccess.allowed)
-  const effectiveMode =
-    requestedMode === THORONDOR_PERSISTENCE_MODES.cloud && cloudConfig.enabled && cloudAllowed
-      ? THORONDOR_PERSISTENCE_MODES.cloud
-      : THORONDOR_PERSISTENCE_MODES.local
+  const effectiveMode = cloudConfig.enabled && cloudAllowed
+    ? THORONDOR_PERSISTENCE_MODES.cloud
+    : THORONDOR_PERSISTENCE_MODES.local
+  const requestedMode = effectiveMode
   const syncStatus =
-    requestedMode === THORONDOR_PERSISTENCE_MODES.cloud && cloudConfig.enabled && !cloudAllowed
-      ? 'cloud-blocked'
+    cloudAllowed && !cloudConfig.enabled
+      ? 'cloud-unconfigured'
       : effectiveMode === THORONDOR_PERSISTENCE_MODES.cloud
         ? 'cloud-ready'
         : 'local-only'
@@ -250,7 +227,7 @@ async function runCloudWrite(operation) {
       status: 'error',
       message: error.message,
     })
-    console.warn('[Thorondor] No se pudo sincronizar con persistencia cloud:', error)
+    console.warn('[Thorondor] No se pudo sincronizar con BBDD por API:', error)
   }
 }
 
@@ -269,7 +246,7 @@ async function runCloudWriteStrict(operation) {
       status: 'error',
       message: error.message,
     })
-    console.warn('[Thorondor] No se pudo sincronizar con persistencia cloud:', error)
+    console.warn('[Thorondor] No se pudo sincronizar con BBDD por API:', error)
     return false
   }
 }

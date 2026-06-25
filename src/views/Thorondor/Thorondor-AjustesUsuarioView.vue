@@ -188,7 +188,7 @@
 
         <div class="billing-line">
           <div>
-            <span>Modo actual</span>
+            <span>Persistencia actual</span>
             <strong>{{ storageModeLabel }}</strong>
             <small>{{ storageModeCopy }}</small>
           </div>
@@ -200,7 +200,7 @@
           <strong>{{ persistenceLabel }}</strong>
           <small>{{ persistenceCopy }}</small>
           <small v-if="persistenceStatus.lastError" class="settings-warning">
-            Último intento cloud: {{ persistenceStatus.lastError }}
+            Último intento BBDD: {{ persistenceStatus.lastError }}
           </small>
         </div>
       </article>
@@ -238,7 +238,7 @@
           <span class="section-kicker">Panel admin</span>
           <h2 class="module-title">Usuarios de la plataforma</h2>
           <p class="module-copy">
-            Gestión de acceso cloud y revisión de cuentas registradas.
+            Gestión de autorización BBDD y revisión de cuentas registradas.
           </p>
         </div>
         <button class="btn btn-main" type="button" :disabled="adminLoading" @click="loadAdminUsers()">
@@ -499,25 +499,25 @@ export default {
 
       return this.canUseCloudPersistence
         ? `${this.storageModeLabel} - usuario autorizado`
-        : `${this.storageModeLabel} - solo IDB`;
+        : `${this.storageModeLabel} - usuario no autorizado`;
     },
 
     storageModeCopy() {
       return this.isCloudPersistence
         ? "Workspace sincronizado con base de datos para consultar histórico desde cualquier sesión."
-        : "Workspace local, ideal para laboratorio y primeros despliegues.";
+        : "Esta cuenta no está autorizada para sincronizar con la BBDD; el workspace queda en IndexedDB.";
     },
 
     persistenceLabel() {
       if (this.persistenceStatus.syncStatus === "cloud-degraded") {
-        return "Cloud en espera, caché local activa";
+        return "API en espera, caché local activa";
       }
 
-      return this.isCloudPersistence ? "Base de datos cloud + caché local" : "IndexedDB local";
+      return this.isCloudPersistence ? "Base de datos por API + caché local" : "IndexedDB por falta de autorización";
     },
 
     persistenceShortLabel() {
-      return this.isCloudPersistence ? "Cloud" : "Local";
+      return this.isCloudPersistence ? "BBDD" : "IDB";
     },
 
     persistenceCopy() {
@@ -529,7 +529,7 @@ export default {
         return `Workspace ${this.persistenceStatus.workspaceId || "default"} sincronizado con la API. IndexedDB queda como caché del navegador.`;
       }
 
-      return "El modo local conserva agentes, logs, alertas y reglas en IndexedDB de este navegador.";
+      return "La cuenta no está autorizada para BBDD por API; agentes, logs, alertas y reglas quedan en IndexedDB de este navegador.";
     }
   },
 

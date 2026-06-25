@@ -23,8 +23,8 @@
                 </dl>
             </div>
             <p class="home-overview-note">
-                Puedes probar la plataforma en modo local. Cuando tu cuenta esté autorizada, también podrás conservar
-                el histórico en Thorondor para trabajar de forma continuada.
+                Cualquier usuario puede trabajar en local con IndexedDB. Cuando una cuenta está autorizada, Thorondor
+                guarda automáticamente el histórico en el servidor para trabajar de forma continuada.
             </p>
         </section>
 
@@ -228,7 +228,7 @@ export default {
                     metrics: [
                         { name: "Host", detail: "nombre visible, sistema operativo, versión, IP/DNS y puerto configurado." },
                         { name: "Heartbeat", detail: "fecha de última señal, estado de /health y errores de colección." },
-                        { name: "Persistencia", detail: "modo local o servidor Thorondor, retención y sincronización disponible." }
+                        { name: "Persistencia", detail: "IndexedDB para usuarios sin autorizar y servidor Thorondor para cuentas autorizadas." }
                     ]
                 },
                 {
