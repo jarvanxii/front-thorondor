@@ -317,7 +317,7 @@ export default {
     padding: clamp(14px, 1.6vw, 18px) clamp(16px, 2.2vw, 24px);
     overflow: hidden;
     border: 1px solid rgba(236, 194, 119, 0.18);
-    border-radius: 4px;
+    border-radius: 6px;
     background: var(--thorondor-panel-background);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.035),
@@ -606,32 +606,53 @@ export default {
 }
 
 @media (max-width: 760px) {
-        .home-overview {
+    .home-overview {
         margin-bottom: 12px;
         padding: 12px;
-        border-radius: 3px;
+        border-radius: 6px;
     }
 
     .home-overview-main {
-        grid-template-columns: minmax(118px, 140px) minmax(0, 1fr);
-        gap: 12px 14px;
+        position: relative;
+        z-index: 0;
+        grid-template-columns: 1fr;
+        gap: 10px;
+    }
+
+    .hero-brand-panel {
+        position: absolute;
+        top: -4px;
+        right: -8px;
+        z-index: 0;
+        opacity: 0.14;
+        pointer-events: none;
+    }
+
+    .hero-message,
+    .hero-status-bar {
+        position: relative;
+        z-index: 1;
     }
 
     .hero-wordmark {
-        width: min(100%, 128px);
+        width: 154px;
+        max-width: none;
     }
 
     .hero-message h2 {
-        font-size: clamp(1.08rem, 5vw, 1.28rem);
+        max-width: 18ch;
+        font-size: clamp(1.22rem, 6vw, 1.52rem);
     }
 
     .hero-summary {
-        font-size: 0.9rem;
-        line-height: 1.5;
+        max-width: 32ch;
+        font-size: 0.92rem;
+        line-height: 1.45;
     }
 
     .home-overview-note {
         font-size: 0.86rem;
+        line-height: 1.42;
     }
 
     .hero-status-bar {
@@ -640,6 +661,7 @@ export default {
         width: 100%;
         max-width: none;
         justify-self: stretch;
+        border-color: rgba(196, 204, 214, 0.13);
     }
 
     .hero-status-bar div {
@@ -677,7 +699,7 @@ export default {
 
 @media (max-width: 420px) {
     .hero-wordmark {
-        width: min(100%, 118px);
+        width: 140px;
     }
 
     .hero-status-bar dt {

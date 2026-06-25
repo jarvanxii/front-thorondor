@@ -20,13 +20,13 @@
   position: relative;
   overflow: hidden;
   background: var(--thorondor-panel-background);
-  border: 1px solid var(--thorondor-border-strong);
-  border-radius: 4px;
+  border: 1px solid rgba(205, 213, 210, 0.16);
+  border-radius: 6px;
   padding: 20px;
   margin-bottom: 18px;
   box-shadow:
-    inset 0 1px 0 rgba(255, 255, 255, 0.035),
-    var(--thorondor-surface-shadow);
+    inset 0 1px 0 rgba(255, 255, 255, 0.04),
+    0 10px 24px rgba(3, 8, 7, 0.16);
   min-width: 0;
 }
 
@@ -34,8 +34,9 @@
   content: '';
   position: absolute;
   inset: 0 0 auto;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.28), transparent);
+  height: 2px;
+  background: linear-gradient(90deg, rgba(236, 194, 119, 0.42), rgba(143, 214, 173, 0.16), transparent 72%);
+  opacity: 0.78;
   pointer-events: none;
 }
 
@@ -196,11 +197,15 @@
 .thorondor-page .tool-card {
   position: relative;
   overflow: hidden;
-  background: var(--thorondor-flat-background);
+  background:
+    linear-gradient(180deg, rgba(35, 47, 41, 0.86), rgba(24, 34, 30, 0.92)),
+    var(--thorondor-flat-background);
   border: 1px solid var(--thorondor-border-subtle);
-  border-radius: 4px;
+  border-radius: 6px;
   min-width: 0;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.03),
+    0 5px 14px rgba(3, 8, 7, 0.08);
 }
 
 .thorondor-page .guide-card::before,
@@ -219,7 +224,9 @@
 .thorondor-page .signal-card:hover,
 .thorondor-page .tool-card:hover {
   border-color: rgba(236, 194, 119, 0.26);
-  background: var(--thorondor-flat-soft-background);
+  background:
+    linear-gradient(180deg, rgba(43, 56, 49, 0.88), rgba(29, 40, 35, 0.94)),
+    var(--thorondor-flat-soft-background);
 }
 
 .thorondor-page .guide-card,
@@ -254,8 +261,9 @@
 .thorondor-page .metric-card span,
 .thorondor-page .signal-card span {
   color: #f8fafc;
-  font-size: 1.18rem;
+  font-size: 1.24rem;
   font-weight: 800;
+  line-height: 1.08;
   overflow-wrap: anywhere;
 }
 
@@ -480,10 +488,11 @@
 .thorondor-page .btn-main,
 .thorondor-page .btn-subtle,
 .thorondor-page .btn-quiet {
-  border-radius: 4px;
+  border-radius: 5px;
   font-weight: 600;
   padding: 8px 12px;
   min-width: 0;
+  min-height: 38px;
   white-space: normal;
 }
 
@@ -621,6 +630,11 @@
   --bs-table-border-color: rgba(176, 184, 194, 0.14);
 }
 
+.thorondor-page .table .text-muted,
+.thorondor-page .table-dark .text-muted {
+  color: #8fa1b2 !important;
+}
+
 .thorondor-page .state-chip {
   display: inline-flex;
   align-items: center;
@@ -660,9 +674,11 @@
   flex: 1 1 30%;
   min-width: 140px;
   padding: 11px;
-  border-radius: 4px;
-  border: 1px solid rgba(176, 184, 194, 0.16);
-  background: var(--thorondor-flat-soft-background);
+  border-radius: 6px;
+  border: 1px solid rgba(176, 184, 194, 0.14);
+  background:
+    linear-gradient(180deg, rgba(42, 54, 47, 0.62), rgba(25, 35, 31, 0.68)),
+    var(--thorondor-flat-soft-background);
 }
 
 .thorondor-page .mini-stat label {
@@ -867,16 +883,16 @@
 @media (max-width: 900px) {
   .thorondor-page {
     width: 100%;
-    padding: 14px 14px 42px;
+    padding: 12px 12px 40px;
   }
 
   .thorondor-page .section-box {
-    padding: 14px;
+    padding: 13px;
     margin-bottom: 12px;
-    border-color: rgba(190, 198, 209, 0.16);
+    border-color: rgba(190, 198, 209, 0.14);
     box-shadow:
       inset 0 1px 0 rgba(255, 255, 255, 0.026),
-      0 6px 14px rgba(0, 0, 0, 0.12);
+      0 7px 18px rgba(0, 0, 0, 0.14);
   }
 
   .thorondor-page .intro-box {
@@ -900,7 +916,7 @@
   .thorondor-page .guide-card span,
   .thorondor-page .metric-card small,
   .thorondor-page .signal-card small {
-    line-height: 1.58;
+    line-height: 1.5;
   }
 
   .thorondor-page .phase-badge-block {
@@ -936,17 +952,23 @@
   }
 
   .thorondor-page .section-box {
-    padding: 12px;
+    padding: 11px;
     margin-bottom: 12px;
-    border-radius: 3px;
-    background: var(--thorondor-panel-background);
+    border-radius: 6px;
+    background:
+      linear-gradient(180deg, rgba(35, 47, 41, 0.96), rgba(22, 32, 28, 0.98)),
+      var(--thorondor-panel-background);
   }
 
   .thorondor-page .guide-grid,
   .thorondor-page .intro-points,
-  .thorondor-page .metric-grid,
   .thorondor-page .card-grid {
     grid-template-columns: 1fr;
+  }
+
+  .thorondor-page .metric-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
   }
 
   .thorondor-page .intro-point,
@@ -972,8 +994,14 @@
   .thorondor-page .metric-card,
   .thorondor-page .signal-card,
   .thorondor-page .tool-card {
-    padding: 12px;
-    border-radius: 3px;
+    padding: 11px;
+    border-radius: 6px;
+  }
+
+  .thorondor-page .metric-card {
+    align-content: start;
+    gap: 5px;
+    min-height: 94px;
   }
 
   .thorondor-page .section-kicker,
@@ -981,13 +1009,31 @@
   .thorondor-page .metric-card label,
   .thorondor-page .signal-card label,
   .thorondor-page .field-label {
-    font-size: 0.75rem;
-    letter-spacing: 0.04em;
+    font-size: 0.7rem;
+    letter-spacing: 0.03em;
+    line-height: 1.18;
   }
 
   .thorondor-page .section-name,
   .thorondor-page .module-title {
-    font-size: clamp(1.18rem, 5.2vw, 1.42rem);
+    font-size: clamp(1.12rem, 4.9vw, 1.36rem);
+  }
+
+  .thorondor-page .section-copy,
+  .thorondor-page .module-copy {
+    font-size: 0.92rem;
+  }
+
+  .thorondor-page .metric-card span,
+  .thorondor-page .signal-card span {
+    font-size: 1.16rem;
+  }
+
+  .thorondor-page .metric-card small,
+  .thorondor-page .signal-card small,
+  .thorondor-page .helper-copy {
+    font-size: 0.82rem;
+    line-height: 1.36;
   }
 
   .thorondor-page .mini-grid {
@@ -998,7 +1044,7 @@
 
   .thorondor-page .mini-stat {
     min-width: 0;
-    padding: 10px;
+    padding: 9px;
   }
 
   .thorondor-page .endpoint-mini-stat {
@@ -1039,6 +1085,13 @@
   .thorondor-page .btn-subtle {
     width: 100%;
   }
+
+  .thorondor-page .btn-main,
+  .thorondor-page .btn-subtle,
+  .thorondor-page .btn-quiet {
+    min-height: 36px;
+    padding: 7px 10px;
+  }
 }
 
 @media (max-width: 420px) {
@@ -1049,18 +1102,21 @@
 
   .thorondor-page .section-box {
     padding: 11px;
-    border-radius: 4px;
+    border-radius: 6px;
   }
 
   .thorondor-page .section-kicker {
     letter-spacing: 0.08em;
   }
 
-  .thorondor-page .mini-grid {
-    grid-template-columns: 1fr;
-  }
-
   .thorondor-page .table {
     min-width: 580px;
+  }
+}
+
+@media (max-width: 340px) {
+  .thorondor-page .metric-grid,
+  .thorondor-page .mini-grid {
+    grid-template-columns: 1fr;
   }
 }

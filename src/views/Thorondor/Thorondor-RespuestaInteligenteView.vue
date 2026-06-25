@@ -483,4 +483,22 @@ export default {
     grid-template-columns: 1fr;
   }
 }
+
+@media (max-width: 767px) {
+  .smart-summary {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 8px;
+  }
+
+  .smart-layout,
+  .smart-studio {
+    gap: 12px;
+  }
+}
+
+@media (max-width: 340px) {
+  .smart-summary {
+    grid-template-columns: 1fr;
+  }
+}
 </style>
