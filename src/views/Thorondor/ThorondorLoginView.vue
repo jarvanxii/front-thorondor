@@ -342,7 +342,7 @@ import {
 } from '@/features/thorondor/services/thorondorAuth'
 
 const COOKIE_CONSENT_META_KEY = 'thorondorCookieConsent:v1'
-const EXTERNAL_OAUTH_ENABLED = false
+const EXTERNAL_OAUTH_ENABLED = true
 
 export default {
   name: 'ThorondorLoginView',
