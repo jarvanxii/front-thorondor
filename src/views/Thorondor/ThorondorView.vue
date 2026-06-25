@@ -11,8 +11,8 @@
                     <span class="section-kicker">Consola SIEM para equipos autorizados</span>
                     <h2>Qué hace Thorondor por ti</h2>
                     <p class="hero-summary">
-                        Thorondor te ayuda a saber qué está pasando en tus servidores, ver señales importantes en una
-                        sola consola y actuar con control cuando algo necesita atención.
+                        Thorondor instala un agente ligero en cada host, recoge estado real del sistema y convierte la
+                        información importante en una consola clara para revisar y actuar.
                     </p>
                 </div>
                 <dl class="hero-status-bar" aria-label="Estado de Thorondor">
@@ -23,8 +23,8 @@
                 </dl>
             </div>
             <p class="home-overview-note">
-                Cualquier usuario puede trabajar en local con IndexedDB. Cuando una cuenta está autorizada, Thorondor
-                guarda automáticamente el histórico en el servidor para trabajar de forma continuada.
+                Si la cuenta está autorizada, el histórico se guarda en el servidor. Si no, la app funciona en IndexedDB
+                sin consumir base de datos.
             </p>
         </section>
 
@@ -34,9 +34,8 @@
                     <span class="section-kicker">Cómo funciona</span>
                     <h2 class="module-title">Un agente por cada equipo que quieras vigilar</h2>
                     <p class="module-copy">
-                        Instalas un agente ligero en cada equipo que quieras monitorizar. El agente recoge el estado del sistema, los
-                        eventos relevantes y las señales de seguridad disponibles. Thorondor ordena esa información para
-                        que puedas revisarla sin saltar entre herramientas.
+                        Instalas, registras y empiezas a ver datos. El agente detecta capacidades del host, valida su
+                        estado y envía solo lo que puede leer de forma razonable.
                     </p>
                 </div>
             </div>
@@ -67,9 +66,8 @@
                     <strong>{{ group.label }}</strong>
                     <span>{{ group.summary }}</span>
                     <ul class="telemetry-metrics" :aria-label="`Métricas de ${group.label}`">
-                        <li v-for="metric in group.metrics" :key="metric.name">
+                        <li v-for="metric in group.metrics" :key="metric.name" :aria-label="`${metric.name}: ${metric.detail}`" :title="metric.detail">
                             <b>{{ metric.name }}</b>
-                            <span>{{ metric.detail }}</span>
                         </li>
                     </ul>
                 </li>
@@ -190,12 +188,12 @@ export default {
                 {
                     label: "Estado del equipo",
                     badge: "Equipo",
-                    copy: "Thorondor muestra si el agente está activo, cuándo fue la última señal y qué sistema está vigilando."
+                    copy: "Estado, endpoint, latencia, versión del agente, uptime y última señal recibida."
                 },
                 {
                     label: "Rendimiento y hardware",
                     badge: "Uso",
-                    copy: "Puedes ver uso de CPU, memoria, discos, temperaturas y otros sensores cuando el equipo los ofrece."
+                    copy: "CPU, RAM, swap, discos, sensores, GPU, batería, SMART y detalles físicos disponibles."
                 },
                 {
                     label: "Procesos",
@@ -205,7 +203,7 @@ export default {
                 {
                     label: "Red",
                     badge: "Net",
-                    copy: "Revisa puertos abiertos, conexiones activas e interfaces para detectar exposición o actividad inesperada."
+                    copy: "Puertos abiertos, conexiones activas, interfaces, rutas, DNS y resumen de exposición."
                 },
                 {
                     label: "Usuarios y accesos",
@@ -215,13 +213,22 @@ export default {
                 {
                     label: "Alertas y respuesta",
                     badge: "Acción",
-                    copy: "Cuando aparece un patrón relevante, Thorondor lo convierte en alerta y permite ejecutar acciones autorizadas."
+                    copy: "Reglas, alertas, bloqueo de IP, gestión de servicios y acciones autorizadas con trazabilidad."
                 }
             ];
         },
 
         agentTelemetryGroups() {
             return [
+                {
+                    label: "Perfil del host",
+                    summary: "Da contexto operativo antes de mirar tablas grandes.",
+                    metrics: [
+                        { name: "Identidad", detail: "hostname, FQDN, dominio o grupo de trabajo, IP local y zona horaria." },
+                        { name: "Plataforma", detail: "sistema, kernel, arquitectura, arranque, Python y pista de virtualización." },
+                        { name: "Base instalada", detail: "gestores de paquetes, productos o servicios de seguridad y rutas por defecto." }
+                    ]
+                },
                 {
                     label: "Identidad y salud del agente",
                     summary: "Permite saber qué host responde, desde dónde responde y si la última lectura es válida.",
@@ -286,19 +293,19 @@ export default {
             return [
                 {
                     label: "1. Genera el instalador",
-                    copy: "Genera el instalador para Linux o Windows y deja preparado el servicio que recogerá la información."
+                    copy: "Elige Linux o Windows, puerto y descarga un único fichero."
                 },
                 {
                     label: "2. Instala el agente",
-                    copy: "Copia el fichero en el equipo destino y ejecútalo con los permisos necesarios. El instalador deja también el desinstalador."
+                    copy: "Ejecuta con permisos elevados. El script crea servicio, dependencias, validación y desinstalador."
                 },
                 {
                     label: "3. Registra el agente",
-                    copy: "Indica en Thorondor el nombre, la IP o DNS y el puerto por el que la consola debe consultar ese equipo."
+                    copy: "Guarda nombre, IP o DNS y puerto para que la consola pueda consultarlo."
                 },
                 {
                     label: "4. Opera con contexto",
-                    copy: "Revisa estado, hardware, red, usuarios, logs, alertas y acciones desde las vistas del host seleccionado."
+                    copy: "Revisa perfil, hardware, red, usuarios, logs, alertas y respuesta desde el host seleccionado."
                 }
             ];
         }
@@ -553,15 +560,20 @@ export default {
 }
 
 .telemetry-metrics {
-    display: grid;
-    gap: 0.45rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.42rem;
+    align-content: start;
 }
 
 .telemetry-metrics li {
-    display: grid;
-    grid-template-columns: minmax(96px, 0.28fr) minmax(0, 1fr);
-    gap: 0.75rem;
-    align-items: baseline;
+    display: inline-flex;
+    align-items: center;
+    min-height: 1.8rem;
+    padding: 0.32rem 0.58rem;
+    border: 1px solid rgba(236, 194, 119, 0.18);
+    border-radius: 4px;
+    background: rgba(7, 13, 18, 0.44);
 }
 
 .telemetry-metrics b {
@@ -571,12 +583,6 @@ export default {
     letter-spacing: 0.05em;
     line-height: 1.35;
     text-transform: uppercase;
-}
-
-.telemetry-metrics span {
-    color: #d7e1ec;
-    font-size: 0.88rem;
-    line-height: 1.45;
 }
 
 @media (max-width: 1180px) {
@@ -690,10 +696,7 @@ export default {
     }
 
     .telemetry-metrics li {
-        grid-template-columns: 1fr;
-        gap: 0.12rem;
-        padding-left: 0.6rem;
-        border-left: 2px solid rgba(236, 194, 119, 0.28);
+        min-height: 1.75rem;
     }
 }
 

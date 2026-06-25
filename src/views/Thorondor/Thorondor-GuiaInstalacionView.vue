@@ -8,9 +8,8 @@
                     <span class="section-kicker">Instalación simplificada</span>
                     <h1 class="section-name">Instalación del agente</h1>
                     <p class="section-copy">
-                        Elige el sistema operativo en el generador, descarga el instalador, déjalo en una carpeta del
-                        host y ejecútalo con permisos elevados. El agente quedará instalado con su desinstalador
-                        preparado.
+                        Genera un fichero, ejecútalo en el host y registra la IP o DNS en Thorondor. El instalador deja
+                        servicio, validación local y desinstalador.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -33,8 +32,8 @@
                     <span class="section-kicker">Instalar</span>
                     <h2 class="module-title">Copia el fichero y ejecuta</h2>
                     <p class="module-copy">
-                        El instalador crea la carpeta real del agente, instala dependencias, detecta módulos/logs
-                        disponibles y deja el servicio arrancando automáticamente.
+                        No necesitas preparar una estructura a mano. El script crea la carpeta real del agente, instala
+                        dependencias, detecta capacidades del host y arranca el servicio.
                     </p>
                 </div>
                 <div class="phase-badge-block">
@@ -174,61 +173,41 @@ export default {
                 return [
                     {
                         label: "Permisos",
-                        copy: "Puedes ejecutarlo desde PowerShell normal; si no está elevado, pedirá permisos de administrador."
+                        copy: "Puedes ejecutarlo desde PowerShell normal; si hace falta, pedirá administrador."
                     },
                     {
-                        label: "Dependencias",
-                        copy: "Usa PowerShell 5.1+ y Python 3.8+. Si falta Python y existe winget, intenta instalarlo automáticamente."
+                        label: "Qué instala",
+                        copy: "Crea C:\\ProgramData\\Thorondor-Agent, venv, logs, tarea programada y desinstalador."
                     },
                     {
-                        label: "Instalación",
-                        copy: "Crea C:\\ProgramData\\Thorondor-Agent, un venv aislado, el agente, logs, configuración y desinstalador."
+                        label: "Validación",
+                        copy: "Comprueba /health al terminar y te deja comandos para revisar tarea y logs."
                     },
                     {
-                        label: "Arranque",
-                        copy: "Crea la tarea programada ThorondorAgent como SYSTEM, con nivel Highest, y la inicia al arrancar Windows."
-                    },
-                    {
-                        label: "Red",
-                        copy: "Crea una regla inbound TCP para el puerto configurado. Para acceso externo, usa túnel, proxy o NAT controlado."
-                    },
-                    {
-                        label: "Desinstalación",
-                        copy: "El desinstalador también pide administrador; elimina tarea, procesos, reglas de firewall del agente y carpetas."
+                        label: "Desinstalar",
+                        copy: "El desinstalador elimina tarea, procesos, reglas propias y carpeta del agente."
                     }
                 ];
             }
 
             return [
-                {
-                    label: "Permisos",
-                    copy: "El script funciona como root o con sudo. Si no hay sudo y no eres root, se detiene."
-                },
-                {
-                    label: "Dependencias",
-                    copy: "Con apt, dnf o pacman instala Python, venv/pip, lm-sensors, smartmontools, dmidecode y pciutils."
-                },
-                {
-                    label: "Instalación real",
-                    copy: "Crea /opt/thorondor-agent, usuario de sistema, venv aislado, psutil, agente Python y desinstalador."
-                },
-                {
-                    label: "Arranque",
-                    copy: "Crea thorondor-siem-agent.service en systemd, recarga systemd, lo habilita y reinicia el servicio."
-                },
-                {
-                    label: "Permisos de lectura",
-                    copy: "Añade el usuario del agente a adm, systemd-journal y docker si existen; detecta logs y módulos disponibles durante la instalación."
-                },
-                {
-                    label: "Red",
-                    copy: "El agente escucha en el puerto configurado. Si el host tiene firewall, permite ese puerto de forma controlada o usa un túnel local hacia 127.0.0.1."
-                },
-                {
-                    label: "Operativa controlada",
-                    copy: "Crea un sudoers limitado para iptables, ufw, firewall-cmd, smartctl, dmesg y dmidecode."
-                }
-            ];
+                    {
+                        label: "Permisos",
+                        copy: "El script funciona como root o con sudo. Si no hay sudo y no eres root, se detiene."
+                    },
+                    {
+                        label: "Qué instala",
+                        copy: "Crea /opt/thorondor-agent, usuario de sistema, venv, agente Python y desinstalador."
+                    },
+                    {
+                        label: "Validación",
+                        copy: "Detecta logs/módulos, arranca systemd y prueba /health al terminar."
+                    },
+                    {
+                        label: "Desinstalar",
+                        copy: "El desinstalador retira systemd, sudoers limitado, usuario creado y carpeta del agente."
+                    }
+                ];
         },
 
         installCommands() {

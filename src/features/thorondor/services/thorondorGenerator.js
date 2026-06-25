@@ -235,7 +235,7 @@ except ImportError:
 HOST_LABEL = ${JSON.stringify(config.displayName)}
 SYSTEM_NAME = ${JSON.stringify(config.systemName)}
 AGENT_ID = ${JSON.stringify(config.agentId)}
-AGENT_VERSION = "1.1.0"
+AGENT_VERSION = "1.2.0"
 DISTRO = ${JSON.stringify(config.distro)}
 OS_VERSION = ${JSON.stringify(config.osVersion)}
 LISTEN_HOST = ${JSON.stringify(resolveListenHost(config))}
@@ -3673,6 +3673,244 @@ def safe_collect(name, fallback, callback, errors):
         return fallback
 
 
+def iso_from_timestamp(value):
+    try:
+        return datetime.fromtimestamp(float(value), timezone.utc).isoformat().replace("+00:00", "Z")
+    except Exception:
+        return ""
+
+
+def detect_package_managers():
+    candidates = (
+        [("winget", "winget"), ("chocolatey", "choco"), ("scoop", "scoop")]
+        if IS_WINDOWS
+        else [
+            ("apt", "apt"),
+            ("dnf", "dnf"),
+            ("yum", "yum"),
+            ("pacman", "pacman"),
+            ("zypper", "zypper"),
+            ("apk", "apk"),
+            ("snap", "snap"),
+            ("flatpak", "flatpak")
+        ]
+    )
+    managers = []
+    for name, binary in candidates:
+        path = shutil.which(binary)
+        if path:
+            managers.append({"name": name, "binary": binary, "path": path})
+    return managers
+
+
+def collect_virtualization_hint():
+    result = {
+        "type": "unknown",
+        "vendor": "",
+        "model": "",
+        "hypervisorPresent": False
+    }
+    if IS_WINDOWS:
+        items = as_list(powershell_json(
+            "Get-CimInstance Win32_ComputerSystem | "
+            "Select-Object Manufacturer,Model,Domain,PartOfDomain,HypervisorPresent | "
+            "ConvertTo-Json -Depth 3 -Compress",
+            timeout=8
+        ))
+        item = items[0] if items and isinstance(items[0], dict) else {}
+        manufacturer = str(item.get("Manufacturer") or "").strip()
+        model = str(item.get("Model") or "").strip()
+        text = f"{manufacturer} {model}".lower()
+        result.update({
+            "vendor": manufacturer,
+            "model": model,
+            "domain": str(item.get("Domain") or "").strip(),
+            "partOfDomain": bool(item.get("PartOfDomain")),
+            "hypervisorPresent": bool(item.get("HypervisorPresent"))
+        })
+        if any(marker in text for marker in ["vmware", "virtualbox", "kvm", "qemu", "hyper-v", "xen", "parallels"]):
+            result["type"] = "virtual"
+        elif manufacturer or model:
+            result["type"] = "physical"
+        return result
+
+    detector = shutil.which("systemd-detect-virt")
+    if detector:
+        virt = run_command([detector])
+        if virt and virt != "none":
+            result["type"] = virt
+        elif virt == "none":
+            result["type"] = "physical"
+
+    for key, path in {
+        "vendor": "/sys/class/dmi/id/sys_vendor",
+        "model": "/sys/class/dmi/id/product_name"
+    }.items():
+        try:
+            with open(path, "r", encoding="utf-8", errors="ignore") as handle:
+                result[key] = handle.read().strip()[:120]
+        except Exception:
+            pass
+    if result["type"] == "unknown" and (result["vendor"] or result["model"]):
+        text = f'{result["vendor"]} {result["model"]}'.lower()
+        result["type"] = "virtual" if any(marker in text for marker in ["vmware", "virtualbox", "kvm", "qemu", "xen", "hyper-v", "parallels"]) else "physical"
+    return result
+
+
+def collect_security_products():
+    if IS_WINDOWS:
+        script = (
+            "$items = @(); "
+            "foreach ($class in @('AntiVirusProduct','FirewallProduct','AntiSpywareProduct')) { "
+            "  try { "
+            "    $items += Get-CimInstance -Namespace root/SecurityCenter2 -ClassName $class -ErrorAction Stop | "
+            "      Select-Object @{n='type';e={$class}},displayName,productState,pathToSignedProductExe,pathToSignedReportingExe "
+            "  } catch {} "
+            "}; $items | ConvertTo-Json -Depth 4 -Compress"
+        )
+        products = []
+        for item in as_list(powershell_json(script, timeout=10)):
+            if not isinstance(item, dict):
+                continue
+            name = str(item.get("displayName") or "").strip()
+            if name:
+                products.append({
+                    "name": name,
+                    "type": str(item.get("type") or "").strip(),
+                    "state": item.get("productState", "")
+                })
+        return products[:20]
+
+    services = []
+    for name in ["ufw", "firewalld", "nftables", "iptables", "auditd", "fail2ban", "clamav-daemon", "ssh", "sshd"]:
+        status = run_command(["systemctl", "is-active", name]) if shutil.which("systemctl") else ""
+        if status:
+            services.append({"name": name, "status": status})
+    return services
+
+
+def collect_default_routes():
+    if IS_WINDOWS:
+        script = (
+            "Get-NetRoute -DestinationPrefix '0.0.0.0/0' -ErrorAction SilentlyContinue | "
+            "Sort-Object RouteMetric | Select-Object -First 4 InterfaceAlias,NextHop,RouteMetric | "
+            "ConvertTo-Json -Depth 3 -Compress"
+        )
+        return [
+            {
+                "interface": str(item.get("InterfaceAlias") or "").strip(),
+                "gateway": str(item.get("NextHop") or "").strip(),
+                "metric": item.get("RouteMetric", "")
+            }
+            for item in as_list(powershell_json(script, timeout=8))
+            if isinstance(item, dict)
+        ]
+
+    result = run_command_result(["ip", "route", "show", "default"], timeout=5)
+    routes = []
+    if result.get("ok"):
+        for line in result.get("stdout", "").splitlines()[:6]:
+            gateway = ""
+            interface = ""
+            parts = line.split()
+            for index, part in enumerate(parts):
+                if part == "via" and index + 1 < len(parts):
+                    gateway = parts[index + 1]
+                if part == "dev" and index + 1 < len(parts):
+                    interface = parts[index + 1]
+            routes.append({"interface": interface, "gateway": gateway, "raw": line.strip()})
+    return routes
+
+
+def collect_domain_hint():
+    if IS_WINDOWS:
+        items = as_list(powershell_json(
+            "Get-CimInstance Win32_ComputerSystem | Select-Object Domain,PartOfDomain,Workgroup | ConvertTo-Json -Compress",
+            timeout=6
+        ))
+        item = items[0] if items and isinstance(items[0], dict) else {}
+        return {
+            "domain": str(item.get("Domain") or "").strip(),
+            "workgroup": str(item.get("Workgroup") or "").strip(),
+            "partOfDomain": bool(item.get("PartOfDomain"))
+        }
+
+    domain = run_command(["hostname", "-d"]) if shutil.which("hostname") else ""
+    search_domain = ""
+    try:
+        with open("/etc/resolv.conf", "r", encoding="utf-8", errors="ignore") as handle:
+            for line in handle:
+                if line.startswith("search ") or line.startswith("domain "):
+                    search_domain = " ".join(line.split()[1:])[:160]
+                    break
+    except Exception:
+        pass
+    return {"domain": domain or search_domain, "workgroup": "", "partOfDomain": bool(domain or search_domain)}
+
+
+def build_host_profile(open_ports=None, established_connections=None, service_inventory=None, scheduled_tasks=None, firewall_summary=None, pending_updates=None, user_inventory=None, docker=None):
+    open_ports = as_list(open_ports)
+    established_connections = as_list(established_connections)
+    service_inventory = as_list(service_inventory)
+    scheduled_tasks = as_list(scheduled_tasks)
+    firewall_summary = firewall_summary if isinstance(firewall_summary, dict) else {}
+    pending_updates = pending_updates if isinstance(pending_updates, dict) else {}
+    user_inventory = user_inventory if isinstance(user_inventory, dict) else {}
+    docker = as_list(docker)
+    domain = collect_domain_hint()
+    local_ports = [
+        item for item in open_ports
+        if str(item.get("localAddr") or item.get("address") or "").startswith(("127.", "::1", "localhost"))
+    ]
+    remote_ports = max(0, len(open_ports) - len(local_ports))
+    managers = detect_package_managers()
+
+    return {
+        "collectedAt": now_iso(),
+        "identity": {
+            "hostname": socket.gethostname(),
+            "fqdn": socket.getfqdn(),
+            "domain": domain.get("domain", ""),
+            "workgroup": domain.get("workgroup", ""),
+            "partOfDomain": domain.get("partOfDomain", False),
+            "localIp": find_local_ip()
+        },
+        "runtime": {
+            "bootTime": iso_from_timestamp(psutil.boot_time()),
+            "uptimeSeconds": int(time.time() - psutil.boot_time()),
+            "timezone": time.tzname[time.daylight] if time.daylight and len(time.tzname) > 1 else time.tzname[0],
+            "timezoneOffsetMinutes": int(-(time.altzone if time.daylight else time.timezone) / 60),
+            "platform": platform.platform(),
+            "pythonVersion": platform.python_version(),
+            "pythonExecutable": sys.executable
+        },
+        "virtualization": collect_virtualization_hint(),
+        "packageManagers": managers,
+        "securityProducts": collect_security_products(),
+        "defaultRoutes": collect_default_routes(),
+        "exposure": {
+            "listeningPorts": len(open_ports),
+            "remoteListeningPorts": remote_ports,
+            "localOnlyListeningPorts": len(local_ports),
+            "establishedConnections": len(established_connections),
+            "firewallRules": int(firewall_summary.get("total") or 0),
+            "thorondorFirewallRules": int(firewall_summary.get("thorondor") or 0),
+            "blockedIps": len(as_list(firewall_summary.get("blockedIps")))
+        },
+        "inventory": {
+            "users": len(as_list(user_inventory.get("users"))),
+            "groups": len(as_list(user_inventory.get("groups"))),
+            "privilegedGroups": len(as_list(user_inventory.get("privilegedGroups"))),
+            "services": len(service_inventory),
+            "failedServices": len([item for item in service_inventory if str(item.get("activeState") or item.get("status") or "").lower() == "failed"]),
+            "scheduledTasks": len(scheduled_tasks),
+            "dockerContainers": len(docker),
+            "pendingUpdates": int(pending_updates.get("count") or 0),
+            "packageManagers": [item["name"] for item in managers]
+        }
+    }
+
+
 VIRTUAL_FSTYPES = {
     "tmpfs", "squashfs", "devtmpfs", "proc", "sysfs", "cgroup", "cgroup2",
     "pstore", "debugfs", "tracefs", "securityfs", "binfmt_misc", "overlay",
@@ -3745,6 +3983,21 @@ def collect_payload():
     smart_data = safe_collect("smartData", [], collect_smart_data, collection_errors) if MODULES.get("smartMonitor") else []
     login_history = safe_collect("loginHistory", [], collect_login_history, collection_errors) if MODULES.get("loginHistory") else []
     pending_updates = safe_collect("pendingUpdates", {"count": 0, "updates": []}, collect_pending_updates, collection_errors) if MODULES.get("updateMonitor") else {"count": 0, "updates": []}
+    host_profile = safe_collect(
+        "hostProfile",
+        {},
+        lambda: build_host_profile(
+            open_ports,
+            established_connections,
+            service_inventory,
+            scheduled_tasks,
+            firewall_summary,
+            pending_updates,
+            user_inventory,
+            docker
+        ),
+        collection_errors
+    )
     inventory_changes = safe_collect(
         "inventoryChanges",
         {"initialized": True, "events": [], "counts": {}},
@@ -3776,10 +4029,16 @@ def collect_payload():
         "heartbeat": now_iso(),
         "system": {
             "hostname": socket.gethostname(),
+            "fqdn": socket.getfqdn(),
             "localIp": find_local_ip(),
             "os": platform.system(),
             "kernel": platform.release(),
+            "platform": platform.platform(),
             "architecture": platform.machine(),
+            "bootTime": iso_from_timestamp(psutil.boot_time()),
+            "timezone": host_profile.get("runtime", {}).get("timezone", ""),
+            "timezoneOffsetMinutes": host_profile.get("runtime", {}).get("timezoneOffsetMinutes", 0),
+            "pythonVersion": platform.python_version(),
             "uptimeSeconds": int(boot_seconds),
             "connectedUsers": collect_users(),
             "loadAverage": list(loadavg)
@@ -3811,6 +4070,7 @@ def collect_payload():
             "battery": battery,
             "gpu": gpu,
             "hardware": hardware,
+            "hostProfile": host_profile,
             "userInventory": user_inventory,
             "docker": docker,
             "dns": dns,
@@ -3841,7 +4101,11 @@ def collect_payload():
                     "smartData": len(smart_data),
                     "loginHistory": len(login_history),
                     "firewallRules": len(firewall_rules),
-                    "failedServices": len(failed_services)
+                    "failedServices": len(failed_services),
+                    "users": len(user_inventory.get("users", [])) if isinstance(user_inventory, dict) else 0,
+                    "groups": len(user_inventory.get("groups", [])) if isinstance(user_inventory, dict) else 0,
+                    "docker": len(docker),
+                    "packageManagers": len(host_profile.get("packageManagers", [])) if isinstance(host_profile, dict) else 0
                 }
             }
         },
@@ -3889,10 +4153,16 @@ def build_warming_payload(message="telemetry_cache_warming"):
         "heartbeat": now_iso(),
         "system": {
             "hostname": socket.gethostname(),
+            "fqdn": socket.getfqdn(),
             "localIp": find_local_ip(),
             "os": platform.system(),
             "kernel": platform.release(),
+            "platform": platform.platform(),
             "architecture": platform.machine(),
+            "bootTime": iso_from_timestamp(psutil.boot_time()),
+            "timezone": time.tzname[time.daylight] if time.daylight and len(time.tzname) > 1 else time.tzname[0],
+            "timezoneOffsetMinutes": int(-(time.altzone if time.daylight else time.timezone) / 60),
+            "pythonVersion": platform.python_version(),
             "uptimeSeconds": int(time.time() - psutil.boot_time()),
             "connectedUsers": [],
             "loadAverage": list(os.getloadavg()) if hasattr(os, "getloadavg") else [0, 0, 0]
@@ -3901,6 +4171,13 @@ def build_warming_payload(message="telemetry_cache_warming"):
             "cpuTotal": psutil.cpu_percent(interval=0),
             "cpuPerCore": [],
             "memoryPercent": psutil.virtual_memory().percent,
+            "hostProfile": {
+                "collectedAt": now_iso(),
+                "identity": {"hostname": socket.gethostname(), "fqdn": socket.getfqdn(), "localIp": find_local_ip()},
+                "runtime": {"bootTime": iso_from_timestamp(psutil.boot_time()), "uptimeSeconds": int(time.time() - psutil.boot_time())},
+                "exposure": {"listeningPorts": 0, "remoteListeningPorts": 0, "establishedConnections": 0},
+                "inventory": {"services": 0, "scheduledTasks": 0, "pendingUpdates": 0}
+            },
             "disks": [],
             "processes": [],
             "openPorts": [],
@@ -4001,6 +4278,21 @@ def collect_browser_payload():
     established_connections = []
     temperatures = safe_collect("temperatures", [], collect_temperatures, collection_errors) if MODULES.get("hardwareMonitor") else []
     user_inventory = safe_collect("userInventory", {"collectedAt": now_iso(), "os": "windows" if IS_WINDOWS else "linux", "users": [], "groups": [], "privilegedGroups": []}, collect_user_inventory, collection_errors)
+    host_profile = safe_collect(
+        "hostProfile",
+        {},
+        lambda: build_host_profile(
+            open_ports,
+            established_connections,
+            [],
+            [],
+            {"total": 0, "thorondor": 0, "system": 0, "blockedIps": []},
+            {"count": 0, "updates": []},
+            user_inventory,
+            []
+        ),
+        collection_errors
+    )
     hardware = {
         "cpuModel": platform.processor() or platform.machine(),
         "cpuPhysicalCores": psutil.cpu_count(logical=False) or 0,
@@ -4033,10 +4325,16 @@ def collect_browser_payload():
         "heartbeat": now_iso(),
         "system": {
             "hostname": socket.gethostname(),
+            "fqdn": socket.getfqdn(),
             "localIp": find_local_ip(),
             "os": platform.system(),
             "kernel": platform.release(),
+            "platform": platform.platform(),
             "architecture": platform.machine(),
+            "bootTime": iso_from_timestamp(psutil.boot_time()),
+            "timezone": host_profile.get("runtime", {}).get("timezone", ""),
+            "timezoneOffsetMinutes": host_profile.get("runtime", {}).get("timezoneOffsetMinutes", 0),
+            "pythonVersion": platform.python_version(),
             "uptimeSeconds": int(time.time() - psutil.boot_time()),
             "connectedUsers": collect_users(),
             "loadAverage": list(loadavg)
@@ -4068,6 +4366,7 @@ def collect_browser_payload():
             "battery": None,
             "gpu": [],
             "hardware": hardware,
+            "hostProfile": host_profile,
             "userInventory": user_inventory,
             "docker": [],
             "dns": [],
@@ -4095,7 +4394,9 @@ def collect_browser_payload():
                     "establishedConnections": len(established_connections),
                     "interfaces": len(interfaces),
                     "temperatures": len(temperatures),
-                    "users": len(user_inventory.get("users", [])) if isinstance(user_inventory, dict) else 0
+                    "users": len(user_inventory.get("users", [])) if isinstance(user_inventory, dict) else 0,
+                    "groups": len(user_inventory.get("groups", [])) if isinstance(user_inventory, dict) else 0,
+                    "packageManagers": len(host_profile.get("packageManagers", [])) if isinstance(host_profile, dict) else 0
                 }
             }
         },
@@ -4321,6 +4622,12 @@ class ThorondorHandler(BaseHTTPRequestHandler):
                 "version": AGENT_VERSION,
                 "port": LISTEN_PORT,
                 "networkScope": NETWORK_SCOPE,
+                "hostname": socket.gethostname(),
+                "fqdn": socket.getfqdn(),
+                "localIp": find_local_ip(),
+                "pollIntervalSeconds": POLL_INTERVAL_SECONDS,
+                "cacheTtlSeconds": telemetry_cache_ttl_seconds(),
+                "uptimeSeconds": int(time.time() - psutil.boot_time()),
                 "commandsAccepted": collect_agent_operational_status([]).get("commandsAccepted", [])
             })
             return
@@ -4602,7 +4909,27 @@ echo "El agente escucha en el puerto $PORT. Regístralo en Thorondor con la IP o
 echo "Si el host usa firewall, permite ese puerto de forma controlada o usa un túnel local hacia 127.0.0.1:$PORT."
 
 echo "[6/6] Validación local:"
-echo "curl http://127.0.0.1:$PORT/health"
+HEALTH_OK="0"
+for attempt in $(seq 1 12); do
+  if "$INSTALL_DIR/venv/bin/python" - <<PY >/dev/null 2>&1
+import json
+import urllib.request
+with urllib.request.urlopen("http://127.0.0.1:$PORT/health", timeout=2) as response:
+    payload = json.loads(response.read().decode("utf-8"))
+    raise SystemExit(0 if payload.get("status") == "ok" else 1)
+PY
+  then
+    HEALTH_OK="1"
+    break
+  fi
+  sleep 1
+done
+if [ "$HEALTH_OK" = "1" ]; then
+  echo "Health check correcto: http://127.0.0.1:$PORT/health"
+else
+  echo "Aviso: el servicio quedo instalado, pero /health aun no responde. Revisa: sudo journalctl -u $SERVICE_FILE -n 80 --no-pager"
+fi
+echo "Comando manual: curl http://127.0.0.1:$PORT/health"
 echo "Desinstalador: sudo $INSTALL_DIR/$UNINSTALL_FILE"
 ${completionMessage}
 `;
@@ -4882,43 +5209,36 @@ sudo ls -la /opt/thorondor-agent`;
     ? `powershell.exe -NoProfile -ExecutionPolicy Bypass -File "${generatedUninstaller}"`
     : `sudo ${generatedUninstaller}`;
 
-  return `## Instalación del agente ${targetLabel}
+  return `## Agente ${targetLabel}
 
-### Lo que se genera
-- Instalador único: \`${installerName}\`.
-- Carpeta recomendada para ejecutarlo: \`${installFolder}\`.
-- Carpeta real de instalación: \`${isWindows ? "C:\\ProgramData\\Thorondor-Agent" : "/opt/thorondor-agent"}\`.
-- Desinstalador generado automáticamente: \`${generatedUninstaller}\`.
-- Puerto del agente: \`${port}\`.
-- Key agents incluida en el instalador para validar las peticiones al agente.
-
-### Requisitos reales
-- Permisos: ${permissionNote}
-- Dependencias: ${dependencyNote}
+### Qué deja instalado
+- Agente: \`${isWindows ? "C:\\ProgramData\\Thorondor-Agent" : "/opt/thorondor-agent"}\`.
 - Servicio: ${serviceNote}
-- Red: ${networkNote}
+- Puerto local: \`${port}\`.
+- Desinstalador: \`${generatedUninstaller}\`.
+- Requisitos: ${permissionNote} ${dependencyNote}
 
-### 1. Copia el fichero a una carpeta y ejecútalo
+### 1. Instalar
 \`\`\`${installFence}
 ${runCommand}
 \`\`\`
 
-### 2. Comprueba que quedó instalado
+### 2. Comprobar servicio
 \`\`\`${installFence}
 ${statusCommand}
 \`\`\`
 
-### 3. Valida el agente
+### 3. Probar respuesta
 \`\`\`${installFence}
 ${validationCommand}
 \`\`\`
 
 ### 4. Registrar en Thorondor
-Abre **Registro** y crea el agente con un nombre visible, la IP o DNS por la que Thorondor lo consultará y el puerto \`${port}\`.
-Para validar en el propio host puedes usar \`http://127.0.0.1:${port}\`; para operación real registra la dirección alcanzable desde la consola.
+En **Registro**, guarda nombre visible, IP o DNS alcanzable desde la consola y puerto \`${port}\`.
+Si solo estás probando dentro del propio host, usa \`127.0.0.1\`.
 
 ### Desinstalar
-El instalador deja preparado un fichero de desinstalación. ${uninstallPermissionNote} Para retirar el agente completo:
+${uninstallPermissionNote}
 
 \`\`\`${installFence}
 ${uninstallCommand}

@@ -14,14 +14,15 @@ autorizado, sincroniza su workspace privado con una base de datos por API.
 - **Persistencia remota**: API con base de datos para workspaces sincronizados y aislados por usuario autorizado.
 - **Motor de reglas**: evaluación JavaScript de umbrales, heartbeat, autenticación, sudo e integridad de ficheros.
 - **Instalador Windows**: \`thorondor-installer.ps1\` solicita permisos de administrador, crea \`C:\\ProgramData\\Thorondor-Agent\`, prepara un venv, registra la tarea \`ThorondorAgent\`, abre el puerto del agente y deja desinstalador.
-- **Instalador Linux**: \`thorondor-installer.sh\` crea \`/opt/thorondor-agent\`, prepara dependencias y habilita systemd.
+- **Instalador Linux**: \`thorondor-installer.sh\` crea \`/opt/thorondor-agent\`, prepara dependencias, habilita systemd, valida \`/health\` y deja desinstalador.
 
 ## Telemetría
 
 El payload de \`/telemetry\` se organiza en bloques estables:
 
 - \`system\`: hostname, IP, sistema operativo, kernel, arquitectura y uptime.
-- \`metrics\`: CPU, memoria, swap, discos, procesos, interfaces de red y temperaturas si el sistema las expone.
+- \`metrics.hostProfile\`: FQDN, dominio o grupo de trabajo, arranque, zona horaria, virtualización, gestores de paquetes, seguridad local, rutas y resumen de exposición.
+- \`metrics\`: CPU, memoria, swap, discos, procesos, interfaces de red, servicios, tareas, firewall, actualizaciones y sensores si el sistema los expone.
 - \`security\`: logins, fallos de autenticación, sudo, usuarios nuevos y cambios en ficheros críticos.
 - \`logs\`: entradas recientes de syslog, journal, kernel o rutas adicionales configuradas.
 - \`heartbeat\`: timestamp de captura usado para detectar caídas o agentes congelados.

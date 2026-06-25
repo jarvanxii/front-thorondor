@@ -27,6 +27,35 @@
                 </div>
             </div>
 
+            <div v-if="snapshotHostProfileReady" class="host-profile-grid mb-4">
+                <article class="tool-card host-profile-card">
+                    <div class="card-head">
+                        <h5>Perfil del host</h5>
+                        <span class="mini-badge">{{ hostProfileOsLabel }}</span>
+                    </div>
+                    <dl class="kv-list">
+                        <div v-for="row in snapshotHostProfileRows" :key="row.label" class="kv-row">
+                            <dt>{{ row.label }}</dt>
+                            <dd>{{ row.value }}</dd>
+                        </div>
+                    </dl>
+                </article>
+
+                <article class="tool-card host-profile-card">
+                    <div class="card-head">
+                        <h5>Superficie resumida</h5>
+                        <span class="mini-badge">{{ snapshotExposureSummary.remoteListeningPorts }} expuestos</span>
+                    </div>
+                    <div class="host-profile-metric-grid">
+                        <div v-for="item in snapshotExposureCards" :key="item.label" class="host-profile-metric">
+                            <label>{{ item.label }}</label>
+                            <strong>{{ item.value }}</strong>
+                            <span>{{ item.note }}</span>
+                        </div>
+                    </div>
+                </article>
+            </div>
+
             <div class="tool-card mb-4" v-if="selectedLatestSnapshot?.disks?.length">
                 <div class="card-head">
                     <h5>Particiones de disco</h5>
@@ -2171,6 +2200,78 @@ export default {
             return cards;
         },
 
+        snapshotHostProfile() {
+            return this.selectedLatestSnapshot?.hostProfile || {};
+        },
+
+        snapshotHostProfileReady() {
+            return Boolean(this.selectedLatestSnapshot) && Object.keys(this.snapshotHostProfile).length > 0;
+        },
+
+        hostProfileOsLabel() {
+            return this.snapshotHostProfile?.runtime?.platform
+                || this.selectedLatestSnapshot?.platform
+                || this.selectedAgent?.distro
+                || "Host";
+        },
+
+        snapshotExposureSummary() {
+            return {
+                listeningPorts: Number(this.snapshotHostProfile?.exposure?.listeningPorts) || this.snapshotOpenPorts.length,
+                remoteListeningPorts: Number(this.snapshotHostProfile?.exposure?.remoteListeningPorts) || 0,
+                localOnlyListeningPorts: Number(this.snapshotHostProfile?.exposure?.localOnlyListeningPorts) || 0,
+                establishedConnections: Number(this.snapshotHostProfile?.exposure?.establishedConnections) || this.snapshotEstablished.length,
+                firewallRules: Number(this.snapshotHostProfile?.exposure?.firewallRules) || this.snapshotFirewallSummary.total || 0,
+                blockedIps: Number(this.snapshotHostProfile?.exposure?.blockedIps) || 0
+            };
+        },
+
+        snapshotExposureCards() {
+            const exposure = this.snapshotExposureSummary;
+            const inventory = this.snapshotHostProfile?.inventory || {};
+            return [
+                { label: "Puertos", value: exposure.listeningPorts, note: `${exposure.remoteListeningPorts} no locales` },
+                { label: "Conexiones", value: exposure.establishedConnections, note: "establecidas" },
+                { label: "Firewall", value: exposure.firewallRules, note: `${exposure.blockedIps} IP bloqueadas` },
+                { label: "Servicios", value: inventory.services ?? this.snapshotServiceInventory.length, note: `${inventory.failedServices ?? this.snapshotFailedServices.length} con fallo` },
+                { label: "Tareas", value: inventory.scheduledTasks ?? this.snapshotScheduledTasks.length, note: "persistencia revisable" },
+                { label: "Parches", value: inventory.pendingUpdates ?? this.snapshotPendingUpdates.count, note: "pendientes" }
+            ];
+        },
+
+        snapshotHostProfileRows() {
+            const profile = this.snapshotHostProfile || {};
+            const identity = profile.identity || {};
+            const runtime = profile.runtime || {};
+            const virtualization = profile.virtualization || {};
+            const managers = (profile.packageManagers || [])
+                .map((item) => item.name || item.binary || item)
+                .filter(Boolean)
+                .join(", ");
+            const securityProducts = (profile.securityProducts || [])
+                .map((item) => item.name || item.displayName || item)
+                .filter(Boolean)
+                .slice(0, 4)
+                .join(", ");
+            const routes = (profile.defaultRoutes || [])
+                .map((item) => [item.interface, item.gateway].filter(Boolean).join(" -> "))
+                .filter(Boolean)
+                .join(", ");
+            const virtualLabel = [virtualization.type, virtualization.vendor || virtualization.model]
+                .filter(Boolean)
+                .join(" · ");
+            return [
+                { label: "FQDN", value: identity.fqdn || this.selectedLatestSnapshot?.fqdn || "N/D" },
+                { label: "Dominio", value: identity.domain || identity.workgroup || "N/D" },
+                { label: "Arranque", value: runtime.bootTime ? this.formatDateTime(runtime.bootTime) : (this.selectedLatestSnapshot?.bootTime ? this.formatDateTime(this.selectedLatestSnapshot.bootTime) : "N/D") },
+                { label: "Zona horaria", value: runtime.timezone || this.selectedLatestSnapshot?.timezone || "N/D" },
+                { label: "Virtualización", value: virtualLabel || "N/D" },
+                { label: "Gestores", value: managers || "N/D" },
+                { label: "Seguridad", value: securityProducts || "N/D" },
+                { label: "Ruta por defecto", value: routes || "N/D" }
+            ];
+        },
+
         historicalSnapshots() {
             const cutoff = Date.now() - (this.historyRangeDays * 86400000);
             return this.selectedAgentSnapshots.filter((snapshot) => new Date(snapshot.timestamp).getTime() >= cutoff);
@@ -3429,6 +3530,56 @@ export default {
     gap: 0.75rem;
 }
 
+.host-profile-grid {
+    display: grid;
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    gap: 0.85rem;
+}
+
+.host-profile-card {
+    min-height: 100%;
+}
+
+.host-profile-card .kv-row dd {
+    overflow-wrap: anywhere;
+}
+
+.host-profile-metric-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 0.62rem;
+}
+
+.host-profile-metric {
+    display: grid;
+    gap: 0.2rem;
+    padding: 0.72rem 0.78rem;
+    border: 1px solid rgba(176, 184, 194, 0.14);
+    border-radius: 4px;
+    background: var(--thorondor-soft-background);
+}
+
+.host-profile-metric label {
+    margin: 0;
+    color: #aeb8c4;
+    font-size: 0.7rem;
+    font-weight: 800;
+    letter-spacing: 0.08em;
+    text-transform: uppercase;
+}
+
+.host-profile-metric strong {
+    color: #f5f7fa;
+    font-size: 1.22rem;
+    line-height: 1.05;
+}
+
+.host-profile-metric span {
+    color: rgba(190, 203, 218, 0.76);
+    font-size: 0.74rem;
+    line-height: 1.35;
+}
+
 .hardware-usage-card {
     display: grid;
     align-content: space-between;
@@ -4079,6 +4230,10 @@ export default {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
 
+    .host-profile-grid {
+        grid-template-columns: 1fr;
+    }
+
     .host-preview-control-grid--three,
     .host-hardware-preview-list {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -4092,6 +4247,7 @@ export default {
     }
 
     .hardware-usage-grid,
+    .host-profile-metric-grid,
     .cpu-core-grid,
     .safe-action-grid,
     .maintenance-grid,

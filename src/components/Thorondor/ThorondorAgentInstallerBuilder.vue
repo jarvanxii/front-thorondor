@@ -6,8 +6,8 @@
                     <span class="section-kicker">Instalador de agentes</span>
                     <h1 class="section-name">Instalador del agente</h1>
                     <p class="section-copy">
-                        El instalador solo prepara el servicio en el equipo destino. El nombre y la IP o DNS se
-                        configuran después desde Registro; la persistencia depende de la cuenta y de sus permisos.
+                        Genera el fichero que instala el agente, valida el servicio y deja preparado el desinstalador.
+                        El nombre y la IP o DNS se guardan después desde Registro.
                     </p>
                 </header>
                 <aside class="generator-hero-summary" aria-label="Resumen del instalador">
@@ -23,8 +23,7 @@
                         <span class="section-kicker">Generación directa</span>
                         <h2 class="module-title">Elige lo imprescindible</h2>
                         <p class="module-copy">
-                            No hace falta indicar nombre ni dirección del host para instalar. El agente detecta lo
-                            disponible en el sistema y queda escuchando en el puerto configurado.
+                            Solo necesitas sistema operativo y puerto. El agente detecta el resto en el host.
                         </p>
                     </div>
                     <div class="generator-setup-controls installer-control-grid">
@@ -65,7 +64,7 @@
                     <div class="action-group-copy">
                         <span>Generar instalador</span>
                         <strong>Descarga un fichero listo para ejecutar</strong>
-                        <p>El registro del agente se hace después, indicando nombre, IP o DNS y puerto desde Thorondor.</p>
+                        <p>Instala primero. Después registra nombre, IP o DNS y puerto desde Thorondor.</p>
                     </div>
                     <div class="action-button-row">
                         <button class="btn btn-main" :disabled="!isGenerateReady" :title="generateButtonTitle" @click="generateAndDownload">Generar instalador</button>
@@ -83,8 +82,8 @@
                 <div class="verdict-body">
                     <strong>Instalador listo</strong>
                     <p>
-                        Descarga {{ generatedBundle.installFileName }}, cópialo al host y ejecútalo con permisos elevados.
-                        Después registra el agente en Thorondor con la dirección por la que vas a consultarlo.
+                        Cópialo al host, ejecútalo con permisos elevados y registra después la dirección por la que lo
+                        consultará Thorondor.
                     </p>
                 </div>
             </div>
