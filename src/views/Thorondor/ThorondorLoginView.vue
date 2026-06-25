@@ -1276,4 +1276,75 @@ export default {
     height: 30px;
   }
 }
+
+@media (max-width: 620px) and (max-height: 680px) {
+  .login-page {
+    --login-mobile-visual-height: min(158px, calc(100vw * 0.48));
+  }
+
+  .login-layout {
+    height: 100svh;
+    min-height: 100svh;
+    overflow: hidden;
+  }
+
+  .login-card {
+    height: calc(100svh - var(--login-mobile-visual-height));
+    min-height: calc(100svh - var(--login-mobile-visual-height));
+    gap: 6px;
+    padding: 10px 16px 8px;
+    overflow: clip;
+  }
+
+  .login-card-header {
+    gap: 2px;
+  }
+
+  .section-kicker,
+  .login-field span {
+    font-size: 0.68rem;
+  }
+
+  .login-card-header h1 {
+    font-size: clamp(1.42rem, 7vw, 1.68rem);
+  }
+
+  .auth-mode-switch {
+    padding: 3px;
+  }
+
+  .auth-mode-switch button {
+    min-height: 32px;
+    font-size: 0.72rem;
+  }
+
+  .login-submit,
+  .social-login-button,
+  .login-field input {
+    min-height: 34px;
+  }
+
+  .login-form {
+    gap: 6px;
+  }
+
+  .login-field {
+    gap: 4px;
+  }
+
+  .login-divider {
+    gap: 7px;
+    font-size: 0.62rem;
+  }
+
+  .recover-link {
+    font-size: 0.76rem;
+  }
+
+  .login-legal-links {
+    gap: 5px;
+    font-size: 0.68rem;
+    line-height: 1.2;
+  }
+}
 </style>
