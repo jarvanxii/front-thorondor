@@ -81,6 +81,39 @@
                     </button>
                 </div>
 
+                <div class="agent-polling-panel">
+                    <div class="agent-polling-copy">
+                        <span>Polling al servidor</span>
+                        <strong>Cada {{ selectedDraft.intervalSeconds }} segundos</strong>
+                        <small>
+                            El agente usará este intervalo para consultar la API central y enviar telemetría.
+                        </small>
+                    </div>
+                    <label class="control-field polling-control">
+                        <span class="field-label">Intervalo en segundos</span>
+                        <input
+                            v-model.number="selectedDraft.intervalSeconds"
+                            class="form-control input-dark"
+                            inputmode="numeric"
+                            :min="pollingMinSeconds"
+                            :max="pollingMaxSeconds"
+                            step="1"
+                            type="number"
+                        />
+                    </label>
+                    <div class="polling-presets" aria-label="Intervalos rápidos">
+                        <button
+                            v-for="seconds in pollingPresets"
+                            :key="seconds"
+                            class="btn btn-quiet"
+                            type="button"
+                            @click="setPollingPreset(selectedAgent.id, seconds)"
+                        >
+                            {{ seconds }}s
+                        </button>
+                    </div>
+                </div>
+
                 <div class="agent-form-grid">
                     <label class="control-field">
                         <span class="field-label">IP o DNS del agente</span>
@@ -164,6 +197,7 @@
                             <th>Último heartbeat</th>
                             <th>Estado</th>
                             <th>SIEM</th>
+                            <th>Polling</th>
                             <th>Endpoint</th>
                             <th>Key agents</th>
                             <th>Acciones</th>
@@ -183,6 +217,7 @@
                                     {{ isAgentPaused(agent) ? 'Pausado' : 'Activo' }}
                                 </span>
                             </td>
+                            <td>{{ agentPollingInterval(agent) }}s</td>
                             <td><code class="inline-code endpoint-code">{{ agentEndpoint(agent) }}</code></td>
                             <td>
                                 <span class="mini-badge" :class="agentKeyStatusClass(agent)">
@@ -241,7 +276,14 @@
 
 <script>
 import ThorondorPageShell from "@/components/Thorondor/ThorondorPageShell.vue";
+import {
+    THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS,
+    THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS,
+    normalizeThorondorAgentPollIntervalSeconds
+} from "@/features/thorondor/data/thorondorDefaults";
 import thorondorBaseMixin from "@/features/thorondor/mixins/thorondorBaseMixin";
+
+const POLLING_PRESETS = [10, 30, 60, 300];
 
 function generateKeyAgents(byteLength = 32) {
     const bytes = new Uint8Array(byteLength);
@@ -301,13 +343,25 @@ export default {
     computed: {
         selectedDraft() {
             if (!this.selectedAgent) {
-                return { hostIp: "", port: 53553, keyAgents: "" };
+                return { hostIp: "", port: 53553, keyAgents: "", intervalSeconds: 30 };
             }
             return this.agentDrafts[this.selectedAgent.id] || this.createAgentDraft(this.selectedAgent);
         },
 
         selectedDraftEndpoint() {
             return buildEndpoint(this.selectedDraft.hostIp, this.selectedDraft.port) || "Sin endpoint";
+        },
+
+        pollingMinSeconds() {
+            return THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS;
+        },
+
+        pollingMaxSeconds() {
+            return THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS;
+        },
+
+        pollingPresets() {
+            return POLLING_PRESETS;
         }
     },
 
@@ -341,6 +395,7 @@ export default {
             return {
                 hostIp: String(agent.hostIp || agent.ipAddress || parsed.host || "").trim(),
                 port: Number(agent.port || agent.listenPort || parsed.port) || 53553,
+                intervalSeconds: this.agentPollingInterval(agent),
                 keyAgents: this.agentKeyValue(agent)
             };
         },
@@ -359,6 +414,28 @@ export default {
 
         agentKeyStatusClass(agent) {
             return this.agentKeyValue(agent) ? "badge-ok" : "badge-warn";
+        },
+
+        agentPollingInterval(agent) {
+            return normalizeThorondorAgentPollIntervalSeconds(
+                agent?.pollIntervalSeconds
+                    ?? agent?.poll_interval_seconds
+                    ?? agent?.pollingIntervalSeconds
+                    ?? agent?.polling_interval_seconds
+                    ?? agent?.intervalSeconds
+            );
+        },
+
+        setPollingPreset(agentId, seconds) {
+            const draft = this.agentDrafts[agentId];
+            if (!draft) return;
+            this.agentDrafts = {
+                ...this.agentDrafts,
+                [agentId]: {
+                    ...draft,
+                    intervalSeconds: normalizeThorondorAgentPollIntervalSeconds(seconds)
+                }
+            };
         },
 
         isAgentKeyVisible(agentId) {
@@ -408,6 +485,19 @@ export default {
                 this.agentFeedback = { type: "error", message: "La key agents debe tener entre 32 y 128 caracteres." };
                 return;
             }
+            const rawIntervalSeconds = Number(draft.intervalSeconds);
+            if (
+                !Number.isFinite(rawIntervalSeconds)
+                || rawIntervalSeconds < THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS
+                || rawIntervalSeconds > THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS
+            ) {
+                this.agentFeedback = {
+                    type: "error",
+                    message: `El intervalo debe estar entre ${THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS} y ${THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS} segundos.`
+                };
+                return;
+            }
+            const intervalSeconds = normalizeThorondorAgentPollIntervalSeconds(rawIntervalSeconds);
 
             this.savingAgentId = agent.id;
             this.agentFeedback = null;
@@ -416,6 +506,8 @@ export default {
                     id: agent.id,
                     hostIp: draft.hostIp,
                     port,
+                    intervalSeconds,
+                    pollIntervalSeconds: intervalSeconds,
                     receiverUrl: buildEndpoint(draft.hostIp, port),
                     keyAgents: draft.keyAgents,
                     siemPaused: this.isAgentPaused(agent),
@@ -423,7 +515,7 @@ export default {
                 });
                 this.agentFeedback = {
                     type: "success",
-                    message: "Agente actualizado. La clave predeterminada del usuario no se ha modificado."
+                    message: "Agente actualizado. El intervalo se aplicará en el siguiente contacto con la API central."
                 };
             } catch (error) {
                 this.agentFeedback = {
@@ -627,6 +719,53 @@ export default {
     color: #b7c4d3;
 }
 
+.agent-polling-panel {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(150px, 190px);
+    gap: 12px;
+    align-items: end;
+    padding: 12px;
+    border: 1px solid rgba(118, 178, 216, 0.22);
+    border-radius: 4px;
+    background:
+        linear-gradient(135deg, rgba(56, 116, 148, 0.16), rgba(16, 24, 34, 0.42)),
+        var(--thorondor-soft-background);
+}
+
+.agent-polling-copy {
+    display: grid;
+    gap: 4px;
+}
+
+.agent-polling-copy span {
+    color: #9fb0c3;
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+}
+
+.agent-polling-copy strong {
+    color: #f8fafc;
+    font-size: 1.04rem;
+}
+
+.agent-polling-copy small {
+    color: #b7c4d3;
+}
+
+.polling-control {
+    margin: 0;
+}
+
+.polling-presets {
+    display: flex;
+    grid-column: 1 / -1;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 8px;
+}
+
 .agent-key-field,
 .agent-endpoint-preview {
     grid-column: 1 / -1;
@@ -705,6 +844,10 @@ export default {
     .agent-pause-panel {
         align-items: stretch;
         flex-direction: column;
+    }
+
+    .agent-polling-panel {
+        grid-template-columns: 1fr;
     }
 
     .agent-selector-head,

@@ -13,6 +13,32 @@ export const THORONDOR_IDB_EVENT_LIMIT = 1000;
 export const THORONDOR_SWEEP_INTERVAL_MS = 3_600_000;
 export const THORONDOR_AGENT_FIXED_PORT = 53553;
 export const THORONDOR_AGENT_FIXED_SERVICE_NAME = "thorondor-siem-agent";
+export const THORONDOR_AGENT_POLL_INTERVAL_DEFAULT_SECONDS = 30;
+export const THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS = 10;
+export const THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS = 3600;
+
+export function normalizeThorondorAgentPollIntervalSeconds(
+  value,
+  fallback = THORONDOR_AGENT_POLL_INTERVAL_DEFAULT_SECONDS
+) {
+  const fallbackValue = Number.isFinite(Number(fallback))
+    ? Number(fallback)
+    : THORONDOR_AGENT_POLL_INTERVAL_DEFAULT_SECONDS;
+  if (value === "" || value === null || value === undefined) {
+    return Math.min(
+      THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS,
+      Math.max(THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS, Math.round(fallbackValue))
+    );
+  }
+
+  const numericValue = Number(value);
+  const candidate = Number.isFinite(numericValue) ? numericValue : fallbackValue;
+
+  return Math.min(
+    THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS,
+    Math.max(THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS, Math.round(candidate))
+  );
+}
 
 export const THORONDOR_MODULE_KEYS = [
   {

@@ -1,10 +1,14 @@
 import {
   THORONDOR_AGENT_FIXED_PORT,
   THORONDOR_AGENT_FIXED_SERVICE_NAME,
+  THORONDOR_AGENT_POLL_INTERVAL_DEFAULT_SECONDS,
+  THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS,
+  THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS,
   THORONDOR_LINUX_DIAGNOSTIC_LOG_PATHS,
   THORONDOR_MODULE_KEYS,
   THORONDOR_WINDOWS_DIAGNOSTIC_LOG_PATHS,
-  getThorondorDefaultOsVersionForTarget
+  getThorondorDefaultOsVersionForTarget,
+  normalizeThorondorAgentPollIntervalSeconds
 } from "@/features/thorondor/data/thorondorDefaults";
 
 function serializeBoolean(value) {
@@ -171,6 +175,7 @@ export function buildThorondorAgentFiles(draft = {}) {
   config.persistenceMode = config.persistenceMode === "cloud" ? "cloud" : "local";
   config.centralSyncEnabled = config.persistenceMode === "cloud" && config.centralSyncEnabled !== false;
   config.centralApiBaseUrl = normalizeCentralApiBaseUrl(config);
+  config.intervalSeconds = normalizeThorondorAgentPollIntervalSeconds(config.intervalSeconds);
 
   const isWindows = config.targetOs === "windows";
   const shouldBuildSystemd = !isWindows && config.generateSystemd && config.autoStart !== false;
@@ -235,7 +240,10 @@ DISTRO = ${JSON.stringify(config.distro)}
 OS_VERSION = ${JSON.stringify(config.osVersion)}
 LISTEN_HOST = ${JSON.stringify(resolveListenHost(config))}
 LISTEN_PORT = ${Number(config.port) || THORONDOR_AGENT_FIXED_PORT}
-POLL_INTERVAL_SECONDS = ${Number(config.intervalSeconds) || 30}
+DEFAULT_POLL_INTERVAL_SECONDS = ${Number(config.intervalSeconds) || THORONDOR_AGENT_POLL_INTERVAL_DEFAULT_SECONDS}
+MIN_POLL_INTERVAL_SECONDS = ${THORONDOR_AGENT_POLL_INTERVAL_MIN_SECONDS}
+MAX_POLL_INTERVAL_SECONDS = ${THORONDOR_AGENT_POLL_INTERVAL_MAX_SECONDS}
+POLL_INTERVAL_SECONDS = DEFAULT_POLL_INTERVAL_SECONDS
 CENTRAL_API_BASE_URL = ${JSON.stringify(config.centralApiBaseUrl)}
 PERSISTENCE_MODE = ${JSON.stringify(config.persistenceMode)}
 KEY_AGENTS = ${JSON.stringify(config.keyAgents)}
@@ -274,7 +282,6 @@ HEADERS = {
 CENTRAL_WARNING_INTERVAL_SECONDS = 300
 _CENTRAL_LAST_WARNING_AT = 0
 _CENTRAL_LAST_WARNING_MESSAGE = ""
-TELEMETRY_CACHE_TTL_SECONDS = max(120, min(300, POLL_INTERVAL_SECONDS * 4))
 TELEMETRY_INITIAL_WAIT_SECONDS = 8
 _TELEMETRY_CACHE = None
 _TELEMETRY_CACHE_AT = 0
@@ -285,6 +292,10 @@ _TELEMETRY_CACHE_LOCK = threading.Lock()
 
 def now_iso():
     return datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")
+
+
+def telemetry_cache_ttl_seconds():
+    return max(120, min(300, int(POLL_INTERVAL_SECONDS) * 4))
 
 
 def log_central_warning(message):
@@ -334,6 +345,45 @@ def central_request(method, path, payload=None, enrollment=False):
         return json.loads(raw) if raw.strip() else None
 
 
+def normalize_poll_interval_seconds(value, fallback=None):
+    if value is None or value == "":
+        return fallback
+    try:
+        candidate = int(float(str(value).strip()))
+    except Exception:
+        return fallback
+    return max(MIN_POLL_INTERVAL_SECONDS, min(MAX_POLL_INTERVAL_SECONDS, candidate))
+
+
+def read_poll_interval_seconds(response):
+    if not isinstance(response, dict):
+        return None
+    agent = response.get("agent") if isinstance(response.get("agent"), dict) else {}
+    for value in (
+        response.get("pollIntervalSeconds"),
+        response.get("poll_interval_seconds"),
+        response.get("intervalSeconds"),
+        agent.get("pollIntervalSeconds"),
+        agent.get("poll_interval_seconds"),
+        agent.get("intervalSeconds"),
+    ):
+        normalized = normalize_poll_interval_seconds(value, None)
+        if normalized is not None:
+            return normalized
+    return None
+
+
+def apply_poll_interval_from_response(response):
+    global POLL_INTERVAL_SECONDS
+    next_interval = read_poll_interval_seconds(response)
+    if next_interval is None:
+        return POLL_INTERVAL_SECONDS
+    if next_interval != POLL_INTERVAL_SECONDS:
+        print(f"[thorondor] intervalo de polling actualizado: {next_interval}s")
+        POLL_INTERVAL_SECONDS = next_interval
+    return POLL_INTERVAL_SECONDS
+
+
 def register_with_central():
     if not central_api_root():
         return None
@@ -351,6 +401,8 @@ def register_with_central():
             "listenPort": LISTEN_PORT,
             "networkScope": NETWORK_SCOPE,
             "endpoint": f"http://{find_local_ip()}:{LISTEN_PORT}",
+            "pollIntervalSeconds": POLL_INTERVAL_SECONDS,
+            "intervalSeconds": POLL_INTERVAL_SECONDS,
             "modules": MODULES
         },
         "heartbeat": now_iso()
@@ -3717,6 +3769,8 @@ def collect_payload():
             "modules": MODULES,
             "persistenceMode": PERSISTENCE_MODE,
             "centralSyncEnabled": bool(CENTRAL_API_BASE_URL),
+            "pollIntervalSeconds": POLL_INTERVAL_SECONDS,
+            "intervalSeconds": POLL_INTERVAL_SECONDS,
             "generatedAt": now_iso()
         },
         "heartbeat": now_iso(),
@@ -3828,6 +3882,8 @@ def build_warming_payload(message="telemetry_cache_warming"):
             "modules": MODULES,
             "persistenceMode": PERSISTENCE_MODE,
             "centralSyncEnabled": bool(CENTRAL_API_BASE_URL),
+            "pollIntervalSeconds": POLL_INTERVAL_SECONDS,
+            "intervalSeconds": POLL_INTERVAL_SECONDS,
             "generatedAt": now_iso()
         },
         "heartbeat": now_iso(),
@@ -3970,6 +4026,8 @@ def collect_browser_payload():
             "modules": MODULES,
             "persistenceMode": PERSISTENCE_MODE,
             "centralSyncEnabled": bool(CENTRAL_API_BASE_URL),
+            "pollIntervalSeconds": POLL_INTERVAL_SECONDS,
+            "intervalSeconds": POLL_INTERVAL_SECONDS,
             "generatedAt": now_iso()
         },
         "heartbeat": now_iso(),
@@ -4049,7 +4107,7 @@ def collect_browser_payload():
 
 def telemetry_cache_is_fresh():
     with _TELEMETRY_CACHE_LOCK:
-        return bool(_TELEMETRY_CACHE) and (time.time() - _TELEMETRY_CACHE_AT) <= TELEMETRY_CACHE_TTL_SECONDS
+        return bool(_TELEMETRY_CACHE) and (time.time() - _TELEMETRY_CACHE_AT) <= telemetry_cache_ttl_seconds()
 
 
 def mark_telemetry_refresh_finished(payload=None, error=""):
@@ -4074,7 +4132,7 @@ def schedule_telemetry_refresh(force=False):
     with _TELEMETRY_CACHE_LOCK:
         if _TELEMETRY_CACHE_REFRESHING:
             return
-        if not force and _TELEMETRY_CACHE and (time.time() - _TELEMETRY_CACHE_AT) <= TELEMETRY_CACHE_TTL_SECONDS:
+        if not force and _TELEMETRY_CACHE and (time.time() - _TELEMETRY_CACHE_AT) <= telemetry_cache_ttl_seconds():
             return
         _TELEMETRY_CACHE_REFRESHING = True
     threading.Thread(target=refresh_telemetry_cache_worker, daemon=True).start()
@@ -4100,11 +4158,12 @@ def get_cached_payload(wait_seconds=TELEMETRY_INITIAL_WAIT_SECONDS):
         with _TELEMETRY_CACHE_LOCK:
             if _TELEMETRY_CACHE:
                 age = max(0, int(time.time() - _TELEMETRY_CACHE_AT))
+                ttl_seconds = telemetry_cache_ttl_seconds()
                 return cached_payload_copy(_TELEMETRY_CACHE, {
                     "status": "ready",
                     "ageSeconds": age,
                     "refreshing": _TELEMETRY_CACHE_REFRESHING,
-                    "ttlSeconds": TELEMETRY_CACHE_TTL_SECONDS,
+                    "ttlSeconds": ttl_seconds,
                     "error": _TELEMETRY_CACHE_ERROR
                 })
         time.sleep(0.15)
@@ -4112,11 +4171,12 @@ def get_cached_payload(wait_seconds=TELEMETRY_INITIAL_WAIT_SECONDS):
     with _TELEMETRY_CACHE_LOCK:
         if _TELEMETRY_CACHE:
             age = max(0, int(time.time() - _TELEMETRY_CACHE_AT))
+            ttl_seconds = telemetry_cache_ttl_seconds()
             return cached_payload_copy(_TELEMETRY_CACHE, {
-                "status": "stale" if age > TELEMETRY_CACHE_TTL_SECONDS else "ready",
+                "status": "stale" if age > ttl_seconds else "ready",
                 "ageSeconds": age,
                 "refreshing": _TELEMETRY_CACHE_REFRESHING,
-                "ttlSeconds": TELEMETRY_CACHE_TTL_SECONDS,
+                "ttlSeconds": ttl_seconds,
                 "error": _TELEMETRY_CACHE_ERROR
             })
         error = _TELEMETRY_CACHE_ERROR
@@ -4196,10 +4256,12 @@ def central_agent_loop():
     while True:
         try:
             registration = register_with_central()
+            apply_poll_interval_from_response(registration)
             if central_response_paused(registration):
                 time.sleep(max(10, POLL_INTERVAL_SECONDS))
                 continue
-            central_request("POST", f"/agents/{AGENT_ID}/telemetry", get_cached_payload(wait_seconds=10))
+            telemetry_response = central_request("POST", f"/agents/{AGENT_ID}/telemetry", get_cached_payload(wait_seconds=10))
+            apply_poll_interval_from_response(telemetry_response)
             process_central_commands()
         except Exception as exc:
             log_central_warning(exc)

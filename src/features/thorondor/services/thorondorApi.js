@@ -1,3 +1,5 @@
+import { normalizeThorondorAgentPollIntervalSeconds } from "@/features/thorondor/data/thorondorDefaults";
+
 function normalizeBaseUrl(agent) {
   const raw = String(agent?.receiverUrl || "").trim();
   const host = String(agent?.hostIp || "").trim();
@@ -329,13 +331,14 @@ export function buildThorondorRequestRules(agent) {
   }
 
   const endpoints = buildThorondorAgentEndpoints(agent);
+  const intervalSeconds = normalizeThorondorAgentPollIntervalSeconds(agent?.intervalSeconds);
 
   return [
     {
       id: `${agent.id}-health`,
       agentId: agent.id,
       type: "health",
-      intervalSeconds: Math.max(15, Number(agent.intervalSeconds) || 30),
+      intervalSeconds,
       method: "GET",
       url: endpoints.healthUrl,
       headers: buildJsonHeaders(agent)
@@ -344,7 +347,7 @@ export function buildThorondorRequestRules(agent) {
       id: `${agent.id}-telemetry`,
       agentId: agent.id,
       type: "telemetry",
-      intervalSeconds: Math.max(15, Number(agent.intervalSeconds) || 30),
+      intervalSeconds,
       method: "GET",
       url: endpoints.telemetryUrl,
       headers: buildJsonHeaders(agent)

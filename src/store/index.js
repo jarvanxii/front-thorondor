@@ -13,6 +13,7 @@ import {
   buildThorondorAgentDraft,
   buildDefaultThorondorRuleSet,
   normalizeThorondorNetworkScope,
+  normalizeThorondorAgentPollIntervalSeconds,
 } from '@/features/thorondor/data/thorondorDefaults'
 import {
   STORE_NAMES,
@@ -479,6 +480,13 @@ function normalizeAgentRecord(agent) {
     ...source,
     alertsPausedUntil,
   })
+  const intervalSeconds = normalizeThorondorAgentPollIntervalSeconds(
+    source.pollIntervalSeconds
+      ?? source.poll_interval_seconds
+      ?? source.pollingIntervalSeconds
+      ?? source.polling_interval_seconds
+      ?? source.intervalSeconds,
+  )
   const statusText = String(source.lastStatus || source.status || '').toLowerCase()
   const lastStatus = siemPaused
     ? 'paused'
@@ -508,7 +516,9 @@ function normalizeAgentRecord(agent) {
     autoStart: source.autoStart !== false,
     generateSystemd:
       source.targetOs !== 'windows' && source.generateSystemd !== false && source.autoStart !== false,
-    intervalSeconds: Math.max(10, Number(source.intervalSeconds) || 30),
+    intervalSeconds,
+    pollIntervalSeconds: intervalSeconds,
+    poll_interval_seconds: intervalSeconds,
     additionalLogPaths: String(source.additionalLogPaths || ''),
     modules: { ...source.modules },
     installUser: String(source.installUser || '').trim(),
@@ -544,12 +554,15 @@ function shouldUseThorondorAgentApiBridge(agent) {
 }
 
 function buildThorondorAgentBridgePayload(agent) {
+  const intervalSeconds = normalizeThorondorAgentPollIntervalSeconds(agent?.intervalSeconds)
   return {
     receiverUrl: agent.receiverUrl || agent.endpoint || '',
     endpoint: agent.receiverUrl || agent.endpoint || '',
     hostIp: agent.hostIp || agent.ipAddress || '',
     port: agent.port || agent.listenPort || THORONDOR_AGENT_FIXED_PORT,
     keyAgents: agent.keyAgents || agent.key_agents || agent.agentToken || agent.token || '',
+    intervalSeconds,
+    pollIntervalSeconds: intervalSeconds,
   }
 }
 
@@ -1662,6 +1675,14 @@ export default createStore({
         throw new Error('IP o DNS del agente requerido')
       }
 
+      const intervalSeconds = normalizeThorondorAgentPollIntervalSeconds(
+        payload.pollIntervalSeconds
+          ?? payload.poll_interval_seconds
+          ?? payload.pollingIntervalSeconds
+          ?? payload.polling_interval_seconds
+          ?? payload.intervalSeconds
+          ?? existing.intervalSeconds,
+      )
       const nextKeyAgents = String(
         payload.keyAgents || payload.key_agents || payload.agentToken || existing.keyAgents || existing.agentToken || '',
       ).trim()
@@ -1684,6 +1705,9 @@ export default createStore({
         hostIp,
         port,
         receiverUrl,
+        intervalSeconds,
+        pollIntervalSeconds: intervalSeconds,
+        poll_interval_seconds: intervalSeconds,
         keyAgents: nextKeyAgents,
         agentToken: nextKeyAgents,
         alertsPaused: Object.prototype.hasOwnProperty.call(payload || {}, 'alertsPaused')
@@ -1713,6 +1737,9 @@ export default createStore({
             hostIp,
             port,
             receiverUrl,
+            intervalSeconds,
+            pollIntervalSeconds: intervalSeconds,
+            poll_interval_seconds: intervalSeconds,
             siemPaused: record.siemPaused,
             pollingPaused: record.siemPaused,
             alertsPaused: record.alertsPaused,
@@ -1723,6 +1750,9 @@ export default createStore({
           const merged = normalizeAgentRecord({
             ...record,
             ...remote,
+            intervalSeconds,
+            pollIntervalSeconds: intervalSeconds,
+            poll_interval_seconds: intervalSeconds,
             keyAgents: nextKeyAgents,
             agentToken: nextKeyAgents,
           })
