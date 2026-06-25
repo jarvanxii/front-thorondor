@@ -44,10 +44,9 @@
           class="sidebar-nav-item"
           :class="{
             'is-active': isActive(item),
-            'is-disabled': item.agentScoped && !effectiveAgentId,
           }"
           :to="routeFor(item)"
-          @click="handleNavClick(item, $event)"
+          @click="handleNavClick"
         >
           <span class="nav-marker" aria-hidden="true"></span>
           <span class="nav-label">{{ item.label }}</span>
@@ -89,6 +88,16 @@ export default {
           })),
         },
         ...THORONDOR_SIDEBAR_GROUPS,
+        {
+          label: 'Cuenta',
+          items: [
+            {
+              id: 'settings',
+              label: 'Ajustes',
+              routeName: 'thorondor-user-settings',
+            },
+          ],
+        },
       ]
     },
 
@@ -170,12 +179,7 @@ export default {
       this.$emit('close')
     },
 
-    handleNavClick(item, event) {
-      if (item.agentScoped && !this.effectiveAgentId) {
-        event.preventDefault()
-        return
-      }
-
+    handleNavClick() {
       this.closeSidebar()
     },
   },
@@ -371,10 +375,6 @@ export default {
     0 4px 10px rgba(0, 0, 0, 0.1);
 }
 
-.sidebar-nav-item.is-disabled {
-  opacity: 0.5;
-}
-
 .nav-marker {
   width: 3px;
   height: 17px;
@@ -412,8 +412,10 @@ export default {
     padding: 12px 10px;
     background: var(--thorondor-panel-background);
     box-shadow: 22px 0 46px rgba(0, 0, 0, 0.38);
+    overscroll-behavior: contain;
     transform: translateX(-104%);
     transition: transform 180ms ease;
+    -webkit-overflow-scrolling: touch;
   }
 
   .thorondor-sidebar.is-open {
@@ -431,6 +433,8 @@ export default {
     flex: 1 1 auto;
     gap: 12px;
     min-height: 0;
+    overscroll-behavior: contain;
+    -webkit-overflow-scrolling: touch;
   }
 
   .sidebar-system {
@@ -442,6 +446,9 @@ export default {
   }
 
   .sidebar-nav-group--primary {
+    position: sticky;
+    top: 0;
+    z-index: 2;
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 6px;
@@ -492,6 +499,43 @@ export default {
     display: none;
   }
 
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid rgba(190, 205, 218, 0.1);
+    border-radius: 6px;
+    background: rgba(8, 13, 21, 0.24);
+  }
+
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) h2 {
+    grid-column: 1 / -1;
+    padding-inline: 4px;
+  }
+
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) h2::after {
+    right: 4px;
+    left: 4px;
+  }
+
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) .sidebar-nav-item {
+    grid-template-columns: minmax(0, 1fr);
+    min-height: 40px;
+    padding: 7px 8px;
+    border-color: rgba(190, 205, 218, 0.08);
+    background: rgba(255, 255, 255, 0.018);
+  }
+
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) .nav-marker {
+    display: none;
+  }
+
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) .nav-label {
+    white-space: normal;
+    text-align: center;
+    line-height: 1.15;
+  }
+
   .sidebar-nav-item {
     min-height: 40px;
   }
@@ -535,10 +579,20 @@ export default {
     padding: 7px;
   }
 
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) {
+    gap: 5px;
+    padding: 7px;
+  }
+
   .sidebar-nav-group--primary .sidebar-nav-item {
     min-height: 35px;
     padding-inline: 7px;
     font-size: 0.71rem;
+  }
+
+  .sidebar-nav-group:not(.sidebar-nav-group--primary) .sidebar-nav-item {
+    min-height: 38px;
+    font-size: 0.72rem;
   }
 }
 </style>

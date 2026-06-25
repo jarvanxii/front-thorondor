@@ -55,9 +55,15 @@
   }
 }
 
+@media (max-width: 720px) {
+  :root {
+    --main-header-height: 96px;
+  }
+}
+
 @media (max-width: 520px) {
   :root {
-    --main-header-height: 52px;
+    --main-header-height: 94px;
   }
 }
 

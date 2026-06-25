@@ -3261,12 +3261,36 @@ export default {
 @media (max-width: 720px) {
   .thorondor-primary-header {
     grid-template-columns: 38px minmax(0, 1fr) auto;
-    gap: 8px;
+    grid-template-rows: 54px 42px;
+    align-content: start;
+    gap: 0 8px;
+    height: var(--main-header-height);
     padding: 0 10px;
   }
 
+  .sidebar-toggle,
+  .thorondor-brand,
+  .thorondor-account-nav {
+    grid-row: 1;
+  }
+
   .thorondor-top-nav {
-    display: none;
+    --top-nav-button-width: 112px;
+    --top-nav-button-height: 32px;
+    --top-nav-gap: 6px;
+    grid-column: 1 / -1;
+    grid-row: 2;
+    display: grid;
+    width: calc(100% + 20px);
+    min-height: 42px;
+    margin: 0 -10px;
+    padding: 5px 10px;
+    align-self: stretch;
+    border-top: 1px solid rgba(190, 205, 218, 0.12);
+    background: rgba(8, 13, 21, 0.72);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.025);
+    scroll-padding-inline: 10px;
+    scroll-snap-type: x proximity;
   }
 
   .thorondor-brand {
@@ -3277,6 +3301,30 @@ export default {
   .brand-logo {
     width: min(156px, 44vw);
     height: 34px;
+  }
+
+  .top-nav-link {
+    width: var(--top-nav-button-width);
+    min-width: var(--top-nav-button-width);
+    height: var(--top-nav-button-height);
+    border: 1px solid rgba(190, 205, 218, 0.12);
+    border-radius: 4px;
+    background: rgba(255, 255, 255, 0.018);
+    font-size: 0.68rem;
+    scroll-snap-align: start;
+  }
+
+  .top-nav-link.router-link-active {
+    border-color: rgba(236, 194, 119, 0.34);
+    background:
+      linear-gradient(180deg, rgba(236, 194, 119, 0.12), rgba(236, 194, 119, 0.035)),
+      rgba(255, 255, 255, 0.024);
+  }
+
+  .top-nav-link::after {
+    right: 18%;
+    bottom: 3px;
+    left: 18%;
   }
 
   .thorondor-account-nav {
@@ -3295,7 +3343,8 @@ export default {
 @media (max-width: 520px) {
   .thorondor-primary-header {
     grid-template-columns: 36px minmax(0, 1fr) auto;
-    gap: 6px;
+    grid-template-rows: 52px 42px;
+    gap: 0 6px;
     padding: 0 8px;
   }
 
@@ -3306,6 +3355,14 @@ export default {
   .brand-logo {
     width: min(142px, 43vw);
     height: 32px;
+  }
+
+  .thorondor-top-nav {
+    --top-nav-button-width: 104px;
+    width: calc(100% + 16px);
+    margin: 0 -8px;
+    padding-inline: 8px;
+    scroll-padding-inline: 8px;
   }
 
   .settings-square,
