@@ -1573,10 +1573,12 @@ export default {
   align-items: center;
   gap: 16px;
   padding: 0 24px;
-  border-bottom: 1px solid rgba(236, 194, 119, 0.2);
-  background: var(--thorondor-panel-background);
+  border-bottom: 1px solid rgba(190, 205, 218, 0.16);
+  background:
+    linear-gradient(180deg, rgba(18, 27, 39, 0.98), rgba(8, 13, 21, 0.99)),
+    var(--thorondor-panel-background);
   box-shadow:
-    0 10px 24px rgba(4, 8, 7, 0.2),
+    0 10px 24px rgba(0, 0, 0, 0.28),
     inset 0 1px 0 rgba(255, 255, 255, 0.04);
   backdrop-filter: blur(20px);
 }
@@ -1648,7 +1650,7 @@ export default {
   padding: 0 12px;
   border: 0;
   border-left: 1px solid rgba(236, 194, 119, 0.12);
-  border-right: 1px solid rgba(205, 213, 210, 0.08);
+  border-right: 1px solid rgba(190, 205, 218, 0.08);
   border-radius: 0;
   background: transparent;
   color: rgba(226, 234, 244, 0.78);
@@ -1742,7 +1744,7 @@ export default {
 }
 
 .authorization-status.is-authorized {
-  color: rgba(134, 239, 172, 0.72);
+  color: rgba(158, 230, 192, 0.78);
 }
 
 .authorization-status-dot {
@@ -1771,15 +1773,15 @@ export default {
   align-items: center;
   justify-content: center;
   height: 44px;
-  border: 1px solid rgba(205, 213, 210, 0.18);
+  border: 1px solid rgba(190, 205, 218, 0.18);
   border-radius: 4px;
-  background: var(--thorondor-flat-background);
-  color: #e8eee7;
+  background: rgba(12, 19, 28, 0.88);
+  color: #e5edf6;
   flex: 0 0 auto;
   cursor: var(--cursor-pointer), pointer;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 4px 10px rgba(5, 9, 8, 0.12);
+    0 4px 10px rgba(0, 0, 0, 0.16);
   transition: border-color 0.16s ease, background 0.16s ease, color 0.16s ease;
 }
 
@@ -1822,7 +1824,7 @@ export default {
 }
 
 .error-square.is-empty {
-  border-color: rgba(205, 213, 210, 0.24);
+  border-color: rgba(190, 205, 218, 0.24);
   background: var(--thorondor-nested-background);
   color: #d9e2ec;
 }
@@ -1871,15 +1873,15 @@ export default {
   border-radius: 0 0 4px 4px;
   background:
     linear-gradient(145deg, rgba(236, 194, 119, 0.018), transparent 44%),
-    linear-gradient(145deg, #273129, #202922 62%, #1b241e);
+    linear-gradient(145deg, rgba(23, 33, 45, 0.99), rgba(14, 22, 32, 0.995) 62%, rgba(8, 13, 21, 1));
   box-shadow:
-    0 12px 28px rgba(5, 9, 8, 0.2),
+    0 12px 28px rgba(0, 0, 0, 0.3),
     inset 0 1px 0 rgba(255, 255, 255, 0.026);
   transform-origin: top right;
   clip-path: inset(0 0 0 0);
   will-change: max-height, opacity, clip-path;
   scrollbar-width: thin;
-  scrollbar-color: rgba(186, 196, 188, 0.34) transparent;
+  scrollbar-color: rgba(190, 205, 218, 0.34) transparent;
 }
 
 .settings-dropdown-header,
@@ -1890,7 +1892,7 @@ export default {
 }
 
 .settings-dropdown-header {
-  border-bottom: 1px solid rgba(205, 213, 210, 0.13);
+  border-bottom: 1px solid rgba(190, 205, 218, 0.13);
   background: var(--thorondor-flat-soft-background);
 }
 
@@ -1906,7 +1908,7 @@ export default {
   align-items: center;
   padding: 11px 8px 12px;
   border: 0;
-  border-bottom: 1px solid rgba(205, 213, 210, 0.12);
+  border-bottom: 1px solid rgba(190, 205, 218, 0.12);
   border-radius: 0;
   background: transparent;
   box-shadow: none;
@@ -1951,7 +1953,7 @@ export default {
 
 .settings-profile-main small {
   overflow: hidden;
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.78rem;
   line-height: 1.3;
   text-overflow: ellipsis;
@@ -1972,14 +1974,14 @@ export default {
 }
 
 .settings-profile-status.is-authorized {
-  border-color: rgba(143, 214, 173, 0.24);
+  border-color: rgba(158, 230, 192, 0.24);
   background: transparent;
-  color: #aee8c4;
+  color: #9ee6c0;
 }
 
 .settings-dropdown-header span,
 .settings-menu-footer > span {
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.08em;
@@ -1994,7 +1996,7 @@ export default {
 .settings-dropdown-header small,
 .settings-menu-footer small,
 .settings-menu-copy span {
-  color: #aab6ad;
+  color: #a8b8c8;
   line-height: 1.45;
 }
 
@@ -2050,7 +2052,7 @@ export default {
 }
 
 .settings-menu-accent--preferences::before {
-  background: #8fd6ad;
+  background: #8fb3c7;
 }
 
 .settings-menu-accent--email::before {
@@ -2058,7 +2060,7 @@ export default {
 }
 
 .settings-menu-accent--persistence::before {
-  background: #86efac;
+  background: #9ee6c0;
 }
 
 .settings-menu-accent--admin::before {
@@ -2093,7 +2095,7 @@ export default {
 }
 
 .settings-menu-item strong {
-  color: #f3f7f1;
+  color: #f3f7fb;
   font-size: 0.84rem;
   line-height: 1.2;
 }
@@ -2137,7 +2139,7 @@ export default {
 }
 
 .settings-menu-footer {
-  border-top: 1px solid rgba(205, 213, 210, 0.11);
+  border-top: 1px solid rgba(190, 205, 218, 0.11);
   background: transparent;
 }
 
@@ -2235,7 +2237,7 @@ export default {
   display: grid;
   place-items: center;
   padding: clamp(12px, 2.4vw, 28px);
-  background: rgba(12, 18, 15, 0.72);
+  background: rgba(5, 8, 14, 0.76);
   backdrop-filter: blur(10px);
 }
 
@@ -2245,11 +2247,11 @@ export default {
   width: min(940px, 100%);
   max-height: min(760px, calc(100dvh - var(--main-header-height) - 24px));
   overflow: hidden;
-  border: 1px solid rgba(205, 213, 210, 0.22);
+  border: 1px solid rgba(190, 205, 218, 0.22);
   border-radius: 4px;
   background: var(--thorondor-panel-background);
   box-shadow:
-    0 20px 52px rgba(4, 8, 7, 0.34),
+    0 20px 52px rgba(0, 0, 0, 0.38),
     inset 0 1px 0 rgba(255, 255, 255, 0.045);
 }
 
@@ -2267,7 +2269,7 @@ export default {
 }
 
 .settings-modal-header {
-  border-bottom: 1px solid rgba(205, 213, 210, 0.16);
+  border-bottom: 1px solid rgba(190, 205, 218, 0.16);
   background: var(--thorondor-soft-background);
 }
 
@@ -2279,7 +2281,7 @@ export default {
 
 .settings-modal-header span,
 .modal-panel-heading span {
-  color: #9aa6b3;
+  color: #a4b2c1;
   font-size: 0.72rem;
   font-weight: 850;
   letter-spacing: 0.09em;
@@ -2296,7 +2298,7 @@ export default {
 .settings-modal-header p,
 .modal-panel-heading small {
   margin: 0;
-  color: #aab6ad;
+  color: #a8b8c8;
   line-height: 1.5;
 }
 
@@ -2307,10 +2309,10 @@ export default {
   flex: 0 0 auto;
   align-items: center;
   justify-content: center;
-  border: 1px solid rgba(205, 213, 210, 0.24);
+  border: 1px solid rgba(190, 205, 218, 0.24);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
-  color: #edf3eb;
+  color: #edf5fb;
   cursor: var(--cursor-pointer), pointer;
   font-weight: 900;
 }
@@ -2325,7 +2327,7 @@ export default {
   overflow: auto;
   padding: 18px 20px;
   scrollbar-width: thin;
-  scrollbar-color: rgba(205, 213, 210, 0.35) transparent;
+  scrollbar-color: rgba(190, 205, 218, 0.35) transparent;
 }
 
 .settings-modal-grid {
@@ -2340,7 +2342,7 @@ export default {
   align-content: start;
   min-width: 0;
   padding: 16px;
-  border: 1px solid rgba(205, 213, 210, 0.16);
+  border: 1px solid rgba(190, 205, 218, 0.16);
   border-radius: 4px;
   background: var(--thorondor-nested-background);
 }
@@ -2404,7 +2406,7 @@ export default {
 .settings-readonly-value {
   width: 100%;
   min-height: 40px;
-  border: 1px solid rgba(205, 213, 210, 0.2);
+  border: 1px solid rgba(190, 205, 218, 0.2);
   border-radius: 3px;
   background: var(--thorondor-soft-background);
   color: #f8fafc;
@@ -2439,14 +2441,14 @@ export default {
 }
 
 .settings-field select option {
-  background: #1f2a25;
+  background: #101824;
   color: #f8fafc;
 }
 
 .settings-readonly-value {
   display: flex;
   align-items: center;
-  color: #9aa6b3;
+  color: #a4b2c1;
 }
 
 .settings-field input:focus,
@@ -2466,7 +2468,7 @@ export default {
 }
 
 .settings-field input:disabled {
-  color: #9aa6b3;
+  color: #a4b2c1;
   cursor: not-allowed;
 }
 
@@ -2476,7 +2478,7 @@ export default {
   gap: 10px;
   align-items: start;
   padding: 12px;
-  border: 1px solid rgba(205, 213, 210, 0.14);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2491,7 +2493,7 @@ export default {
   position: relative;
   width: 38px;
   height: 21px;
-  border: 1px solid rgba(205, 213, 210, 0.28);
+  border: 1px solid rgba(190, 205, 218, 0.28);
   border-radius: 999px;
   background: var(--thorondor-nested-background);
   transition: background 0.16s ease, border-color 0.16s ease;
@@ -2505,18 +2507,18 @@ export default {
   width: 13px;
   height: 13px;
   border-radius: 50%;
-  background: #9aa6b3;
+  background: #a4b2c1;
   transition: transform 0.16s ease, background 0.16s ease;
 }
 
 .settings-switch-row input:checked+.switch-control {
-  border-color: rgba(110, 231, 183, 0.45);
-  background: rgba(16, 185, 129, 0.18);
+  border-color: rgba(143, 179, 199, 0.46);
+  background: rgba(143, 179, 199, 0.16);
 }
 
 .settings-switch-row input:checked+.switch-control::after {
   transform: translateX(17px);
-  background: #6ee7b7;
+  background: var(--thorondor-gold-strong);
 }
 
 .settings-switch-row span:last-child {
@@ -2525,12 +2527,12 @@ export default {
 }
 
 .settings-switch-row strong {
-  color: #f3f7f1;
+  color: #f3f7fb;
   font-size: 0.9rem;
 }
 
 .settings-switch-row small {
-  color: #aab6ad;
+  color: #a8b8c8;
   line-height: 1.45;
 }
 
@@ -2582,7 +2584,7 @@ export default {
   justify-content: space-between;
   gap: 14px;
   padding: 12px;
-  border: 1px solid rgba(205, 213, 210, 0.14);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2599,7 +2601,7 @@ export default {
 }
 
 .admin-toolbar span {
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.82rem;
 }
 
@@ -2621,13 +2623,13 @@ export default {
   gap: 4px;
   min-width: 0;
   padding: 10px;
-  border: 1px solid rgba(205, 213, 210, 0.14);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
 
 .admin-stat-grid span {
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.7rem;
   font-weight: 850;
   text-transform: uppercase;
@@ -2657,10 +2659,10 @@ export default {
   gap: 3px;
   min-height: 48px;
   padding: 10px 12px;
-  border: 1px solid rgba(205, 213, 210, 0.16);
+  border: 1px solid rgba(190, 205, 218, 0.16);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
-  color: #dde7df;
+  color: #dce7f2;
   cursor: var(--cursor-pointer), pointer;
   font: inherit;
   text-align: left;
@@ -2677,7 +2679,7 @@ export default {
 }
 
 .admin-tabs span {
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.76rem;
 }
 
@@ -2693,7 +2695,7 @@ export default {
   gap: 10px;
   align-items: end;
   padding: 12px;
-  border: 1px solid rgba(205, 213, 210, 0.14);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2721,7 +2723,7 @@ export default {
   align-items: center;
   min-width: 1040px;
   padding: 10px;
-  border: 1px solid rgba(205, 213, 210, 0.14);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2757,14 +2759,14 @@ export default {
 .admin-user-main small,
 .admin-user-meta small {
   overflow: hidden;
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.76rem;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
 .admin-user-meta strong {
-  color: #dde7df;
+  color: #dce7f2;
   font-size: 0.8rem;
   font-weight: 800;
 }
@@ -2780,9 +2782,9 @@ export default {
   min-height: 26px;
   align-items: center;
   padding: 0 8px;
-  border: 1px solid rgba(205, 213, 210, 0.16);
+  border: 1px solid rgba(190, 205, 218, 0.16);
   border-radius: 999px;
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.72rem;
   font-style: normal;
   font-weight: 850;
@@ -2790,9 +2792,9 @@ export default {
 }
 
 .admin-user-pills em.is-active {
-  border-color: rgba(74, 222, 128, 0.32);
-  color: #bbf7d0;
-  background: rgba(18, 83, 49, 0.2);
+  border-color: rgba(158, 230, 192, 0.3);
+  color: #9ee6c0;
+  background: rgba(22, 101, 80, 0.16);
 }
 
 .admin-user-actions {
@@ -2817,9 +2819,9 @@ export default {
 }
 
 .settings-admin-action--primary {
-  border-color: rgba(74, 222, 128, 0.32);
-  background: rgba(18, 83, 49, 0.18);
-  color: #bbf7d0;
+  border-color: rgba(158, 230, 192, 0.28);
+  background: rgba(22, 101, 80, 0.16);
+  color: #9ee6c0;
 }
 
 .settings-admin-action--danger {
@@ -2837,8 +2839,8 @@ export default {
 
 .settings-admin-action--primary:hover,
 .settings-admin-action--primary:focus-visible {
-  border-color: rgba(74, 222, 128, 0.5);
-  background: rgba(18, 83, 49, 0.28);
+  border-color: rgba(158, 230, 192, 0.42);
+  background: rgba(22, 101, 80, 0.24);
 }
 
 .settings-admin-action--danger:hover,
@@ -2855,9 +2857,9 @@ export default {
 .admin-empty-state {
   margin: 0;
   padding: 14px;
-  border: 1px dashed rgba(205, 213, 210, 0.22);
+  border: 1px dashed rgba(190, 205, 218, 0.22);
   border-radius: 4px;
-  color: #aab6ad;
+  color: #a8b8c8;
   text-align: center;
 }
 
@@ -2876,7 +2878,7 @@ export default {
   align-items: center;
   min-width: 920px;
   padding: 10px;
-  border: 1px solid rgba(205, 213, 210, 0.12);
+  border: 1px solid rgba(190, 205, 218, 0.12);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
@@ -2890,7 +2892,7 @@ export default {
 }
 
 .admin-log-row--head span {
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.68rem;
   font-weight: 900;
   letter-spacing: 0.08em;
@@ -2913,7 +2915,7 @@ export default {
 
 .admin-log-row small {
   overflow: hidden;
-  color: #aab6ad;
+  color: #a8b8c8;
   font-size: 0.72rem;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -2925,10 +2927,10 @@ export default {
   min-height: 22px;
   align-items: center;
   padding: 0 8px;
-  border: 1px solid rgba(143, 214, 173, 0.28);
+  border: 1px solid rgba(143, 179, 199, 0.3);
   border-radius: 999px;
-  background: rgba(33, 118, 80, 0.16);
-  color: #c6f6d8;
+  background: rgba(47, 72, 96, 0.22);
+  color: #cfe4f3;
   font-size: 0.68rem;
   font-style: normal;
   font-weight: 900;
@@ -2958,7 +2960,7 @@ export default {
   gap: 10px;
   align-items: center;
   padding: 12px;
-  border: 1px solid rgba(205, 213, 210, 0.16);
+  border: 1px solid rgba(190, 205, 218, 0.16);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
   cursor: var(--cursor-pointer), pointer;
@@ -2977,7 +2979,7 @@ export default {
 .settings-persistence-card input {
   width: 16px;
   height: 16px;
-  accent-color: #d5dfd7;
+  accent-color: var(--thorondor-gold);
 }
 
 .settings-persistence-card span {
@@ -2991,16 +2993,16 @@ export default {
 }
 
 .settings-persistence-card small {
-  color: #aab6ad;
+  color: #a8b8c8;
   line-height: 1.42;
 }
 
 .settings-persistence-card em {
   justify-self: end;
   padding: 0.25rem 0.46rem;
-  border: 1px solid rgba(205, 213, 210, 0.22);
+  border: 1px solid rgba(190, 205, 218, 0.22);
   border-radius: 3px;
-  color: #dde7df;
+  color: #dce7f2;
   font-size: 0.66rem;
   font-style: normal;
   font-weight: 850;
@@ -3019,13 +3021,13 @@ export default {
   gap: 5px;
   min-width: 0;
   padding: 12px;
-  border: 1px solid rgba(205, 213, 210, 0.14);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-soft-background);
 }
 
 .settings-metric-grid span {
-  color: #9aa6b3;
+  color: #a4b2c1;
   font-size: 0.68rem;
   font-weight: 850;
   letter-spacing: 0.08em;
@@ -3041,7 +3043,7 @@ export default {
 }
 
 .settings-modal-footer {
-  border-top: 1px solid rgba(205, 213, 210, 0.16);
+  border-top: 1px solid rgba(190, 205, 218, 0.16);
   background: var(--thorondor-soft-background);
 }
 
@@ -3061,15 +3063,15 @@ export default {
 }
 
 .settings-modal-secondary {
-  border: 1px solid rgba(205, 213, 210, 0.2);
+  border: 1px solid rgba(190, 205, 218, 0.2);
   background: var(--thorondor-soft-background);
-  color: #dde7df;
+  color: #dce7f2;
 }
 
 .settings-modal-primary {
   border: 1px solid rgba(229, 236, 246, 0.34);
-  background: linear-gradient(180deg, rgba(232, 236, 228, 0.92), rgba(205, 213, 210, 0.9));
-  color: #101410;
+  background: linear-gradient(180deg, rgba(238, 244, 250, 0.94), rgba(190, 205, 218, 0.92));
+  color: #0b1118;
 }
 
 .settings-modal-primary:disabled {
@@ -3113,7 +3115,7 @@ export default {
   width: 42px;
   height: 42px;
   place-items: center;
-  border: 1px solid rgba(205, 213, 210, 0.22);
+  border: 1px solid rgba(190, 205, 218, 0.22);
   border-radius: 4px;
   background: var(--thorondor-nested-background);
 }

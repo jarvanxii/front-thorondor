@@ -161,7 +161,7 @@ function colorFromSeed(seed, alpha = 1) {
   const palette = [
     [148, 163, 184],
     [251, 191, 36],
-    [74, 222, 128],
+    [143, 179, 199],
     [248, 113, 113],
     [125, 140, 158],
     [251, 146, 60],
@@ -313,9 +313,9 @@ export default {
 }
 
 .os-badge--linux {
-  background: rgba(74, 222, 128, 0.12);
-  border: 1px solid rgba(74, 222, 128, 0.3);
-  color: #86efac;
+  background: rgba(143, 179, 199, 0.14);
+  border: 1px solid rgba(143, 179, 199, 0.3);
+  color: #cfe4f3;
 }
 
 .os-badge--win {

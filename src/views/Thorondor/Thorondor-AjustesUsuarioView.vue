@@ -858,13 +858,13 @@ export default {
   justify-content: space-between;
   gap: 14px;
   padding: 12px 14px;
-  border: 1px solid rgba(74, 222, 128, 0.22);
+  border: 1px solid rgba(143, 179, 199, 0.24);
   border-radius: 4px;
-  background: rgba(18, 83, 49, 0.16);
+  background: rgba(47, 72, 96, 0.16);
 }
 
 .mail-status strong {
-  color: #bbf7d0;
+  color: #cfe4f3;
   font-size: 0.9rem;
 }
 
@@ -1004,8 +1004,8 @@ export default {
 }
 
 .settings-feedback--success {
-  border-color: rgba(74, 222, 128, 0.36);
-  color: #bbf7d0;
+  border-color: rgba(158, 230, 192, 0.32);
+  color: #9ee6c0;
 }
 
 .settings-feedback--error {
@@ -1084,8 +1084,8 @@ export default {
 }
 
 .permission-pill.is-authorized {
-  border-color: rgba(74, 222, 128, 0.36);
-  color: #bbf7d0;
+  border-color: rgba(158, 230, 192, 0.32);
+  color: #9ee6c0;
 }
 
 .btn-compact {

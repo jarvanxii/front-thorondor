@@ -3,43 +3,46 @@
 :root {
   --main-header-height: 68px;
   --sidebar-width: 248px;
-  --thorondor-ink: #18211d;
-  --thorondor-ink-soft: #222c27;
-  --thorondor-panel: #242d28;
-  --thorondor-panel-strong: #1c2520;
+  --thorondor-ink: #0d1118;
+  --thorondor-ink-soft: #141b25;
+  --thorondor-panel: #18212b;
+  --thorondor-panel-strong: #111923;
   --thorondor-gold: #d6a15c;
   --thorondor-gold-strong: #f3cf8c;
   --thorondor-gold-soft: rgba(218, 166, 92, 0.18);
   --thorondor-gold-line: rgba(236, 194, 119, 0.24);
-  --thorondor-line: rgba(205, 213, 210, 0.18);
-  --thorondor-border-subtle: rgba(205, 213, 210, 0.14);
+  --thorondor-steel: #8fb3c7;
+  --thorondor-steel-soft: rgba(143, 179, 199, 0.18);
+  --thorondor-line: rgba(190, 205, 218, 0.18);
+  --thorondor-border-subtle: rgba(190, 205, 218, 0.14);
   --thorondor-border-strong: rgba(236, 194, 119, 0.22);
-  --thorondor-flat-background: rgba(30, 39, 34, 0.88);
-  --thorondor-flat-soft-background: rgba(36, 46, 40, 0.66);
-  --thorondor-surface-shadow: 0 7px 18px rgba(5, 9, 8, 0.11);
+  --thorondor-flat-background: rgba(15, 22, 31, 0.9);
+  --thorondor-flat-soft-background: rgba(22, 31, 42, 0.7);
+  --thorondor-surface-shadow: 0 9px 22px rgba(0, 0, 0, 0.2);
   --thorondor-text: #f8fafc;
-  --thorondor-muted: #9aa6b3;
+  --thorondor-muted: #a4b2c1;
   --thorondor-panel-background:
-    linear-gradient(145deg, rgba(43, 53, 47, 0.96), rgba(32, 41, 36, 0.985) 58%, rgba(25, 33, 30, 0.992)),
-    #242d28;
+    linear-gradient(145deg, rgba(28, 38, 50, 0.96), rgba(19, 28, 39, 0.985) 58%, rgba(11, 17, 25, 0.992)),
+    #151f2a;
   --thorondor-nested-background:
-    linear-gradient(145deg, rgba(36, 45, 40, 0.72), rgba(28, 36, 32, 0.78)),
-    rgba(30, 39, 34, 0.72);
+    linear-gradient(145deg, rgba(25, 36, 48, 0.78), rgba(14, 22, 32, 0.84)),
+    rgba(15, 22, 31, 0.76);
   --thorondor-soft-background:
-    linear-gradient(145deg, rgba(49, 60, 53, 0.42), rgba(32, 41, 36, 0.54)),
-    rgba(36, 46, 40, 0.5);
+    linear-gradient(145deg, rgba(44, 58, 74, 0.4), rgba(18, 27, 38, 0.56)),
+    rgba(21, 30, 41, 0.56);
   --thorondor-grid-background:
-    radial-gradient(circle at 1px 1px, rgba(126, 211, 173, 0.12) 0.8px, transparent 1.8px),
-    radial-gradient(circle at 21px 17px, rgba(236, 194, 119, 0.07) 0.75px, transparent 1.7px),
-    repeating-linear-gradient(0deg, rgba(132, 190, 160, 0.042) 0 1px, transparent 1px 34px),
-    repeating-linear-gradient(90deg, rgba(132, 190, 160, 0.034) 0 1px, transparent 1px 34px),
-    repeating-linear-gradient(35deg, transparent 0 26px, rgba(99, 169, 135, 0.038) 26px 27px, transparent 27px 58px),
-    repeating-linear-gradient(145deg, transparent 0 42px, rgba(43, 116, 91, 0.055) 42px 43px, transparent 43px 96px),
-    radial-gradient(circle at 14% 16%, rgba(78, 142, 112, 0.18), transparent 28%),
-    radial-gradient(circle at 82% 72%, rgba(50, 112, 91, 0.16), transparent 30%),
-    linear-gradient(150deg, rgba(54, 68, 62, 0.985), rgba(37, 50, 49, 0.995) 44%, rgba(27, 38, 38, 1)),
-    #263133;
-  --thorondor-grid-background-size: 34px 34px, 38px 38px, 34px 34px, 34px 34px, 116px 116px, 188px 188px, auto, auto, auto, auto;
+    radial-gradient(circle at 1px 1px, rgba(143, 179, 199, 0.1) 0.8px, transparent 1.8px),
+    radial-gradient(circle at 21px 17px, rgba(236, 194, 119, 0.06) 0.75px, transparent 1.7px),
+    repeating-linear-gradient(0deg, rgba(143, 179, 199, 0.034) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(90deg, rgba(143, 179, 199, 0.028) 0 1px, transparent 1px 34px),
+    repeating-linear-gradient(35deg, transparent 0 26px, rgba(125, 155, 178, 0.032) 26px 27px, transparent 27px 58px),
+    repeating-linear-gradient(145deg, transparent 0 42px, rgba(93, 114, 134, 0.04) 42px 43px, transparent 43px 96px),
+    radial-gradient(circle at 14% 16%, rgba(55, 83, 110, 0.2), transparent 28%),
+    radial-gradient(circle at 82% 72%, rgba(98, 60, 74, 0.12), transparent 30%),
+    radial-gradient(circle at 64% 18%, rgba(214, 161, 92, 0.08), transparent 24%),
+    linear-gradient(150deg, rgba(20, 29, 41, 0.99), rgba(13, 21, 31, 0.995) 46%, rgba(8, 12, 18, 1)),
+    #0d131d;
+  --thorondor-grid-background-size: 34px 34px, 38px 38px, 34px 34px, 34px 34px, 116px 116px, 188px 188px, auto, auto, auto, auto, auto;
   --cursor-default: auto;
   --cursor-pointer: pointer;
   --cursor-text: text;

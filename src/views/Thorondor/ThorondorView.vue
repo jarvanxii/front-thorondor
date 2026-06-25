@@ -528,7 +528,7 @@ export default {
 
 .telemetry-list {
     display: grid;
-    border-top: 1px solid rgba(205, 213, 210, 0.14);
+    border-top: 1px solid rgba(190, 205, 218, 0.14);
 }
 
 .telemetry-row {
@@ -537,7 +537,7 @@ export default {
     gap: 1rem;
     align-items: start;
     padding: 0.95rem 0;
-    border-bottom: 1px solid rgba(205, 213, 210, 0.14);
+    border-bottom: 1px solid rgba(190, 205, 218, 0.14);
 }
 
 .telemetry-row > strong {
@@ -547,7 +547,7 @@ export default {
 }
 
 .telemetry-row > span {
-    color: #c2cec5;
+    color: #c8d4e1;
     font-size: 0.9rem;
     line-height: 1.48;
 }
@@ -574,7 +574,7 @@ export default {
 }
 
 .telemetry-metrics span {
-    color: #d5dfd7;
+    color: #d7e1ec;
     font-size: 0.88rem;
     line-height: 1.45;
 }

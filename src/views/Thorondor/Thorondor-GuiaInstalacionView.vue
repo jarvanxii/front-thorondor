@@ -422,8 +422,8 @@ export default {
 }
 
 .copy-btn.copied {
-    border-color: rgba(74, 222, 128, 0.5);
-    color: #86efac;
+    border-color: rgba(158, 230, 192, 0.42);
+    color: #9ee6c0;
 }
 
 .phase-badge-block--danger .phase-badge {

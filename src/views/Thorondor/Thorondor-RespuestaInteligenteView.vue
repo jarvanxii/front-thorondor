@@ -472,9 +472,9 @@ export default {
 }
 
 .status-line--success {
-  border-color: rgba(74, 222, 128, 0.34);
-  background: rgba(22, 101, 52, 0.16);
-  color: #bbf7d0;
+  border-color: rgba(158, 230, 192, 0.28);
+  background: rgba(22, 101, 80, 0.16);
+  color: #9ee6c0;
 }
 
 @media (max-width: 1320px) {

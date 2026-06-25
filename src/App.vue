@@ -57,8 +57,10 @@ export default {
 <style scoped>
 .thorondor-app-shell {
   min-height: 100vh;
-  background: var(--thorondor-grid-background);
-  background-size: var(--thorondor-grid-background-size);
+  background:
+    linear-gradient(180deg, rgba(7, 11, 18, 0.08), rgba(7, 11, 18, 0.28)),
+    var(--thorondor-grid-background);
+  background-size: auto, var(--thorondor-grid-background-size);
   background-attachment: fixed;
   color: #e0e6ed;
 }
@@ -80,7 +82,7 @@ export default {
   z-index: 2400;
   display: none;
   border: 0;
-  background: rgba(0, 0, 0, 0.52);
+  background: rgba(0, 0, 0, 0.56);
 }
 
 @media (max-width: 1040px) {
@@ -95,12 +97,15 @@ export default {
 
 @media (max-width: 900px) {
   .thorondor-app-shell {
-    background: var(--thorondor-grid-background);
-    background-size: var(--thorondor-grid-background-size);
+    background:
+      linear-gradient(180deg, rgba(7, 11, 18, 0.18), rgba(7, 11, 18, 0.42)),
+      var(--thorondor-grid-background);
+    background-size: auto, var(--thorondor-grid-background-size);
+    background-attachment: scroll;
   }
 
   .sidebar-backdrop {
-    background: rgba(3, 6, 10, 0.68);
+    background: rgba(3, 6, 10, 0.74);
     backdrop-filter: blur(4px);
   }
 }

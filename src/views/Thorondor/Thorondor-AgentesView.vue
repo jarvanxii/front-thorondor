@@ -596,9 +596,9 @@ export default {
     justify-content: space-between;
     gap: 14px;
     padding: 12px;
-    border: 1px solid rgba(74, 222, 128, 0.22);
+    border: 1px solid rgba(143, 179, 199, 0.24);
     border-radius: 4px;
-    background: rgba(20, 83, 45, 0.12);
+    background: rgba(47, 72, 96, 0.16);
 }
 
 .agent-pause-panel.is-paused {
@@ -651,7 +651,7 @@ export default {
 
 .agent-endpoint-preview code,
 .endpoint-code {
-    color: #c6f6d8;
+    color: #cfe4f3;
 }
 
 .agent-editor-actions {
@@ -664,10 +664,10 @@ export default {
 .agent-feedback {
     margin: 0;
     padding: 10px 12px;
-    border: 1px solid rgba(74, 222, 128, 0.26);
+    border: 1px solid rgba(158, 230, 192, 0.26);
     border-radius: 4px;
-    background: rgba(20, 83, 45, 0.18);
-    color: #bbf7d0;
+    background: rgba(22, 101, 80, 0.16);
+    color: #9ee6c0;
 }
 
 .agent-feedback.is-error {
@@ -682,8 +682,8 @@ export default {
 }
 
 .badge-ok {
-    border-color: rgba(74, 222, 128, 0.32);
-    color: #bbf7d0;
+    border-color: rgba(158, 230, 192, 0.28);
+    color: #9ee6c0;
 }
 
 .badge-warn {

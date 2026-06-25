@@ -1236,8 +1236,8 @@ export default {
 }
 
 .severity-low {
-  border-color: rgba(143, 214, 173, 0.45);
-  color: #bbf7d0;
+  border-color: rgba(143, 179, 199, 0.45);
+  color: #cfe4f3;
 }
 
 .chip-neutral {

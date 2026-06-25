@@ -196,15 +196,15 @@ export default {
   padding: 16px 12px 14px;
   overflow-y: auto;
   background: var(--thorondor-panel-background);
-  border-right: 1px solid rgba(236, 194, 119, 0.17);
-  box-shadow: 20px 0 44px rgba(0, 0, 0, 0.26);
+  border-right: 1px solid rgba(190, 205, 218, 0.16);
+  box-shadow: 20px 0 44px rgba(0, 0, 0, 0.34);
 }
 
 .sidebar-identity {
   display: grid;
   gap: 12px;
   padding: 12px;
-  border: 1px solid rgba(236, 194, 119, 0.16);
+  border: 1px solid rgba(190, 205, 218, 0.14);
   border-radius: 4px;
   background: var(--thorondor-nested-background);
 }
@@ -218,7 +218,7 @@ export default {
 .sidebar-system span,
 .sidebar-nav-group h2 {
   margin: 0;
-  color: #c4a16b;
+  color: #d7b06e;
   font-size: 0.68rem;
   font-weight: 800;
   letter-spacing: 0;
@@ -236,7 +236,7 @@ export default {
 
 .sidebar-identity small,
 .sidebar-system small {
-  color: #aeb6c0;
+  color: #a9b8c7;
   font-size: 0.72rem;
   line-height: 1.45;
 }
@@ -245,7 +245,7 @@ export default {
   display: grid;
   gap: 8px;
   padding: 12px;
-  border: 1px solid rgba(189, 196, 205, 0.15);
+  border: 1px solid rgba(190, 205, 218, 0.16);
   border-radius: 4px;
   background: var(--thorondor-nested-background);
 }
@@ -253,7 +253,7 @@ export default {
 .sidebar-system select {
   width: 100%;
   min-height: 36px;
-  border: 1px solid rgba(189, 196, 205, 0.24);
+  border: 1px solid rgba(190, 205, 218, 0.24);
   border-radius: 4px;
   appearance: none;
   background:
@@ -288,7 +288,7 @@ export default {
 }
 
 .sidebar-system select option {
-  background: #1f2a25;
+  background: #101824;
   color: #f4f6f8;
 }
 
@@ -356,7 +356,7 @@ export default {
 }
 
 .sidebar-nav-item:hover {
-  border-color: rgba(189, 196, 205, 0.13);
+  border-color: rgba(190, 205, 218, 0.18);
   background: var(--thorondor-soft-background);
   color: #f7f9fb;
   transform: translateX(1px);
@@ -364,7 +364,7 @@ export default {
 
 .sidebar-nav-item.is-active {
   border-color: rgba(236, 194, 119, 0.28);
-  background: linear-gradient(90deg, rgba(126, 93, 42, 0.28), rgba(31, 40, 35, 0.62));
+  background: linear-gradient(90deg, rgba(126, 93, 42, 0.28), rgba(14, 24, 36, 0.72));
   color: #ffffff;
   box-shadow:
     inset 3px 0 0 var(--thorondor-gold),
@@ -405,11 +405,13 @@ export default {
 
 @media (max-width: 1040px) {
   .thorondor-sidebar {
-    width: min(312px, 86vw);
+    display: flex;
+    width: min(332px, 90vw);
+    flex-direction: column;
     gap: 9px;
     padding: 12px 10px;
     background: var(--thorondor-panel-background);
-    box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
+    box-shadow: 22px 0 46px rgba(0, 0, 0, 0.38);
     transform: translateX(-104%);
     transition: transform 180ms ease;
   }
@@ -420,11 +422,74 @@ export default {
 
   .sidebar-identity,
   .sidebar-system {
+    flex: 0 0 auto;
     padding: 10px;
+  }
+
+  .sidebar-nav {
+    order: 1;
+    flex: 1 1 auto;
+    gap: 12px;
+    min-height: 0;
+  }
+
+  .sidebar-system {
+    order: 2;
+  }
+
+  .sidebar-identity {
+    order: 3;
   }
 
   .sidebar-nav-group--primary {
     display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+    padding: 8px;
+    border: 1px solid rgba(190, 205, 218, 0.13);
+    border-radius: 6px;
+    background: rgba(8, 13, 21, 0.48);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.035);
+  }
+
+  .sidebar-nav-group--primary h2 {
+    grid-column: 1 / -1;
+    padding-inline: 4px;
+  }
+
+  .sidebar-nav-group--primary h2::after {
+    right: 4px;
+    left: 4px;
+  }
+
+  .sidebar-nav-group--primary .sidebar-nav-item {
+    grid-template-columns: minmax(0, 1fr) auto;
+    min-height: 36px;
+    gap: 4px;
+    padding-inline: 8px;
+    border-color: rgba(190, 205, 218, 0.08);
+    background: rgba(255, 255, 255, 0.025);
+    font-size: 0.74rem;
+  }
+
+  .sidebar-nav-group--primary .nav-label {
+    text-align: center;
+  }
+
+  .sidebar-nav-group--primary .sidebar-nav-item:hover {
+    border-color: rgba(236, 194, 119, 0.24);
+    background: rgba(236, 194, 119, 0.08);
+    transform: none;
+  }
+
+  .sidebar-nav-group--primary .sidebar-nav-item.is-active {
+    border-color: rgba(236, 194, 119, 0.38);
+    background: linear-gradient(135deg, rgba(214, 161, 92, 0.22), rgba(143, 179, 199, 0.1));
+    box-shadow: inset 0 -2px 0 var(--thorondor-gold);
+  }
+
+  .sidebar-nav-group--primary .nav-marker {
+    display: none;
   }
 
   .sidebar-nav-item {
@@ -434,7 +499,7 @@ export default {
 
 @media (max-width: 520px) {
   .thorondor-sidebar {
-    width: min(304px, 86vw);
+    width: min(326px, 90vw);
     gap: 8px;
     padding: 10px 8px;
   }
@@ -450,7 +515,7 @@ export default {
   }
 
   .sidebar-nav {
-    gap: 10px;
+    gap: 9px;
     padding-right: 2px;
   }
 
@@ -463,6 +528,17 @@ export default {
     min-height: 38px;
     padding-inline: 8px;
     font-size: 0.78rem;
+  }
+
+  .sidebar-nav-group--primary {
+    gap: 5px;
+    padding: 7px;
+  }
+
+  .sidebar-nav-group--primary .sidebar-nav-item {
+    min-height: 35px;
+    padding-inline: 7px;
+    font-size: 0.71rem;
   }
 }
 </style>

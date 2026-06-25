@@ -30,10 +30,10 @@ export default {
   padding: 16px clamp(22px, 2.6vw, 40px);
   border-top: 1px solid rgba(214, 161, 92, 0.2);
   background:
-    linear-gradient(135deg, rgba(31, 40, 35, 0.96), rgba(22, 30, 26, 0.98)),
-    #202923;
+    linear-gradient(135deg, rgba(17, 25, 35, 0.98), rgba(8, 13, 21, 0.99)),
+    #101824;
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.026);
-  color: #b7c2b9;
+  color: #a8b8c8;
   font-family: 'Inter', sans-serif;
 }
 
@@ -54,7 +54,7 @@ export default {
 }
 
 .footer-brand span {
-  color: #b9c5bc;
+  color: #a8b8c8;
   font-size: 0.76rem;
   line-height: 1.4;
 }
@@ -65,7 +65,7 @@ export default {
   justify-content: flex-end;
   gap: 0;
   align-items: center;
-  color: #aeb9b0;
+  color: #9fb0c2;
   font-size: 0.72rem;
   line-height: 1.5;
 }

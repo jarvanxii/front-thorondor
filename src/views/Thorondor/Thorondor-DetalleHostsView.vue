@@ -2225,7 +2225,7 @@ export default {
                 labels: snapshots.map((snapshot) => this.formatDateTime(snapshot.timestamp)),
                 datasets: [
                     { label: "CPU", data: snapshots.map((snapshot) => snapshot.cpuTotal), borderColor: "rgba(176, 184, 194, 1)", backgroundColor: "rgba(176, 184, 194, 0.18)", tension: 0.25, spanGaps: true },
-                    { label: "RAM", data: snapshots.map((snapshot) => snapshot.memoryPercent), borderColor: "rgba(74, 222, 128, 1)", backgroundColor: "rgba(74, 222, 128, 0.18)", tension: 0.25, spanGaps: true },
+                    { label: "RAM", data: snapshots.map((snapshot) => snapshot.memoryPercent), borderColor: "rgba(143, 179, 199, 1)", backgroundColor: "rgba(143, 179, 199, 0.18)", tension: 0.25, spanGaps: true },
                     ...this.diskDatasets
                 ]
             };
@@ -3210,7 +3210,7 @@ export default {
         diskBarColor(percent) {
             if (percent >= 90) return "rgba(239, 68, 68, 0.85)";
             if (percent >= 75) return "rgba(251, 191, 36, 0.85)";
-            return "rgba(74, 222, 128, 0.85)";
+            return "rgba(143, 179, 199, 0.85)";
         },
 
         barWidth(value) {
@@ -3303,7 +3303,7 @@ export default {
         tempBarColor(celsius) {
             if (celsius >= 90) return "rgba(239, 68, 68, 0.85)";
             if (celsius >= 75) return "rgba(251, 191, 36, 0.85)";
-            return "rgba(74, 222, 128, 0.85)";
+            return "rgba(143, 179, 199, 0.85)";
         },
 
         timelineDotClass(kind) {
@@ -3317,7 +3317,7 @@ export default {
 <style scoped>
 .small-code {
     font-size: 0.78rem;
-    color: #9aa6b3;
+    color: #a4b2c1;
     background: var(--thorondor-soft-background);
     padding: 0.1rem 0.3rem;
     border-radius: 3px;
@@ -3412,15 +3412,15 @@ export default {
 }
 
 .protocol-badge--tcp {
-    border-color: rgba(143, 214, 173, 0.28);
-    color: #c6f6d8;
-    background: rgba(33, 118, 80, 0.12);
+    border-color: rgba(143, 179, 199, 0.3);
+    color: #cfe4f3;
+    background: rgba(47, 72, 96, 0.14);
 }
 
 .protocol-badge--udp {
-    border-color: rgba(52, 211, 153, 0.28);
-    color: #bbf7d0;
-    background: rgba(22, 163, 74, 0.12);
+    border-color: rgba(158, 230, 192, 0.26);
+    color: #9ee6c0;
+    background: rgba(22, 101, 80, 0.14);
 }
 
 .hardware-usage-grid {
@@ -3478,7 +3478,7 @@ export default {
 .hardware-meter-fill {
     height: 100%;
     border-radius: inherit;
-    background: rgba(74, 222, 128, 0.82);
+    background: rgba(143, 179, 199, 0.82);
     transition: width 0.25s ease;
 }
 
@@ -3487,7 +3487,7 @@ export default {
 }
 
 .hardware-meter-fill.tone-success {
-    background: rgba(74, 222, 128, 0.84);
+    background: rgba(158, 230, 192, 0.72);
 }
 
 .hardware-meter-fill.tone-warning {
@@ -3647,8 +3647,8 @@ export default {
 }
 
 .operation-feedback--success {
-    border-color: rgba(74, 222, 128, 0.26);
-    color: #bbf7d0;
+    border-color: rgba(158, 230, 192, 0.26);
+    color: #9ee6c0;
 }
 
 .operation-feedback--error {
@@ -3668,8 +3668,8 @@ export default {
 }
 
 .management-feedback.is-success {
-    border-color: rgba(74, 222, 128, 0.26);
-    color: #bbf7d0;
+    border-color: rgba(158, 230, 192, 0.26);
+    color: #9ee6c0;
 }
 
 .management-feedback.is-error {
@@ -3779,7 +3779,7 @@ export default {
 
 .disk-bar-pct {
     font-size: 0.78rem;
-    color: #9aa6b3;
+    color: #a4b2c1;
     min-width: 40px;
     text-align: right;
 }
@@ -3822,7 +3822,7 @@ export default {
 
 .disk-toggle-btn:hover {
     border-color: rgba(255, 255, 255, 0.22);
-    color: #9aa6b3;
+    color: #a4b2c1;
 }
 
 .temp-grid {
@@ -3956,7 +3956,7 @@ export default {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 0.85rem;
     padding: 1rem;
-    border: 1px solid rgba(205, 213, 210, 0.14);
+    border: 1px solid rgba(190, 205, 218, 0.14);
     border-radius: 4px;
     background: var(--thorondor-flat-soft-background, var(--thorondor-soft-background));
 }
@@ -3980,7 +3980,7 @@ export default {
     gap: 0.35rem;
     min-height: 104px;
     padding: 0.9rem;
-    border: 1px solid rgba(205, 213, 210, 0.14);
+    border: 1px solid rgba(190, 205, 218, 0.14);
     border-radius: 4px;
     background: var(--thorondor-nested-background);
 }
@@ -4006,7 +4006,7 @@ export default {
 
 .host-preview-table {
     overflow: auto;
-    border: 1px solid rgba(205, 213, 210, 0.14);
+    border: 1px solid rgba(190, 205, 218, 0.14);
     border-radius: 4px;
     background: var(--thorondor-nested-background);
 }
@@ -4020,7 +4020,7 @@ export default {
 .host-preview-table th,
 .host-preview-table td {
     padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid rgba(205, 213, 210, 0.12);
+    border-bottom: 1px solid rgba(190, 205, 218, 0.12);
     vertical-align: top;
 }
 
@@ -4065,7 +4065,7 @@ export default {
     gap: 0.35rem;
     min-height: 112px;
     padding: 0.9rem;
-    border: 1px solid rgba(205, 213, 210, 0.14);
+    border: 1px solid rgba(190, 205, 218, 0.14);
     border-radius: 4px;
     background: var(--thorondor-nested-background);
 }

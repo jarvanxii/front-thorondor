@@ -6,7 +6,7 @@
   --thorondor-surface-strong: var(--thorondor-panel-strong);
   --thorondor-line: var(--thorondor-border-strong);
   --thorondor-text: #f8fafc;
-  --thorondor-muted: #9aa6b3;
+  --thorondor-muted: #a4b2c1;
   width: min(100%, 1480px);
   min-height: calc(100vh - var(--main-header-height, 68px));
   margin: 0 auto;
@@ -20,13 +20,13 @@
   position: relative;
   overflow: hidden;
   background: var(--thorondor-panel-background);
-  border: 1px solid rgba(205, 213, 210, 0.16);
+  border: 1px solid rgba(190, 205, 218, 0.16);
   border-radius: 6px;
   padding: 20px;
   margin-bottom: 18px;
   box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.04),
-    0 10px 24px rgba(3, 8, 7, 0.16);
+    0 12px 26px rgba(0, 0, 0, 0.22);
   min-width: 0;
 }
 
@@ -35,7 +35,7 @@
   position: absolute;
   inset: 0 0 auto;
   height: 2px;
-  background: linear-gradient(90deg, rgba(236, 194, 119, 0.42), rgba(143, 214, 173, 0.16), transparent 72%);
+  background: linear-gradient(90deg, rgba(236, 194, 119, 0.48), rgba(143, 179, 199, 0.22), transparent 72%);
   opacity: 0.78;
   pointer-events: none;
 }
@@ -84,7 +84,7 @@
 .thorondor-page .section-copy,
 .thorondor-page .module-copy {
   margin: 0;
-  color: #cfd6de;
+  color: #d5dde8;
   font-size: 0.95rem;
   line-height: 1.56;
   max-width: 76ch;
@@ -108,7 +108,7 @@
 .thorondor-page .intro-summary span {
   display: inline-flex;
   width: fit-content;
-  color: #9aa6b3;
+  color: #a4b2c1;
   font-size: 0.72rem;
   font-weight: 800;
   letter-spacing: 0.12em;
@@ -125,7 +125,7 @@
 .thorondor-page .phase-badge-block small,
 .thorondor-page .muted-copy {
   margin: 0;
-  color: #9aa6b3;
+  color: #a4b2c1;
   line-height: 1.65;
 }
 
@@ -198,7 +198,7 @@
   position: relative;
   overflow: hidden;
   background:
-    linear-gradient(180deg, rgba(35, 47, 41, 0.86), rgba(24, 34, 30, 0.92)),
+    linear-gradient(180deg, rgba(21, 31, 43, 0.9), rgba(11, 18, 27, 0.95)),
     var(--thorondor-flat-background);
   border: 1px solid var(--thorondor-border-subtle);
   border-radius: 6px;
@@ -216,7 +216,7 @@
   position: absolute;
   inset: 0 auto 0 0;
   width: 1px;
-  background: linear-gradient(180deg, rgba(236, 194, 119, 0.28), rgba(143, 214, 173, 0.08));
+  background: linear-gradient(180deg, rgba(236, 194, 119, 0.32), rgba(143, 179, 199, 0.1));
 }
 
 .thorondor-page .guide-card:hover,
@@ -225,7 +225,7 @@
 .thorondor-page .tool-card:hover {
   border-color: rgba(236, 194, 119, 0.26);
   background:
-    linear-gradient(180deg, rgba(43, 56, 49, 0.88), rgba(29, 40, 35, 0.94)),
+    linear-gradient(180deg, rgba(29, 41, 55, 0.92), rgba(13, 22, 33, 0.96)),
     var(--thorondor-flat-soft-background);
 }
 
@@ -253,7 +253,7 @@
 .thorondor-page .metric-card small,
 .thorondor-page .signal-card small,
 .thorondor-page .helper-copy {
-  color: #9aa6b3;
+  color: #a8b8c8;
   font-size: 0.94rem;
   line-height: 1.5;
 }
@@ -296,8 +296,8 @@
 }
 
 .thorondor-page .verdict-success {
-  background: rgba(22, 101, 52, 0.14);
-  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(47, 72, 96, 0.18);
+  border-color: rgba(143, 179, 199, 0.28);
 }
 
 .thorondor-page .verdict-neutral {
@@ -357,7 +357,7 @@
 
 .thorondor-page .input-dark {
   background: var(--thorondor-flat-soft-background);
-  border: 1px solid rgba(205, 213, 210, 0.28);
+  border: 1px solid rgba(190, 205, 218, 0.28);
   color: #f8fafc !important;
   caret-color: #f8fafc;
 }
@@ -396,7 +396,7 @@
 
 .thorondor-page select option,
 .thorondor-page select.input-dark option {
-  background: #1f2a25;
+  background: #101824;
   color: #f8fafc;
 }
 
@@ -416,14 +416,14 @@
 }
 
 .thorondor-page .input-dark::placeholder {
-  color: #9aa6b3;
+  color: #a4b2c1;
 }
 
 .thorondor-page .readonly-field {
   display: flex;
   min-height: 40px;
   align-items: center;
-  color: #9aa6b3 !important;
+  color: #a4b2c1 !important;
   cursor: default;
 }
 
@@ -627,7 +627,26 @@
 
 .thorondor-page .table-dark {
   --bs-table-bg: transparent;
-  --bs-table-border-color: rgba(176, 184, 194, 0.14);
+  --bs-table-border-color: rgba(190, 205, 218, 0.16);
+  color: #e5edf6;
+}
+
+.thorondor-page .table-dark :is(th, td) {
+  border-color: rgba(190, 205, 218, 0.14);
+}
+
+.thorondor-page .table-dark thead th {
+  background: rgba(8, 13, 21, 0.42);
+  color: #f3f7fb;
+  font-weight: 820;
+}
+
+.thorondor-page .table-dark tbody tr {
+  background: rgba(255, 255, 255, 0.012);
+}
+
+.thorondor-page .table-dark tbody tr:hover {
+  background: rgba(143, 179, 199, 0.055);
 }
 
 .thorondor-page .table .text-muted,
@@ -647,8 +666,8 @@
 }
 
 .thorondor-page .chip-success {
-  background: rgba(22, 101, 52, 0.2);
-  color: #86efac;
+  background: rgba(22, 101, 80, 0.18);
+  color: #9ee6c0;
 }
 
 .thorondor-page .chip-warning {
@@ -677,13 +696,13 @@
   border-radius: 6px;
   border: 1px solid rgba(176, 184, 194, 0.14);
   background:
-    linear-gradient(180deg, rgba(42, 54, 47, 0.62), rgba(25, 35, 31, 0.68)),
+    linear-gradient(180deg, rgba(26, 38, 52, 0.7), rgba(11, 18, 27, 0.78)),
     var(--thorondor-flat-soft-background);
 }
 
 .thorondor-page .mini-stat label {
   display: block;
-  color: #9aa6b3;
+  color: #a8b8c8;
   font-size: 0.78rem;
   margin-bottom: 4px;
   text-transform: uppercase;
@@ -758,7 +777,7 @@
 }
 
 .thorondor-page .timeline-body small {
-  color: #9aa6b3;
+  color: #a4b2c1;
 }
 
 .thorondor-page .compact-timeline {
@@ -800,7 +819,7 @@
   border: 1px dashed rgba(176, 184, 194, 0.34);
   border-radius: 4px;
   padding: 18px;
-  color: #9aa6b3;
+  color: #a4b2c1;
   text-align: center;
   background: var(--thorondor-flat-soft-background);
 }
@@ -814,7 +833,7 @@
 }
 
 .thorondor-page .tone-success {
-  color: #86efac !important;
+  color: #9ee6c0 !important;
 }
 
 .thorondor-page .tone-warning {
@@ -931,7 +950,7 @@
   }
 
   .thorondor-page .table-wrap {
-    border: 1px solid rgba(176, 184, 194, 0.12);
+    border: 1px solid rgba(190, 205, 218, 0.14);
     background: var(--thorondor-flat-soft-background);
   }
 
@@ -956,7 +975,7 @@
     margin-bottom: 12px;
     border-radius: 6px;
     background:
-      linear-gradient(180deg, rgba(35, 47, 41, 0.96), rgba(22, 32, 28, 0.98)),
+      linear-gradient(180deg, rgba(19, 30, 42, 0.98), rgba(8, 13, 21, 0.99)),
       var(--thorondor-panel-background);
   }
 
