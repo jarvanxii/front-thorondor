@@ -31,11 +31,16 @@
       </select>
     </label>
     <nav class="sidebar-nav">
-      <section v-for="group in navGroups" :key="group.label" class="sidebar-nav-group">
+      <section
+        v-for="group in sidebarNavGroups"
+        :key="group.label"
+        class="sidebar-nav-group"
+        :class="{ 'sidebar-nav-group--primary': group.primary }"
+      >
         <h2>{{ group.label }}</h2>
         <RouterLink
           v-for="item in group.items"
-          :key="item.id"
+          :key="item.id || item.routeName"
           class="sidebar-nav-item"
           :class="{
             'is-active': isActive(item),
@@ -57,6 +62,7 @@
 import {
   THORONDOR_HOST_SCOPED_ROUTES,
   THORONDOR_SIDEBAR_GROUPS,
+  THORONDOR_TOP_NAV_ITEMS,
 } from '@/features/thorondor/data/thorondorNavigation'
 
 export default {
@@ -71,13 +77,21 @@ export default {
 
   emits: ['close'],
 
-  data() {
-    return {
-      navGroups: THORONDOR_SIDEBAR_GROUPS,
-    }
-  },
-
   computed: {
+    sidebarNavGroups() {
+      return [
+        {
+          label: 'Navegación',
+          primary: true,
+          items: THORONDOR_TOP_NAV_ITEMS.map((item) => ({
+            ...item,
+            id: `main-${item.routeName}`,
+          })),
+        },
+        ...THORONDOR_SIDEBAR_GROUPS,
+      ]
+    },
+
     thorondorState() {
       return this.$store.state.thorondor || {}
     },
@@ -305,6 +319,10 @@ export default {
   gap: 5px;
 }
 
+.sidebar-nav-group--primary {
+  display: none;
+}
+
 .sidebar-nav-group h2 {
   position: relative;
   padding: 0 10px 8px;
@@ -387,9 +405,9 @@ export default {
 
 @media (max-width: 1040px) {
   .thorondor-sidebar {
-    width: min(330px, 88vw);
-    gap: 10px;
-    padding: 14px 12px;
+    width: min(312px, 86vw);
+    gap: 9px;
+    padding: 12px 10px;
     background: var(--thorondor-panel-background);
     box-shadow: 18px 0 40px rgba(0, 0, 0, 0.28);
     transform: translateX(-104%);
@@ -402,37 +420,49 @@ export default {
 
   .sidebar-identity,
   .sidebar-system {
-    padding: 11px;
+    padding: 10px;
+  }
+
+  .sidebar-nav-group--primary {
+    display: grid;
   }
 
   .sidebar-nav-item {
-    min-height: 43px;
+    min-height: 40px;
   }
 }
 
 @media (max-width: 520px) {
   .thorondor-sidebar {
-    width: min(342px, 92vw);
-    padding: 12px 10px;
+    width: min(304px, 86vw);
+    gap: 8px;
+    padding: 10px 8px;
+  }
+
+  .sidebar-identity,
+  .sidebar-system {
+    padding: 9px;
   }
 
   .sidebar-identity small {
+    display: none;
     font-size: 0.7rem;
   }
 
   .sidebar-nav {
-    gap: 13px;
+    gap: 10px;
     padding-right: 2px;
   }
 
   .sidebar-nav-group h2 {
     padding-inline: 8px;
+    padding-bottom: 6px;
   }
 
   .sidebar-nav-item {
-    min-height: 44px;
-    padding-inline: 9px;
-    font-size: 0.8rem;
+    min-height: 38px;
+    padding-inline: 8px;
+    font-size: 0.78rem;
   }
 }
 </style>

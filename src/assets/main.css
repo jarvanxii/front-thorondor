@@ -48,13 +48,13 @@
 
 @media (max-width: 900px) {
   :root {
-    --main-header-height: 60px;
+    --main-header-height: 56px;
   }
 }
 
 @media (max-width: 520px) {
   :root {
-    --main-header-height: 56px;
+    --main-header-height: 52px;
   }
 }
 

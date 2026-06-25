@@ -3257,35 +3257,52 @@ export default {
 }
 
 @media (max-width: 720px) {
+  .thorondor-primary-header {
+    grid-template-columns: 38px minmax(0, 1fr) auto;
+    gap: 8px;
+    padding: 0 10px;
+  }
+
+  .thorondor-top-nav {
+    display: none;
+  }
+
   .thorondor-brand {
-    width: 118px;
+    width: auto;
+    min-width: 0;
   }
 
   .brand-logo {
-    width: 118px;
+    width: min(156px, 44vw);
     height: 34px;
+  }
+
+  .thorondor-account-nav {
+    gap: 6px;
+  }
+
+  .authorization-status {
+    display: none;
+  }
+
+  .error-square.is-empty {
+    display: none;
   }
 }
 
 @media (max-width: 520px) {
   .thorondor-primary-header {
-    grid-template-columns: 36px minmax(94px, 104px) minmax(0, 1fr) auto;
+    grid-template-columns: 36px minmax(0, 1fr) auto;
     gap: 6px;
     padding: 0 8px;
   }
 
-  .thorondor-top-nav {
-    --top-nav-button-width: 112px;
-    --top-nav-button-height: 32px;
-    --top-nav-gap: 5px;
-  }
-
   .thorondor-brand {
-    width: 102px;
+    width: auto;
   }
 
   .brand-logo {
-    width: 102px;
+    width: min(142px, 43vw);
     height: 32px;
   }
 
@@ -3296,24 +3313,8 @@ export default {
     height: 36px;
   }
 
-  .authorization-status {
-    gap: 0;
-    width: 10px;
-    justify-content: center;
-    padding: 0;
-  }
-
-  .authorization-status-label {
-    display: none;
-  }
-
   .sidebar-toggle span {
     width: 16px;
-  }
-
-  .top-nav-link {
-    padding: 0 6px;
-    font-size: 0.64rem;
   }
 
   .settings-dropdown {
