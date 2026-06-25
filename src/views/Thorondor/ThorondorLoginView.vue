@@ -3,9 +3,6 @@
     <section class="login-layout">
       <section class="login-visual" aria-label="Thorondor SIEM">
         <img class="login-banner" :src="loginBanner" alt="Thorondor SIEM" />
-        <div class="login-mobile-brand" aria-hidden="true">
-          <img :src="loginLogo" alt="" />
-        </div>
       </section>
 
       <section class="login-card" aria-labelledby="login-title">
@@ -331,7 +328,6 @@
 
 <script>
 import loginBanner from '@/assets/images/brand/banner_login.png'
-import loginLogo from '@/assets/images/brand/thorondor_header.png'
 import { getMeta, setMeta } from '@/features/thorondor/services/thorondorIndexedDb'
 import {
   THORONDOR_SOCIAL_AUTH_PROVIDERS,
@@ -354,7 +350,6 @@ export default {
   data() {
     return {
       loginBanner,
-      loginLogo,
       authMode: 'login',
       providerAvailability: {},
       providersLoaded: false,
@@ -654,17 +649,6 @@ export default {
   object-fit: cover;
   object-position: center;
   filter: saturate(1.04) contrast(1.05);
-}
-
-.login-mobile-brand {
-  display: none;
-}
-
-.login-mobile-brand img {
-  display: block;
-  width: 100%;
-  height: auto;
-  object-fit: contain;
 }
 
 .login-card,
@@ -1133,7 +1117,7 @@ export default {
 
 @media (max-width: 980px) {
   .login-page {
-    --login-mobile-visual-height: min(300px, calc(100vw * 0.6667));
+    --login-mobile-visual-height: clamp(218px, 54vw, 332px);
     height: auto;
     min-height: 100vh;
     min-height: 100svh;
@@ -1156,48 +1140,52 @@ export default {
     display: grid;
     place-items: center;
     z-index: 0;
-    height: auto;
+    height: var(--login-mobile-visual-height);
     min-height: 0;
-    padding: 22px 20px 18px;
+    overflow: hidden;
+    padding: 14px 18px 12px;
     background:
-      radial-gradient(circle at 22% 0%, rgba(244, 208, 143, 0.14), transparent 11rem),
+      linear-gradient(180deg, rgba(236, 194, 119, 0.11), transparent 36%),
       linear-gradient(135deg, rgba(244, 208, 143, 0.04) 1px, transparent 1px),
       linear-gradient(45deg, rgba(176, 184, 194, 0.035) 1px, transparent 1px),
       #020607;
     background-size: auto, 34px 34px, 34px 34px, auto;
   }
 
+  .login-visual::before {
+    position: absolute;
+    inset: auto 16px 0;
+    z-index: 2;
+    height: 1px;
+    background: linear-gradient(90deg, transparent, rgba(244, 208, 143, 0.76), transparent);
+    content: '';
+    pointer-events: none;
+  }
+
   .login-visual::after {
     z-index: 1;
     background:
-      radial-gradient(circle at 50% 28%, rgba(244, 208, 143, 0.1), transparent 9rem),
-      linear-gradient(180deg, rgba(2, 6, 7, 0.18), rgba(2, 6, 7, 0.74));
+      linear-gradient(90deg, rgba(2, 6, 7, 0.46), transparent 16%, transparent 84%, rgba(2, 6, 7, 0.48)),
+      linear-gradient(180deg, rgba(2, 6, 7, 0.06), rgba(2, 6, 7, 0.5));
   }
 
   .login-banner {
-    display: none;
-  }
-
-  .login-mobile-brand {
     position: relative;
     z-index: 2;
-    display: grid;
-    width: min(84vw, 304px);
-    min-height: 94px;
-    place-items: center;
-    padding: 18px 20px;
-    border: 1px solid rgba(236, 194, 119, 0.22);
-    border-radius: 8px;
-    background:
-      linear-gradient(180deg, rgba(255, 255, 255, 0.055), rgba(255, 255, 255, 0.018)),
-      rgba(7, 13, 12, 0.78);
+    display: block;
+    width: min(100%, calc((var(--login-mobile-visual-height) - 26px) * 1.5), 462px);
+    height: auto;
+    max-height: calc(var(--login-mobile-visual-height) - 26px);
+    aspect-ratio: 3 / 2;
+    border: 1px solid rgba(236, 194, 119, 0.24);
+    border-radius: 7px;
+    background: rgba(7, 13, 12, 0.74);
+    object-fit: contain;
+    object-position: center;
     box-shadow:
-      0 22px 44px rgba(0, 0, 0, 0.24),
+      0 18px 42px rgba(0, 0, 0, 0.36),
+      0 0 0 1px rgba(255, 255, 255, 0.035),
       inset 0 1px 0 rgba(255, 255, 255, 0.08);
-  }
-
-  .login-mobile-brand img {
-    max-height: 66px;
     filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.36));
   }
 
@@ -1225,7 +1213,7 @@ export default {
 
 @media (max-width: 620px) {
   .login-page {
-    --login-mobile-visual-height: min(288px, calc(100vw * 0.6667));
+    --login-mobile-visual-height: clamp(190px, 58vw, 264px);
   }
 
   .login-card {
@@ -1234,17 +1222,12 @@ export default {
   }
 
   .login-visual {
-    padding: 16px 18px 14px;
+    padding: 12px 14px 10px;
   }
 
-  .login-mobile-brand {
-    width: min(82vw, 276px);
-    min-height: 82px;
-    padding: 15px 18px;
-  }
-
-  .login-mobile-brand img {
-    max-height: 58px;
+  .login-banner {
+    width: min(100%, calc((var(--login-mobile-visual-height) - 22px) * 1.5), 390px);
+    max-height: calc(var(--login-mobile-visual-height) - 22px);
   }
 
   .cookie-modal-backdrop {
@@ -1300,7 +1283,7 @@ export default {
 
 @media (max-height: 760px) {
   .login-page {
-    --login-mobile-visual-height: min(250px, calc(100vw * 0.6667));
+    --login-mobile-visual-height: clamp(176px, 44vw, 246px);
   }
 
   .login-card {
@@ -1344,7 +1327,7 @@ export default {
 
 @media (max-width: 620px) and (max-height: 680px) {
   .login-page {
-    --login-mobile-visual-height: min(158px, calc(100vw * 0.48));
+    --login-mobile-visual-height: clamp(142px, 42vw, 174px);
     overflow-x: hidden;
     overflow-y: auto;
   }
@@ -1368,14 +1351,9 @@ export default {
     padding: 10px 16px 8px;
   }
 
-  .login-mobile-brand {
-    width: min(78vw, 236px);
-    min-height: 62px;
-    padding: 10px 14px;
-  }
-
-  .login-mobile-brand img {
-    max-height: 44px;
+  .login-banner {
+    width: min(100%, calc((var(--login-mobile-visual-height) - 18px) * 1.5), 270px);
+    max-height: calc(var(--login-mobile-visual-height) - 18px);
   }
 
   .login-card-header {
