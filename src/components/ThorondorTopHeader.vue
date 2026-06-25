@@ -8,6 +8,17 @@
       <img class="brand-logo" :src="thorondorHeaderLogo" alt="Thorondor SIEM" />
     </RouterLink>
 
+    <nav class="thorondor-top-nav" aria-label="Navegación principal">
+      <RouterLink
+        v-for="item in navItems"
+        :key="item.routeName"
+        :to="routeFor(item)"
+        class="top-nav-link"
+      >
+        {{ item.label }}
+      </RouterLink>
+    </nav>
+
     <nav class="thorondor-account-nav" aria-label="Ajustes de usuario">
       <span
         class="authorization-status"
@@ -554,6 +565,7 @@
 
 <script>
 import thorondorHeaderLogo from '@/assets/images/brand/thorondor_header.png'
+import { THORONDOR_TOP_NAV_ITEMS } from '@/features/thorondor/data/thorondorNavigation'
 import {
   fetchThorondorAdminLogs,
   fetchThorondorAdminUsers,
@@ -640,6 +652,7 @@ export default {
   data() {
     return {
       thorondorHeaderLogo,
+      navItems: THORONDOR_TOP_NAV_ITEMS,
       settingsMenuOpen: false,
       errorMenuOpen: false,
       activeSettingsModal: null,
@@ -1498,6 +1511,18 @@ export default {
       }
     },
 
+    routeFor(item) {
+      const query = { ...(item.query || {}) }
+
+      if (item.agentScoped && this.selectedAgentId) {
+        query.agent = this.selectedAgentId
+      }
+
+      return Object.keys(query).length
+        ? { name: item.routeName, query }
+        : { name: item.routeName }
+    },
+
     formatErrorTime(timestamp) {
       if (!timestamp) return 'Sin hora'
       return new Intl.DateTimeFormat('es-ES', {
@@ -1516,7 +1541,7 @@ export default {
   inset: 0 0 auto;
   z-index: 9000;
   display: grid;
-  grid-template-columns: minmax(190px, 240px) minmax(0, 1fr);
+  grid-template-columns: minmax(178px, 228px) minmax(0, 1fr) auto;
   width: 100%;
   height: var(--main-header-height);
   align-items: center;
@@ -1559,6 +1584,90 @@ export default {
   object-fit: contain;
   object-position: left center;
   filter: contrast(1.06) drop-shadow(0 5px 10px rgba(0, 0, 0, 0.24));
+}
+
+.thorondor-top-nav {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(78px, 1fr);
+  justify-self: center;
+  width: min(100%, 690px);
+  min-width: 0;
+  height: var(--main-header-height);
+  align-items: stretch;
+  overflow: hidden;
+}
+
+.top-nav-link {
+  position: relative;
+  display: inline-flex;
+  min-width: 0;
+  align-items: center;
+  justify-content: center;
+  padding: 0 10px;
+  border-right: 1px solid rgba(190, 205, 218, 0.08);
+  color: rgba(226, 234, 244, 0.76);
+  font-size: 0.72rem;
+  font-weight: 850;
+  line-height: 1.1;
+  text-align: center;
+  text-decoration: none;
+  white-space: nowrap;
+  transition:
+    background 0.16s ease,
+    color 0.16s ease,
+    transform 0.16s ease;
+}
+
+.top-nav-link:first-child {
+  border-left: 1px solid rgba(236, 194, 119, 0.1);
+}
+
+.top-nav-link::after {
+  position: absolute;
+  right: 14%;
+  bottom: 0;
+  left: 14%;
+  height: 2px;
+  border-radius: 999px;
+  background: linear-gradient(90deg, transparent, rgba(236, 194, 119, 0.94), transparent);
+  content: '';
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition:
+    opacity 0.18s ease,
+    transform 0.2s ease,
+    box-shadow 0.18s ease;
+}
+
+.top-nav-link:hover,
+.top-nav-link:focus-visible {
+  background:
+    radial-gradient(circle at 50% 0%, rgba(236, 194, 119, 0.11), transparent 72%),
+    linear-gradient(180deg, rgba(236, 194, 119, 0.055), rgba(255, 255, 255, 0));
+  color: #f5d99d;
+  outline: none;
+  transform: translateY(-1px);
+}
+
+.top-nav-link.router-link-active,
+.top-nav-link.router-link-exact-active {
+  background:
+    radial-gradient(circle at 50% -10%, rgba(236, 194, 119, 0.16), transparent 72%),
+    linear-gradient(180deg, rgba(236, 194, 119, 0.09), rgba(236, 194, 119, 0.025));
+  color: #fff2cf;
+  box-shadow:
+    inset 0 0 20px rgba(236, 194, 119, 0.1),
+    inset 0 1px 0 rgba(255, 240, 180, 0.045);
+}
+
+.top-nav-link:hover::after,
+.top-nav-link:focus-visible::after,
+.top-nav-link.router-link-active::after,
+.top-nav-link.router-link-exact-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+  box-shadow: 0 0 12px rgba(236, 194, 119, 0.42);
 }
 
 .thorondor-account-nav {
@@ -2989,6 +3098,10 @@ export default {
 
   .error-dropdown {
     right: 64px;
+  }
+
+  .thorondor-top-nav {
+    display: none;
   }
 
   .sidebar-toggle {

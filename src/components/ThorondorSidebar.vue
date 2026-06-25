@@ -325,6 +325,10 @@ export default {
   gap: 5px;
 }
 
+.sidebar-nav-group--primary {
+  display: none;
+}
+
 .sidebar-nav-group h2 {
   position: relative;
   padding: 0 10px 8px;
@@ -427,6 +431,10 @@ export default {
     gap: 12px;
     overscroll-behavior: contain;
     -webkit-overflow-scrolling: touch;
+  }
+
+  .sidebar-nav-group--primary {
+    display: grid;
   }
 
   .sidebar-nav-item {
