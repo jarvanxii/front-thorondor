@@ -105,3 +105,26 @@ El modelo actual para demos y producción es:
 - El HTTP local del agente mantiene `/health` abierto para diagnóstico; `/telemetry`, `/logs`, `/response/blocks`, `/response/block-ip` y `/response/unblock-ip` requieren token de agente.
 
 No abrir puertos ni reglas de firewall en hosts monitorizados sin confirmar alcance LAN/VPN/público y origen permitido.
+
+## Google OAuth en produccion
+
+Google OAuth quedo activado en produccion el 2026-06-25. El boton de Google se
+habilita en el front con `EXTERNAL_OAUTH_ENABLED = true`, pero sigue dependiendo
+de la disponibilidad real que devuelve el backend en `/auth/session` o
+`/auth/providers`. Si el backend no tiene credenciales, el boton queda apagado.
+
+La identidad funcional es el email. Si un usuario existe por registro local y
+entra por Google con el mismo email, el backend reutiliza el mismo usuario
+interno, de modo que los datos y permisos no dependen del metodo de acceso.
+
+Para diagnosticar OAuth desde fuera:
+
+```bash
+curl -fsS https://thorondor.app/api/auth/providers
+curl -sS -D - -o /dev/null https://thorondor.app/oauth2/authorization/google
+```
+
+La segunda respuesta debe redirigir a Google con
+`redirect_uri=https://thorondor.app/login/oauth2/code/google`, sin `:444`. La
+guia completa de servidor esta en
+`C:\Users\Jarva\Desktop\git-repos\back-thorondor\docs\thorondor-google-oauth.md`.

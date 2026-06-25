@@ -103,7 +103,7 @@ Stores esperados: `agents`, `snapshots`, `logs`, `events`, `alerts`, `rules`, `h
 
 ## Documentacion operativa
 
-Las reglas para agentes están en `AGENTS.md`. La operativa de entorno, despliegue, callback OAuth, persistencia y agentes generados está en `docs/thorondor-front-operativa.md`.
+Las reglas para agentes están en `AGENTS.md`. La operativa de entorno, despliegue, callback OAuth, persistencia y agentes generados está en `docs/thorondor-front-operativa.md`. La guia completa de Google OAuth en servidor esta en `C:\Users\Jarva\Desktop\git-repos\back-thorondor\docs\thorondor-google-oauth.md`.
 
 ## Build
 
