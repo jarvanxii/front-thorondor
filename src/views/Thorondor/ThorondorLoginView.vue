@@ -1127,7 +1127,8 @@ export default {
 
   .login-layout {
     position: relative;
-    display: block;
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 100vh;
     min-height: 100svh;
@@ -1137,69 +1138,64 @@ export default {
 
   .login-visual {
     position: relative;
-    display: grid;
-    place-items: center;
+    display: block;
+    flex: 0 0 auto;
     z-index: 0;
-    height: var(--login-mobile-visual-height);
+    width: 100%;
+    height: auto;
     min-height: 0;
+    aspect-ratio: 3 / 2;
     overflow: hidden;
-    padding: 14px 18px 12px;
-    background:
-      linear-gradient(180deg, rgba(236, 194, 119, 0.11), transparent 36%),
-      linear-gradient(135deg, rgba(244, 208, 143, 0.04) 1px, transparent 1px),
-      linear-gradient(45deg, rgba(176, 184, 194, 0.035) 1px, transparent 1px),
-      #020607;
-    background-size: auto, 34px 34px, 34px 34px, auto;
+    padding: 0;
+    background: #020607;
   }
 
   .login-visual::before {
-    position: absolute;
-    inset: auto 16px 0;
-    z-index: 2;
-    height: 1px;
-    background: linear-gradient(90deg, transparent, rgba(244, 208, 143, 0.76), transparent);
-    content: '';
-    pointer-events: none;
+    display: none;
   }
 
   .login-visual::after {
-    z-index: 1;
+    z-index: 3;
     background:
-      linear-gradient(90deg, rgba(2, 6, 7, 0.46), transparent 16%, transparent 84%, rgba(2, 6, 7, 0.48)),
-      linear-gradient(180deg, rgba(2, 6, 7, 0.06), rgba(2, 6, 7, 0.5));
+      linear-gradient(180deg, rgba(2, 6, 7, 0.02), transparent 58%, rgba(2, 6, 7, 0.62));
   }
 
   .login-banner {
-    position: relative;
+    position: absolute;
+    inset: 0;
     z-index: 2;
     display: block;
-    width: min(100%, calc((var(--login-mobile-visual-height) - 26px) * 1.5), 462px);
-    height: auto;
-    max-height: calc(var(--login-mobile-visual-height) - 26px);
+    width: 100%;
+    height: 100%;
+    max-width: none;
+    max-height: none;
     aspect-ratio: 3 / 2;
-    border: 1px solid rgba(236, 194, 119, 0.24);
-    border-radius: 7px;
-    background: rgba(7, 13, 12, 0.74);
+    border: 0;
+    border-radius: 0;
+    background: transparent;
     object-fit: contain;
     object-position: center;
-    box-shadow:
-      0 18px 42px rgba(0, 0, 0, 0.36),
-      0 0 0 1px rgba(255, 255, 255, 0.035),
-      inset 0 1px 0 rgba(255, 255, 255, 0.08);
-    filter: drop-shadow(0 8px 16px rgba(0, 0, 0, 0.36));
+    box-shadow: none;
+    filter: saturate(1.04) contrast(1.05);
   }
 
   .login-card {
     position: relative;
     z-index: 1;
+    display: flex;
+    flex: 1 1 auto;
+    flex-direction: column;
+    align-items: center;
     height: auto;
     justify-items: center;
     gap: 11px;
     padding: clamp(18px, 3.2vw, 28px);
+    padding-bottom: calc(env(safe-area-inset-bottom) + 2px);
     min-height: 0;
     overflow: visible;
     border-top: 1px solid rgba(236, 194, 119, 0.24);
     border-left: 0;
+    border-radius: 0;
     box-shadow: 0 -16px 42px rgba(5, 9, 8, 0.3);
   }
 
@@ -1208,6 +1204,12 @@ export default {
     width: auto;
     height: 2px;
     background: linear-gradient(90deg, transparent, #d6a15c 32%, #f4cf8f 50%, #d6a15c 68%, transparent);
+  }
+
+  .login-legal-links {
+    margin-top: auto;
+    flex-wrap: wrap;
+    line-height: 1.3;
   }
 }
 
@@ -1218,16 +1220,16 @@ export default {
 
   .login-card {
     gap: 9px;
-    padding: 16px 18px 18px;
+    padding: 16px 18px calc(env(safe-area-inset-bottom) + 2px);
   }
 
   .login-visual {
-    padding: 12px 14px 10px;
+    padding: 0;
   }
 
   .login-banner {
-    width: min(100%, calc((var(--login-mobile-visual-height) - 22px) * 1.5), 390px);
-    max-height: calc(var(--login-mobile-visual-height) - 22px);
+    width: 100%;
+    max-height: none;
   }
 
   .cookie-modal-backdrop {
@@ -1333,6 +1335,8 @@ export default {
   }
 
   .login-layout {
+    display: flex;
+    flex-direction: column;
     height: auto;
     min-height: 100svh;
     overflow: visible;
@@ -1340,20 +1344,21 @@ export default {
   }
 
   .login-card {
+    flex: 1 1 auto;
     height: auto;
     min-height: 0;
     gap: 6px;
-    padding: 10px 16px 8px;
+    padding: 10px 16px calc(env(safe-area-inset-bottom) + 2px);
     overflow: visible;
   }
 
   .login-visual {
-    padding: 10px 16px 8px;
+    padding: 0;
   }
 
   .login-banner {
-    width: min(100%, calc((var(--login-mobile-visual-height) - 18px) * 1.5), 270px);
-    max-height: calc(var(--login-mobile-visual-height) - 18px);
+    width: 100%;
+    max-height: none;
   }
 
   .login-card-header {
@@ -1402,6 +1407,7 @@ export default {
   }
 
   .login-legal-links {
+    margin-top: auto;
     gap: 5px;
     font-size: 0.68rem;
     line-height: 1.2;
